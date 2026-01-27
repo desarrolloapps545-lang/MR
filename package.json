@@ -1,0 +1,42 @@
+{
+  "name": "admin-mr-portable",
+  "version": "1.0.0",
+  "description": "Panel de Administración M&R",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "author": "Ingeniero Santiago Orrego",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.0"
+  },
+  "build": {
+    "appId": "com.admin.mr",
+    "productName": "Admin MR",
+    "copyright": "Copyright © 2024 Ingeniero Santiago Orrego",
+    "win": {
+      "target": [
+        "portable",
+        "nsis"
+      ],
+      "icon": "img/logo.png",
+      "requestedExecutionLevel": "requireAdministrator"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true
+    },
+    "portable": {
+      "artifactName": "${productName}.exe",
+      "requestExecutionLevel": "admin"
+    },
+    "files": [
+      "**/*"
+    ]
+  }
+}
