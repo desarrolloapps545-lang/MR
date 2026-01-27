@@ -3842,17 +3842,10 @@
                     if ((Number(d.balance) || 0) === 0) return false;
 
                     // Parsear fecha dd-MM-yyyy o Timestamp
-                    let dateObj = null;
-                    if (d.saleDate) {
-                        if (typeof d.saleDate === 'string') {
-                            const parts = d.saleDate.split('-');
-                            if (parts.length === 3) {
-                                dateObj = new Date(parts[2], parts[1] - 1, parts[0]);
-                            }
-                        } else if (d.saleDate.toDate) {
-                            dateObj = d.saleDate.toDate();
-                        }
-                    }
+                    let dateObj = parseDate(d.saleDate);
+                    
+                    // Fallback a createdAt si no hay saleDate o falló el parseo
+                    if (!dateObj) dateObj = parseDate(d.createdAt);
                     
                     if (!dateObj) return false;
 
@@ -8622,63 +8615,85 @@
                 
                 // 2. Cargar y procesar Cobros
                 if (!isWeekly) {
-                    // A. Get all active debtors to identify which ones are 'Diario'
+                    // A. Obtener deudores activos (balance > 0)
                     const debtorsSnap = await db.collection('debtors').where('balance', '>', 0).get();
-                    const dailyDebtorIds = new Set();
-                    const dailyDebtorsData = {}; // Map of { debtorId: { valorCuota, asesorName, municipality } }
+                    const debtorMap = new Map();
 
                     debtorsSnap.forEach(doc => {
-                        const d = doc.data();
-
-                        // Excluir créditos creados hoy
-                        const createdDate = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate() : null;
-                        if (createdDate && createdDate >= startDate && createdDate <= endDate) {
-                            return;
-                        }
-
-                        let isDiario = false;
-                        const term = d.paymentTerm;
-                        if (Array.isArray(term)) isDiario = term.some(t => String(t).toUpperCase() === 'DIARIO');
-                        else isDiario = String(term).toUpperCase() === 'DIARIO';
-
-                        if (isDiario) {
-                            dailyDebtorIds.add(doc.id);
-                            dailyDebtorsData[doc.id] = {
-                                valorCuota: Number(d.valorCuota) || 0,
-                                asesorName: d.asesorName,
-                                municipality: d.municipality
-                            };
-                        }
+                        debtorMap.set(doc.id, doc.data());
                     });
 
-                    // B. Prepare data structure for aggregation
-                    const cobrosMap = {}; // Key: asesor|municipio
-
-                    // C. Calculate "Cobro" (Expected) by iterating through all active daily debtors
-                    for (const debtorId in dailyDebtorsData) {
-                        const debtor = dailyDebtorsData[debtorId];
-                        const key = `${debtor.asesorName}|${debtor.municipality}`;
-                        if (!cobrosMap[key]) {
-                            cobrosMap[key] = { asesor: debtor.asesorName, municipio: debtor.municipality, cobro: 0, recaudo: 0 };
-                        }
-                        cobrosMap[key].cobro += debtor.valorCuota;
-                    }
-
-                    // D. Get today's payments and calculate "Recaudo" (Actual)
+                    // B. Obtener pagos de hoy
                     const paymentsSnap = await db.collection('payments').where('createdAt', '>=', startDate).where('createdAt', '<=', endDate).get();
+                    const payments = [];
+                    const paymentDebtorIds = new Set();
 
                     paymentsSnap.forEach(doc => {
                         const p = doc.data();
-                        if (p.imported === true || !dailyDebtorIds.has(p.debtorId)) return;
+                        if (p.imported !== true && p.debtorId) {
+                            payments.push(p);
+                            paymentDebtorIds.add(p.debtorId);
+                        }
+                    });
+
+                    // C. Identificar y cargar deudores que pagaron hoy pero no están activos (saldo 0)
+                    const missingDebtorIds = [];
+                    paymentDebtorIds.forEach(id => {
+                        if (!debtorMap.has(id)) {
+                            missingDebtorIds.push(id);
+                        }
+                    });
+
+                    if (missingDebtorIds.length > 0) {
+                        const chunks = [];
+                        for (let i = 0; i < missingDebtorIds.length; i += 10) {
+                            chunks.push(missingDebtorIds.slice(i, i + 10));
+                        }
+                        const promises = chunks.map(chunk => db.collection('debtors').where(firebase.firestore.FieldPath.documentId(), 'in', chunk).get());
+                        const snapshots = await Promise.all(promises);
+                        snapshots.forEach(snap => {
+                            snap.forEach(doc => {
+                                debtorMap.set(doc.id, doc.data());
+                            });
+                        });
+                    }
+
+                    // D. Procesar datos
+                    const cobrosMap = {}; // Key: asesor|municipio
+
+                    // Helper para verificar si es Diario
+                    const isDiario = (d) => {
+                        const term = d.paymentTerm;
+                        if (Array.isArray(term)) return term.some(t => String(t).toUpperCase() === 'DIARIO');
+                        return String(term).toUpperCase() === 'DIARIO';
+                    };
+
+                    // Calcular Cobro (Esperado)
+                    debtorMap.forEach((d, id) => {
+                        if (!isDiario(d)) return;
+
+                        // Excluir créditos creados hoy del Cobro Esperado
+                        const createdDate = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate() : null;
+                        const isCreatedToday = createdDate && createdDate >= startDate && createdDate <= endDate;
+
+                        if (!isCreatedToday) {
+                            const key = `${d.asesorName}|${d.municipality}`;
+                            if (!cobrosMap[key]) cobrosMap[key] = { asesor: d.asesorName, municipio: d.municipality, cobro: 0, recaudo: 0 };
+                            cobrosMap[key].cobro += (Number(d.valorCuota) || 0);
+                        }
+                    });
+
+                    // Calcular Recaudo (Real)
+                    payments.forEach(p => {
+                        const d = debtorMap.get(p.debtorId);
+                        if (!d || !isDiario(d)) return;
 
                         const key = `${p.userName}|${p.municipality}`;
-                        if (!cobrosMap[key]) {
-                            cobrosMap[key] = { asesor: p.userName, municipio: p.municipality, cobro: 0, recaudo: 0 };
-                        }
+                        if (!cobrosMap[key]) cobrosMap[key] = { asesor: p.userName, municipio: p.municipality, cobro: 0, recaudo: 0 };
                         cobrosMap[key].recaudo += (Number(p.paymentAmount) || 0);
                     });
 
-                    // E. Render the table
+                    // E. Renderizar
                     const cobrosList = Object.values(cobrosMap).sort((a, b) => (a.asesor || '').localeCompare(b.asesor || '') || (a.municipio || '').localeCompare(b.municipio || ''));
                     currentDashboardCobrosData = cobrosList;
 
