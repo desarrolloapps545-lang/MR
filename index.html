@@ -6530,14 +6530,56 @@
 
             updateData.assignedMunicipality = currentEditAssignedMunicipalities;
 
+            const submitBtn = editUserForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<div class="small-spinner" style="border-top-color: white;"></div> Actualizando...';
+            submitBtn.disabled = true;
+
             try {
+                // 1. Obtener nombre anterior para actualizar referencias
+                const userDoc = await db.collection('users').doc(uid).get();
+                const oldName = userDoc.exists ? userDoc.data().name : '';
+
+                // 2. Actualizar usuario principal
                 await db.collection('users').doc(uid).update(updateData);
+
+                // 3. Actualizar referencias en otras colecciones si el nombre cambió
+                if (oldName && oldName !== name) {
+                    const updatePromises = [];
+
+                    // Colecciones que usan 'asesorName'
+                    const collectionsAsesor = ['debtors', 'clients'];
+                    for (const col of collectionsAsesor) {
+                        const snapshot = await db.collection(col).where('asesorName', '==', oldName).get();
+                        snapshot.forEach(doc => {
+                            updatePromises.push(doc.ref.update({ asesorName: name }));
+                        });
+                    }
+
+                    // Colecciones que usan 'userName'
+                    const collectionsUser = ['payments', 'reports', 'expenses', 'wexpenses', 'wreports'];
+                    for (const col of collectionsUser) {
+                        const snapshot = await db.collection(col).where('userName', '==', oldName).get();
+                        snapshot.forEach(doc => {
+                            updatePromises.push(doc.ref.update({ userName: name }));
+                        });
+                    }
+
+                    if (updatePromises.length > 0) {
+                        await Promise.all(updatePromises);
+                    }
+                }
+
                 editUserModal.style.display = 'none';
                 showToast("Usuario editado exitosamente");
                 loadUsers();
             } catch (error) {
+                console.error("Error al actualizar usuario:", error);
                 editUserError.textContent = "Error al actualizar: " + error.message;
                 editUserError.style.display = 'block';
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
             }
         });
 
@@ -10609,11 +10651,52 @@
                 let html = '';
                 const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-                records.forEach(r => {
+                let injectionHtml = '';
+                // Lógica de Inyección (Proyección del siguiente reporte)
+                if (user && user !== 'Todos los usuarios' && records.length > 0) {
+                    const lastRecord = records[0]; // El más reciente (por orden descendente)
+                    const lastDate = lastRecord.createdAt && lastRecord.createdAt.toDate ? lastRecord.createdAt.toDate() : null;
+
+                    if (lastDate) {
+                        const nextDate = new Date(lastDate);
+                        if (isWeekly) {
+                            nextDate.setDate(nextDate.getDate() + 7);
+                        } else {
+                            nextDate.setDate(nextDate.getDate() + 1);
+                        }
+
+                        const nextDayName = days[nextDate.getDay()];
+                        const nextDisplayDate = nextDate.toLocaleDateString();
+                        const nextInitialBase = Number(lastRecord.finalBase) || 0;
+
+                        // Fila de proyección (Inyección)
+                        injectionHtml = `<tr style="background-color: #e8f8f5; border-bottom: 2px solid #2ecc71;">
+                            <td>${user} <span style="font-size: 10px; color: #27ae60; font-weight: bold;">(Inyección)</span></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td id="cell-injection-${lastRecord.id}">
+                                $${nextInitialBase.toLocaleString('es-CO')} 
+                                <button class="btn btn-inject-base" data-id="${lastRecord.id}" data-val="${nextInitialBase}" data-collection="${collectionName}" style="width: 20px; height: 20px; padding: 0; font-size: 10px; margin-left: 5px; background-color: #27ae60; display: inline-flex; justify-content: center; align-items: center;" title="Inyectar Base"><i class="fas fa-edit"></i></button>
+                            </td>
+                            <td>-</td>
+                            <td>${nextDayName}</td>
+                            <td>${nextDisplayDate}</td>
+                        </tr>`;
+                    }
+                }
+
+                records.forEach((r, index) => {
                     const createdAt = r.createdAt && r.createdAt.toDate ? r.createdAt.toDate() : null;
                     let dayName = 'N/A';
                     let displayDate = 'N/A';
                     let btnDateStr = '';
+
+                    // Lógica para mostrar ogFinalBase si existe (Inyección realizada)
+                    let finalBaseDisplay = r.finalBase;
+                    if (r.ogFinalBase !== undefined && r.ogFinalBase !== null) {
+                        finalBaseDisplay = r.ogFinalBase;
+                    }
 
                     if (createdAt) {
                         dayName = days[createdAt.getDay()];
@@ -10658,10 +10741,14 @@
                         <td>$${(Number(r.paymentsReport) || 0).toLocaleString('es-CO')} ${buttons.payments}</td>
                         <td>$${(Number(gastos) || 0).toLocaleString('es-CO')} ${editExpenseBtn} ${buttons.expenses}</td>
                         <td id="cell-initialBase-${r.id}">$${(Number(r.initialBase) || 0).toLocaleString('es-CO')} <button class="btn edit-base-btn" data-id="${r.id}" data-field="initialBase" data-val="${r.initialBase || 0}" data-collection="${collectionName}" style="width: 20px; height: 20px; padding: 0; font-size: 10px; margin-left: 5px; background-color: #f39c12; display: inline-flex; justify-content: center; align-items: center;"><i class="fas fa-edit"></i></button></td>
-                        <td id="cell-finalBase-${r.id}">$${(Number(r.finalBase) || 0).toLocaleString('es-CO')} <button class="btn edit-base-btn" data-id="${r.id}" data-field="finalBase" data-val="${r.finalBase || 0}" data-collection="${collectionName}" style="width: 20px; height: 20px; padding: 0; font-size: 10px; margin-left: 5px; background-color: #f39c12; display: inline-flex; justify-content: center; align-items: center;"><i class="fas fa-edit"></i></button></td>
+                        <td id="cell-finalBase-${r.id}">$${(Number(finalBaseDisplay) || 0).toLocaleString('es-CO')} <button class="btn edit-base-btn" data-id="${r.id}" data-field="finalBase" data-val="${finalBaseDisplay || 0}" data-collection="${collectionName}" style="width: 20px; height: 20px; padding: 0; font-size: 10px; margin-left: 5px; background-color: #f39c12; display: inline-flex; justify-content: center; align-items: center;"><i class="fas fa-edit"></i></button></td>
                         <td>${dayName}</td>
                         <td>${displayDate}</td>
                     </tr>`;
+
+                    if (index === 0 && injectionHtml) {
+                        html += injectionHtml;
+                    }
                 });
 
                 tbody.innerHTML = html || '<tr><td colspan="8" style="text-align:center;">No se encontraron registros.</td></tr>';
@@ -10673,6 +10760,48 @@
 
         // Listener para botones en la tabla de Reportes General (GN)
         document.getElementById('gn-table-body').addEventListener('click', async (e) => {
+            // Editar Inyección
+            const btnInject = e.target.closest('.btn-inject-base');
+            if (btnInject) {
+                const id = btnInject.dataset.id;
+                const val = btnInject.dataset.val;
+                const collection = btnInject.dataset.collection;
+                const cell = document.getElementById(`cell-injection-${id}`);
+                
+                cell.innerHTML = `
+                    <input type="number" id="input-injection-${id}" value="${val}" style="width: 80px;">
+                    <button class="btn save-injection-btn" data-id="${id}" data-collection="${collection}" style="width: 25px; height: 25px; padding: 0; font-size: 12px; background-color: #2ecc71; display: inline-flex; justify-content: center; align-items: center;"><i class="fas fa-save"></i></button>
+                `;
+                return;
+            }
+
+            const btnSaveInject = e.target.closest('.save-injection-btn');
+            if (btnSaveInject) {
+                const id = btnSaveInject.dataset.id;
+                const collection = btnSaveInject.dataset.collection;
+                const newVal = Number(document.getElementById(`input-injection-${id}`).value);
+                
+                btnSaveInject.innerHTML = '<div class="small-spinner"></div>';
+                btnSaveInject.disabled = true;
+
+                try {
+                    const docRef = db.collection(collection).doc(id);
+                    const docSnap = await docRef.get();
+                    if (docSnap.exists) {
+                        const data = docSnap.data();
+                        const currentFinalBase = data.finalBase;
+                        const updateData = { finalBase: newVal };
+                        if (data.ogFinalBase === undefined) {
+                            updateData.ogFinalBase = currentFinalBase;
+                        }
+                        await docRef.update(updateData);
+                        showToast("Inyección realizada correctamente");
+                        generateGnReport();
+                    }
+                } catch (error) { console.error(error); alert("Error: " + error.message); }
+                return;
+            }
+
             // Ver Detalle Cobros
             const btnPayments = e.target.closest('.view-report-payments-btn');
             if (btnPayments) {
