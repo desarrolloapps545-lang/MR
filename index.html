@@ -6550,14 +6550,14 @@
                         payments.forEach(p => {
                             // Parse date string to Date object for Excel
                             const [d, m, y] = p.date.split('-').map(Number);
-                            const dateObj = new Date(y, m - 1, d);
+                            const dateObj = new Date(y, m - 1, d, 12, 0, 0);
                             wsData.push([p.weekNum, p.month, dateObj, p.quotaVal, p.amount]);
                         });
                     } else {
                         wsData.push(["FECHA PAGO", "VALOR CUOTA", "ABONO"]);
                         payments.forEach(p => {
                             const [d, m, y] = p.date.split('-').map(Number);
-                            const dateObj = new Date(y, m - 1, d);
+                            const dateObj = new Date(y, m - 1, d, 12, 0, 0);
                             wsData.push([dateObj, p.quotaVal, p.amount]);
                         });
                     }

@@ -15,7 +15,7 @@ function createWindow() {
             autoHideMenuBar: true // Oculta la barra de menú típica de Windows (Archivo, Editar...)
         });
 
-        win.loadFile(path.join(__dirname, 'admin.html')).catch(e => {
+        win.loadFile(path.join(__dirname, 'index.html')).catch(e => {
             dialog.showErrorBox("Error de carga", "No se pudo cargar el archivo: " + e.message);
         });
     } catch (error) {
