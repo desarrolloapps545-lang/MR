@@ -906,6 +906,52 @@
                 padding: 6px 4px;
             }
         }
+        
+        /* Estilos para el dropdown de historial de pagos (Comportamiento de Pago) */
+        .history-dropdown-row {
+            background-color: #f9f9f9;
+        }
+        .history-table-container {
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            position: relative;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+        }
+        .history-download-btn {
+            position: static;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .history-download-btn:hover {
+            background-color: #2980b9;
+        }
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        .history-table th, .history-table td {
+            border: 1px solid #eee;
+            padding: 8px;
+            text-align: left;
+        }
+        .history-table th {
+            background-color: #f4f7f9;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -2766,6 +2812,14 @@
         let currentPgReportData = []; // Datos del reporte P&G para descarga
         let currentDashboardCobrosData = [];
         let currentDashboardCreditosData = [];
+        let currentHistoryData = null; // Datos para descarga del historial de pagos (dropdown)
+
+        // Función para cerrar todos los modales
+        function closeAllModals() {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.style.display = 'none';
+            });
+        }
 
         // Elementos de Modales de Reportes Detallados
         const viewReportPaymentsModal = document.getElementById('view-report-payments-modal');
@@ -3012,6 +3066,7 @@
 
         navUsers.addEventListener('click', async (e) => {
             e.preventDefault();
+            closeAllModals();
             await handleWelcomeTransition(); // Ejecutar animación si aplica
             sidebarExpandBtn.style.display = '';
             localStorage.setItem('lastSection', 'users');
@@ -3055,6 +3110,7 @@
 
         navAppData.addEventListener('click', async (e) => {
             e.preventDefault();
+            closeAllModals();
             await handleWelcomeTransition(); // Ejecutar animación si aplica
             sidebarExpandBtn.style.display = '';
             localStorage.setItem('lastSection', 'appData');
@@ -3098,6 +3154,7 @@
 
         navClients.addEventListener('click', async (e) => {
             e.preventDefault();
+            closeAllModals();
             await handleWelcomeTransition(); // Ejecutar animación si aplica
             sidebarExpandBtn.style.display = '';
             localStorage.setItem('lastSection', 'clients');
@@ -3192,6 +3249,7 @@
 
         navMunicipalities.addEventListener('click', async (e) => {
             e.preventDefault();
+            closeAllModals();
             await handleWelcomeTransition(); // Ejecutar animación si aplica
             sidebarExpandBtn.style.display = '';
             localStorage.setItem('lastSection', 'municipalities');
@@ -3231,6 +3289,7 @@
 
         navReports.addEventListener('click', async (e) => {
             e.preventDefault();
+            closeAllModals();
             await handleWelcomeTransition(); // Ejecutar animación si aplica
             sidebarExpandBtn.style.display = '';
             localStorage.setItem('lastSection', 'reports');
@@ -5908,6 +5967,8 @@
                 await downloadPgReport('excel');
             } else if (currentDownloadContext === 'dashboard') {
                 await downloadDashboardReport('excel');
+            } else if (currentDownloadContext === 'payment_behavior_history') {
+                await downloadMissedPaymentHistory('excel');
             }
         });
 
@@ -5931,6 +5992,8 @@
                 await downloadPgReport('pdf');
             } else if (currentDownloadContext === 'dashboard') {
                 await downloadDashboardReport('pdf');
+            } else if (currentDownloadContext === 'payment_behavior_history') {
+                await downloadMissedPaymentHistory('pdf');
             }
         });
 
@@ -6433,6 +6496,118 @@
                 }
                 showToast("Descarga completada");
             } catch (error) { console.error(error); alert("Error al descargar: " + error.message); } finally { loadingModal.style.display = 'none'; }
+        }
+
+        async function downloadMissedPaymentHistory(format) {
+            if (!currentHistoryData) return;
+            
+            const loadingModal = document.getElementById('import-loading-modal');
+            const loadingText = loadingModal.querySelector('h3');
+            loadingText.textContent = "Generando archivo...";
+            loadingModal.style.display = 'flex';
+
+            try {
+                const { debtor, payments, mode } = currentHistoryData;
+                const isWeekly = mode === 'Semanal';
+                
+                // Datos de cabecera
+                const headerData = {
+                    "ASESOR": debtor.asesorName || '',
+                    "MUNICIPIO": debtor.municipality || '',
+                    "FECHA PRESTAMO": debtor.saleDate || '',
+                    "TIPO CREDITO": debtor.CreditType || '',
+                    "VALOR CUOTA": Number(debtor.valorCuota) || 0,
+                    "SALDO ACTUAL": Number(debtor.balance) || 0,
+                    "FRECUENCIA": debtor.paymentTerm || ''
+                };
+
+                if (format === 'excel') {
+                    const wb = XLSX.utils.book_new();
+                    
+                    // Crear hoja
+                    let wsData = [];
+                    
+                    // Fila de datos del cliente
+                    wsData.push(["ASESOR", "MUNICIPIO", "FECHA PRESTAMO", "TIPO CREDITO", "VALOR CUOTA", "SALDO ACTUAL", "FRECUENCIA"]);
+                    const clientRow = [
+                        headerData["ASESOR"],
+                        headerData["MUNICIPIO"],
+                        headerData["FECHA PRESTAMO"],
+                        headerData["TIPO CREDITO"],
+                        headerData["VALOR CUOTA"],
+                        headerData["SALDO ACTUAL"],
+                        headerData["FRECUENCIA"]
+                    ];
+                    wsData.push(clientRow);
+                    
+                    // Dos filas vacías
+                    wsData.push([]);
+                    wsData.push([]);
+                    
+                    // Tabla de pagos
+                    if (isWeekly) {
+                        wsData.push(["SEMANA", "MES", "FECHA PAGO", "VALOR CUOTA", "ABONO"]);
+                        payments.forEach(p => {
+                            // Parse date string to Date object for Excel
+                            const [d, m, y] = p.date.split('-').map(Number);
+                            const dateObj = new Date(y, m - 1, d);
+                            wsData.push([p.weekNum, p.month, dateObj, p.quotaVal, p.amount]);
+                        });
+                    } else {
+                        wsData.push(["FECHA PAGO", "VALOR CUOTA", "ABONO"]);
+                        payments.forEach(p => {
+                            const [d, m, y] = p.date.split('-').map(Number);
+                            const dateObj = new Date(y, m - 1, d);
+                            wsData.push([dateObj, p.quotaVal, p.amount]);
+                        });
+                    }
+
+                    const ws = XLSX.utils.aoa_to_sheet(wsData, { cellDates: true });
+                    
+                    // Apply short date format to date cells
+                    const range = XLSX.utils.decode_range(ws['!ref']);
+                    for (let R = range.s.r; R <= range.e.r; ++R) {
+                        for (let C = range.s.c; C <= range.e.c; ++C) {
+                            const cell = ws[XLSX.utils.encode_cell({r: R, c: C})];
+                            if (cell && cell.t === 'd') cell.z = 'm/d/yy';
+                        }
+                    }
+
+                    XLSX.utils.book_append_sheet(wb, ws, "Historial");
+                    XLSX.writeFile(wb, `Historial_Pagos_${debtor.name}.xlsx`);
+
+                } else {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+                    
+                    doc.setFontSize(12);
+                    doc.text(`Historial de Pagos - ${debtor.name}`, 14, 15);
+                    
+                    // Sección de datos arriba
+                    doc.setFontSize(10);
+                    let y = 25;
+                    doc.text(`Asesor: ${headerData["ASESOR"]} | Municipio: ${headerData["MUNICIPIO"]}`, 14, y); y += 6;
+                    doc.text(`Fecha Préstamo: ${headerData["FECHA PRESTAMO"]} | Tipo: ${headerData["TIPO CREDITO"]}`, 14, y); y += 6;
+                    doc.text(`Cuota: $${headerData["VALOR CUOTA"].toLocaleString('es-CO')} | Saldo: $${headerData["SALDO ACTUAL"].toLocaleString('es-CO')}`, 14, y); y += 6;
+                    doc.text(`Frecuencia: ${headerData["FRECUENCIA"]}`, 14, y); y += 10;
+
+                    let tableHead = isWeekly ? [["Semana", "Mes", "Fecha Pago", "Valor Cuota", "Abono"]] : [["Fecha Pago", "Valor Cuota", "Abono"]];
+                    let tableBody = payments.map(p => {
+                        return isWeekly 
+                            ? [p.weekNum, p.month, p.date, "$" + p.quotaVal.toLocaleString('es-CO'), "$" + p.amount.toLocaleString('es-CO')]
+                            : [p.date, "$" + p.quotaVal.toLocaleString('es-CO'), "$" + p.amount.toLocaleString('es-CO')];
+                    });
+
+                    doc.autoTable({
+                        head: tableHead,
+                        body: tableBody,
+                        startY: y,
+                        theme: 'grid'
+                    });
+                    doc.save(`Historial_Pagos_${debtor.name}.pdf`);
+                }
+                showToast("Descarga completada");
+            } catch (error) { console.error(error); alert("Error: " + error.message); } finally { loadingModal.style.display = 'none'; }
         }
 
         async function downloadDashboardReport(format) {
@@ -8851,6 +9026,7 @@
             btn.addEventListener('click', function() {
                 pgModeButtons.forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
+                document.getElementById('pg-filter-date-text').textContent = 'Seleccionar Fecha';
                 // No resetear texto de fecha al cambiar modo para persistencia
                 // pgFilterDateText.textContent = 'Seleccionar Fecha';
             });
@@ -8862,6 +9038,7 @@
             btn.addEventListener('click', function() {
                 pbModeButtons.forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
+                document.getElementById('pb-filter-date-text').textContent = 'Seleccionar Fecha';
             });
         });
 
@@ -8871,6 +9048,7 @@
             btn.addEventListener('click', function() {
                 crModeButtons.forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
+                document.getElementById('cr-filter-date-text').textContent = 'Seleccionar Fecha';
             });
         });
 
@@ -8880,6 +9058,7 @@
             btn.addEventListener('click', function() {
                 pmModeButtons.forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
+                document.getElementById('pm-filter-date-text').textContent = 'Seleccionar Fecha';
             });
         });
 
@@ -8889,6 +9068,7 @@
             btn.addEventListener('click', function() {
                 exModeButtons.forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
+                document.getElementById('ex-filter-date-text').textContent = 'Seleccionar Fecha';
             });
         });
 
@@ -8898,6 +9078,7 @@
             btn.addEventListener('click', function() {
                 gnModeButtons.forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
+                document.getElementById('gn-filter-date-text').textContent = 'Seleccionar Fecha';
             });
         });
 
@@ -9108,14 +9289,14 @@
                 opts = [
                     {val: 'week_of_month', text: 'Semanas del mes'},
                     {val: 'range', text: 'Rango de fechas'},
-                    {val: 'month', text: 'Mes'},
-                    {val: 'all', text: 'Todas las semanas de todos los meses y de todos los años'}
+                    {val: 'month', text: 'Mes'}
+                    // Removed 'all' option for PB report
                 ];
             } else {
                 opts = [
                     {val: 'specific', text: 'Fecha especifica'},
-                    {val: 'range', text: 'Rango'},
-                    {val: 'all', text: 'Todos los dias de todos los meses de todos los años'}
+                    {val: 'range', text: 'Rango'}
+                    // Removed 'all' option for PB report
                 ];
             }
             
@@ -10053,6 +10234,134 @@
             }
         }
 
+        // Helper to get last N payments for dropdown
+        async function getLastPaymentsForDebtor(debtorId, refDate, n, isWeekly) {
+            // refDate is the date of the missed payment. We want payments BEFORE this date.
+            // For simplicity, we query all payments for this debtor and sort/slice in memory or query with limit.
+            // Since we need "last N before date", a query with orderBy desc and startAfter is best, 
+            // but refDate might be a string or object.
+            
+            try {
+                const paymentsSnap = await db.collection('payments')
+                    .where('debtorId', '==', debtorId)
+                    .get(); // Get all to sort correctly in JS (safer with mixed date formats)
+                
+                let payments = paymentsSnap.docs.map(doc => {
+                    const d = doc.data();
+                    const dateObj = parseDate(d.paymentDate) || (d.createdAt ? d.createdAt.toDate() : new Date(0));
+                    return { ...d, dateObj };
+                });
+
+                // Filter payments strictly BEFORE the reference date/time
+                // refDate passed here is the start of the missed day/week.
+                payments = payments.filter(p => p.dateObj < refDate);
+
+                // Sort descending
+                payments.sort((a, b) => b.dateObj - a.dateObj);
+
+                // Take top N
+                payments = payments.slice(0, n);
+
+                // Format for display
+                const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+                
+                return payments.map(p => {
+                    const d = p.dateObj;
+                    const dateStr = `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
+                    
+                    // Calculate week num for weekly mode
+                    let weekNum = 0;
+                    if (isWeekly) {
+                        const day = d.getDate();
+                        if (day <= 7) weekNum = 1;
+                        else if (day <= 14) weekNum = 2;
+                        else if (day <= 21) weekNum = 3;
+                        else weekNum = 4;
+                    }
+
+                    return {
+                        date: dateStr,
+                        quotaVal: Number(p.valorCuota) || 0,
+                        amount: Number(p.paymentAmount) || 0,
+                        weekNum: weekNum,
+                        month: months[d.getMonth()]
+                    };
+                });
+            } catch (e) {
+                console.error("Error fetching history:", e);
+                return [];
+            }
+        }
+
+        // Function to toggle dropdown
+        window.toggleMissedPaymentDetails = async (btn, debtorId, dateStr, mode) => {
+            const tr = btn.closest('tr');
+            const nextTr = tr.nextElementSibling;
+            
+            if (nextTr && nextTr.classList.contains('history-dropdown-row')) {
+                nextTr.remove();
+                btn.classList.remove('fa-chevron-up');
+                btn.classList.add('fa-chevron-down');
+                return;
+            }
+
+            // Change icon
+            btn.classList.remove('fa-chevron-down');
+            btn.classList.add('fa-chevron-up');
+
+            // Create row
+            const newRow = document.createElement('tr');
+            newRow.className = 'history-dropdown-row';
+            const cell = document.createElement('td');
+            cell.colSpan = 9;
+            cell.innerHTML = '<div class="history-table-container"><div class="spinner" style="width:20px; height:20px; margin:0 auto;"></div></div>';
+            newRow.appendChild(cell);
+            tr.parentNode.insertBefore(newRow, tr.nextSibling);
+
+            // Fetch data
+            // Parse dateStr back to object for comparison
+            const [d, m, y] = dateStr.split('-').map(Number);
+            const refDate = new Date(y, m - 1, d);
+            const isWeekly = mode === 'Semanal';
+            const limit = isWeekly ? 4 : 15;
+
+            const history = await getLastPaymentsForDebtor(debtorId, refDate, limit, isWeekly);
+            
+            // Get debtor info for header (stored in button dataset or fetch?)
+            // We can fetch from DB or pass via dataset. Fetching is safer.
+            const debtorDoc = await db.collection('debtors').doc(debtorId).get();
+            const debtorData = debtorDoc.exists ? debtorDoc.data() : {};
+
+            // Store for download
+            currentHistoryData = { debtor: { ...debtorData, name: debtorData.name || 'Cliente' }, payments: history, mode: mode };
+
+            // Render table
+            let tableHtml = `<div style="display:flex; justify-content:flex-end; margin-bottom:8px;"><button class="history-download-btn" onclick="currentDownloadContext='payment_behavior_history'; downloadFormatModal.style.display='flex';"><i class="fas fa-download"></i></button></div>`;
+            tableHtml += `<table class="history-table"><thead><tr>`;
+            
+            if (isWeekly) {
+                tableHtml += `<th>Semana</th><th>Mes</th><th>Fecha Pago</th><th>Valor Cuota</th><th>Abono</th>`;
+            } else {
+                tableHtml += `<th>Fecha Pago</th><th>Valor Cuota</th><th>Abono</th>`;
+            }
+            tableHtml += `</tr></thead><tbody>`;
+
+            if (history.length === 0) {
+                tableHtml += `<tr><td colspan="${isWeekly?5:3}" style="text-align:center;">No hay pagos anteriores recientes.</td></tr>`;
+            } else {
+                history.forEach(h => {
+                    if (isWeekly) {
+                        tableHtml += `<tr><td>${h.weekNum}</td><td>${h.month}</td><td>${h.date}</td><td>$${h.quotaVal.toLocaleString('es-CO')}</td><td>$${h.amount.toLocaleString('es-CO')}</td></tr>`;
+                    } else {
+                        tableHtml += `<tr><td>${h.date}</td><td>$${h.quotaVal.toLocaleString('es-CO')}</td><td>$${h.amount.toLocaleString('es-CO')}</td></tr>`;
+                    }
+                });
+            }
+            tableHtml += `</tbody></table>`;
+
+            cell.querySelector('.history-table-container').innerHTML = tableHtml;
+        };
+
         async function generatePaymentBehaviorReport() {
             const tbody = document.getElementById('pb-table-body');
             tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;"><div class="spinner" style="width:30px; height:30px; margin:0 auto;"></div></td></tr>';
@@ -10101,6 +10410,10 @@
                 endDate = new Date(2100, 11, 31);
             }
 
+            // Helper to format date
+            const formatDate = (date) => `${String(date.getDate()).padStart(2,'0')}-${String(date.getMonth()+1).padStart(2,'0')}-${date.getFullYear()}`;
+            const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
             try {
                 if (!isWeekly) {
                     // --- LOGICA DIARIO ---
@@ -10142,22 +10455,21 @@
                     });
 
                     // 2. Consultar Pagos (Por paymentDate)
-                    const paymentsMap = {};
+                    const paymentsMap = {}; // Key: debtorId|dateStr -> amount
                     const dateStrings = [];
                     
                     if (type === 'specific') {
                         dateStrings.push(dateStrForImported);
                     } else {
                         let currentDate = new Date(startDate);
+                        // Iterate through range to build keys
                         while (currentDate <= endDate) {
-                            const d = String(currentDate.getDate()).padStart(2, '0');
-                            const m = String(currentDate.getMonth() + 1).padStart(2, '0');
-                            const y = currentDate.getFullYear();
-                            dateStrings.push(`${d}-${m}-${y}`);
+                            dateStrings.push(formatDate(currentDate));
                             currentDate.setDate(currentDate.getDate() + 1);
                         }
                     }
 
+                    // Fetch payments in chunks
                     const chunks = [];
                     for (let i = 0; i < dateStrings.length; i += 10) {
                         chunks.push(dateStrings.slice(i, i + 10));
@@ -10172,8 +10484,9 @@
                             if (user && user !== 'Todos los usuarios' && p.userName !== user) return;
                             if (muni && muni !== 'Todos los Municipios' && p.municipality !== muni) return;
                             if (p.debtorId) {
-                                if (!paymentsMap[p.debtorId]) paymentsMap[p.debtorId] = 0;
-                                paymentsMap[p.debtorId] += (Number(p.paymentAmount) || 0);
+                                // Map by debtor AND date
+                                const key = `${p.debtorId}|${p.paymentDate}`;
+                                paymentsMap[key] = (paymentsMap[key] || 0) + (Number(p.paymentAmount) || 0);
                             }
                         });
                     });
@@ -10184,49 +10497,60 @@
                     
                     const reportData = [];
 
+                    // Iterate debtors and dates to find misses
                     debtors.forEach(r => {
-                        const abonos = paymentsMap[r.id] || 0;
-                        const nuevos = r.CreditType === 'Nuevo' ? (Number(r.saleValue) || 0) : 0;
-                        const represtes = r.CreditType === 'Represte' ? (Number(r.saleValue) || 0) : 0;
-                        
-                        let dateStr = 'N/A';
-                        let dateObj = null;
-                        if (r.saleDate) {
-                            dateStr = r.saleDate;
-                            dateObj = parseDate(r.saleDate);
-                        } else if (r.createdAt) {
-                            dateStr = r.createdAt.toDate().toLocaleDateString();
-                            dateObj = r.createdAt.toDate();
-                        }
+                        dateStrings.forEach(dateStr => {
+                            // Check if debtor was active on this date
+                            const created = r.createdAt ? r.createdAt.toDate() : new Date(0);
+                            const [d, m, y] = dateStr.split('-').map(Number); 
+                            const checkDateStart = new Date(y, m - 1, d, 0, 0, 0);
+                            
+                            if (created >= checkDateStart) return; // Created on or after this date (no payment due yet)
 
-                        reportData.push({
-                            name: r.name,
-                            municipality: r.municipality,
-                            asesorName: r.asesorName,
-                            dateStr: dateStr,
-                            dateObj: dateObj,
-                            nuevos: nuevos,
-                            represtes: represtes,
-                            valorCuota: Number(r.valorCuota) || 0,
-                            abonos: abonos,
-                            balance: Number(r.balance) || 0
+                            const key = `${r.id}|${dateStr}`;
+                            const paidAmount = paymentsMap[key] || 0;
+
+                            if (paidAmount === 0) {
+                                // Missed Payment!
+                                const nuevos = r.CreditType === 'Nuevo' ? (Number(r.saleValue) || 0) : 0;
+                                const represtes = r.CreditType === 'Represte' ? (Number(r.saleValue) || 0) : 0;
+
+                                reportData.push({
+                                    id: r.id,
+                                    name: r.name,
+                                    municipality: r.municipality,
+                                    asesorName: r.asesorName,
+                                    dateStr: dateStr, // Date of missed payment
+                                    saleDate: r.saleDate || 'N/A', // Actual loan date
+                                    dateObj: checkDateStart,
+                                    nuevos: nuevos,
+                                    represtes: represtes,
+                                    valorCuota: Number(r.valorCuota) || 0,
+                                    abonos: 0, // It's missed
+                                    balance: Number(r.balance) || 0
+                                });
+                            }
                         });
+                    });
 
+                    reportData.forEach(row => {
                         html += `<tr>
-                            <td>${r.name || 'N/A'}</td>
-                            <td>${r.municipality || 'N/A'}</td>
-                            <td>${r.asesorName || 'N/A'}</td>
-                            <td>${dateStr}</td>
-                            <td>$${nuevos.toLocaleString('es-CO')}</td>
-                            <td>$${represtes.toLocaleString('es-CO')}</td>
-                            <td>$${(Number(r.valorCuota) || 0).toLocaleString('es-CO')}</td>
-                            <td>$${abonos.toLocaleString('es-CO')}</td>
-                            <td>$${(Number(r.balance) || 0).toLocaleString('es-CO')}</td>
+                            <td>${row.name || 'N/A'}</td>
+                            <td>${row.municipality || 'N/A'}</td>
+                            <td>${row.asesorName || 'N/A'}</td>
+                            <td>${row.saleDate}</td>
+                            <td>$${row.nuevos.toLocaleString('es-CO')}</td>
+                            <td>$${row.represtes.toLocaleString('es-CO')}</td>
+                            <td>$${row.valorCuota.toLocaleString('es-CO')}</td>
+                            <td style="text-align:center; cursor:pointer;" onclick="toggleMissedPaymentDetails(this.querySelector('i'), '${row.id}', '${row.dateStr}', 'Diario')">
+                                <i class="fas fa-chevron-down dropdown-toggle"></i>
+                            </td>
+                            <td>$${row.balance.toLocaleString('es-CO')}</td>
                         </tr>`;
                     });
                     
-                    currentPbReportData = reportData;
-                    tbody.innerHTML = html || '<tr><td colspan="9" style="text-align:center;">No se encontraron registros activos.</td></tr>';
+                    currentPbReportData = reportData; // For main export if needed (though format differs)
+                    tbody.innerHTML = html || '<tr><td colspan="9" style="text-align:center;">Todos los clientes realizaron sus pagos en las fechas seleccionadas.</td></tr>';
 
                 } else {
                     // --- LOGICA SEMANAL ---
@@ -10268,16 +10592,44 @@
                     });
 
                     // 2. Consultar Pagos (Por paymentDate)
-                    const paymentsMap = {};
+                    const paymentsMap = {}; // Key: debtorId|WeekLabel -> amount
                     const dateStrings = [];
+                    const weekLabels = new Set();
+                    const weekMap = {}; // dateStr -> WeekLabel
+                    const weekRanges = {}; // Label -> {start, end}
+
                     let currentDate = new Date(startDate);
                     while (currentDate <= endDate) {
-                        const d = String(currentDate.getDate()).padStart(2, '0');
-                        const m = String(currentDate.getMonth() + 1).padStart(2, '0');
+                        const dStr = formatDate(currentDate);
+                        dateStrings.push(dStr);
+                        
+                        // Determine Week Label
+                        const d = currentDate.getDate();
+                        const m = currentDate.getMonth();
                         const y = currentDate.getFullYear();
-                        dateStrings.push(`${d}-${m}-${y}`);
+                        let w = 4;
+                        if (d <= 7) w = 1;
+                        else if (d <= 14) w = 2;
+                        else if (d <= 21) w = 3;
+                        
+                        const label = `Semana ${w} - ${months[m]} ${y}`;
+                        weekLabels.add(label);
+                        weekMap[dStr] = label;
+
+                        // Track range for this week label
+                        if (!weekRanges[label]) weekRanges[label] = { start: new Date(currentDate), end: new Date(currentDate) };
+                        const range = weekRanges[label];
+                        if (currentDate < range.start) range.start = new Date(currentDate);
+                        if (currentDate > range.end) range.end = new Date(currentDate);
+
                         currentDate.setDate(currentDate.getDate() + 1);
                     }
+                    
+                    // Convert Set to Array for iteration
+                    const sortedWeeks = Array.from(weekLabels).sort((a,b) => {
+                        // Simple sort, might need better logic if crossing years, but sufficient for now
+                        return a.localeCompare(b);
+                    });
 
                     const chunks = [];
                     for (let i = 0; i < dateStrings.length; i += 10) {
@@ -10293,8 +10645,9 @@
                             if (user && user !== 'Todos los usuarios' && p.userName !== user) return;
                             if (muni && muni !== 'Todos los Municipios' && p.municipality !== muni) return;
                             if (p.debtorId) {
-                                if (!paymentsMap[p.debtorId]) paymentsMap[p.debtorId] = 0;
-                                paymentsMap[p.debtorId] += (Number(p.paymentAmount) || 0);
+                                const label = weekMap[p.paymentDate];
+                                const key = `${p.debtorId}|${label}`;
+                                paymentsMap[key] = (paymentsMap[key] || 0) + (Number(p.paymentAmount) || 0);
                             }
                         });
                     });
@@ -10305,55 +10658,126 @@
                     
                     const reportData = [];
 
+                    // Iterate debtors and weeks
                     debtors.forEach(r => {
-                        const abonos = paymentsMap[r.id] || 0;
-                        const nuevos = r.CreditType === 'Nuevo' ? (Number(r.saleValue) || 0) : 0;
-                        const represtes = r.CreditType === 'Represte' ? (Number(r.saleValue) || 0) : 0;
-                        
-                        let dateStr = 'N/A';
-                        let dateObj = null;
-                        if (r.saleDate) {
-                            dateStr = r.saleDate;
-                            dateObj = parseDate(r.saleDate);
-                        } else if (r.createdAt) {
-                            dateStr = r.createdAt.toDate().toLocaleDateString();
-                            dateObj = r.createdAt.toDate();
-                        }
+                        sortedWeeks.forEach(weekLabel => {
+                            // Check creation date vs week
+                            const created = r.createdAt ? r.createdAt.toDate() : new Date(0);
+                            const range = weekRanges[weekLabel];
+                            
+                            // If created on or after the start of the week, exclude
+                            if (range && created >= range.start) return;
+                            
+                            const key = `${r.id}|${weekLabel}`;
+                            const paidAmount = paymentsMap[key] || 0;
 
-                        reportData.push({
-                            name: r.name,
-                            municipality: r.municipality,
-                            asesorName: r.asesorName,
-                            dateStr: dateStr,
-                            dateObj: dateObj,
-                            nuevos: nuevos,
-                            represtes: represtes,
-                            valorCuota: Number(r.valorCuota) || 0,
-                            abonos: abonos,
-                            balance: Number(r.balance) || 0
+                            if (paidAmount === 0) {
+                                const nuevos = r.CreditType === 'Nuevo' ? (Number(r.saleValue) || 0) : 0;
+                                const represtes = r.CreditType === 'Represte' ? (Number(r.saleValue) || 0) : 0;
+                                
+                                // Use week start date for sorting/reference if needed, or just label
+                                // We pass the label as dateStr
+                                
+                                reportData.push({
+                                    id: r.id,
+                                    name: r.name,
+                                    municipality: r.municipality,
+                                    asesorName: r.asesorName,
+                                    dateStr: weekLabel,
+                                    saleDate: r.saleDate || 'N/A',
+                                    dateObj: null, // Not strictly needed for display
+                                    nuevos: nuevos,
+                                    represtes: represtes,
+                                    valorCuota: Number(r.valorCuota) || 0,
+                                    abonos: 0,
+                                    balance: Number(r.balance) || 0
+                                });
+                            }
                         });
+                    });
+
+                    reportData.forEach(row => {
+                        // For weekly, we need a date string for the dropdown to calculate "previous 4 weeks".
+                        // We can pass the week label and parse it in the toggle function, or pass a representative date.
+                        // Let's pass a representative date (e.g. start of that week) to the toggle function.
+                        // We need to reconstruct date from label "Semana X - Mes YYYY".
+                        // Or simpler: pass the label and handle logic in getLastPayments.
+                        // Actually, toggleMissedPaymentDetails expects a dateStr dd-mm-yyyy.
+                        // Let's find a date within that week.
+                        // We can use the first date in `dateStrings` that matches the label in `weekMap`.
+                        const repDate = dateStrings.find(d => weekMap[d] === row.dateStr) || formatDate(new Date());
 
                         html += `<tr>
-                            <td>${r.name || 'N/A'}</td>
-                            <td>${r.municipality || 'N/A'}</td>
-                            <td>${r.asesorName || 'N/A'}</td>
-                            <td>${dateStr}</td>
-                            <td>$${nuevos.toLocaleString('es-CO')}</td>
-                            <td>$${represtes.toLocaleString('es-CO')}</td>
-                            <td>$${(Number(r.valorCuota) || 0).toLocaleString('es-CO')}</td>
-                            <td>$${abonos.toLocaleString('es-CO')}</td>
-                            <td>$${(Number(r.balance) || 0).toLocaleString('es-CO')}</td>
+                            <td>${row.name || 'N/A'}</td>
+                            <td>${row.municipality || 'N/A'}</td>
+                            <td>${row.asesorName || 'N/A'}</td>
+                            <td>${row.saleDate}</td>
+                            <td>$${row.nuevos.toLocaleString('es-CO')}</td>
+                            <td>$${row.represtes.toLocaleString('es-CO')}</td>
+                            <td>$${row.valorCuota.toLocaleString('es-CO')}</td>
+                            <td style="text-align:center; cursor:pointer;" onclick="toggleMissedPaymentDetails(this.querySelector('i'), '${row.id}', '${repDate}', 'Semanal')">
+                                <i class="fas fa-chevron-down dropdown-toggle"></i>
+                            </td>
+                            <td>$${row.balance.toLocaleString('es-CO')}</td>
                         </tr>`;
                     });
 
                     currentPbReportData = reportData;
-                    tbody.innerHTML = html || '<tr><td colspan="9" style="text-align:center;">No se encontraron registros activos.</td></tr>';
+                    tbody.innerHTML = html || '<tr><td colspan="9" style="text-align:center;">Todos los clientes realizaron sus pagos en las semanas seleccionadas.</td></tr>';
                 }
             } catch (error) {
                 console.error("Error generating PB report:", error);
                 tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:red;">Error al generar reporte.</td></tr>';
             }
         }
+
+        // Helper to update municipality filter based on user selection
+        async function updateUserMunicipalities(userName, targetInputId) {
+            const targetInput = document.getElementById(targetInputId);
+            if (!userName || userName === 'Todos los usuarios') {
+                // If all users, we might want to allow all municipalities or reset. 
+                // The prompt says "siempre tenga la opcion de seleccionar todos los municipios".
+                // We'll leave it as is or reload all departments? 
+                // Existing logic loads munis based on department filter usually.
+                // If we want to filter by user's assigned munis, we do it here.
+                return; 
+            }
+            
+            targetInput.value = '';
+            targetInput.placeholder = 'Cargando...';
+            targetInput.disabled = true;
+
+            try {
+                const userQuery = await db.collection('users').where('name', '==', userName).limit(1).get();
+                if (!userQuery.empty) {
+                    const userData = userQuery.docs[0].data();
+                    let assigned = userData.assignedMunicipality || [];
+                    assigned.sort();
+                    assigned.unshift('Todos los Municipios');
+                    
+                    setupSearchableInput(targetInputId, 'list-' + targetInputId, assigned);
+                    targetInput.placeholder = 'Seleccionar Municipio...';
+                    targetInput.disabled = false;
+                } else {
+                     targetInput.placeholder = 'Usuario no encontrado';
+                     targetInput.disabled = false;
+                }
+            } catch (e) {
+                console.error(e);
+                targetInput.placeholder = 'Error';
+                targetInput.disabled = false;
+            }
+        }
+
+        // Attach listeners to user filters
+        ['pg', 'pb', 'cr', 'pm', 'ex', 'gn'].forEach(prefix => {
+            const userInput = document.getElementById(`${prefix}-filter-user`);
+            if (userInput) {
+                userInput.addEventListener('change', (e) => {
+                    updateUserMunicipalities(e.target.value, `${prefix}-filter-municipality`);
+                });
+            }
+        });
 
         async function generateCreditsReport() {
             const tbody = document.getElementById('cr-table-body');
