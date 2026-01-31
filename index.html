@@ -777,12 +777,22 @@
 
             .sidebar.sidebar-mobile-open { left: 0; }
 
+            #mobile-nav-bar {
+                display: none; /* Controlado por JS */
+                position: absolute; /* Se mueve con el scroll */
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 70px;
+                z-index: 3500;
+                background-color: #cccccc;
+                align-items: center;
+                padding-left: 10px;
+                box-sizing: border-box;
+            }
+
             #sidebar-expand-btn {
                 display: flex;
-                position: fixed;
-                top: 10px;
-                left: 10px;
-                z-index: 3500;
                 background-color: transparent !important;
                 border: none !important;
                 width: 55px;
@@ -796,7 +806,7 @@
             #sidebar-expand-btn img {
                 width: 100%;
                 height: 100%;
-                border-radius: 50%;
+                border-radius: 15px; /* Cuadrado redondeado como el logo */
                 border: 2px solid white;
                 box-shadow: 0 2px 5px rgba(0,0,0,0.3);
                 object-fit: cover;
@@ -904,6 +914,7 @@
             }
             th, td {
                 padding: 6px 4px;
+                white-space: nowrap;
             }
         }
         
@@ -961,7 +972,9 @@
 </div>
 
 <div id="admin-panel" style="display: none;"> 
-    <button id="sidebar-expand-btn" class="btn"><img src="img/logo.png" alt="Menu"></button>
+    <div id="mobile-nav-bar" style="display: none;">
+        <button id="sidebar-expand-btn" class="btn"><img src="img/logo.png" alt="Menu"></button>
+    </div>
     <div class="sidebar">
         <div class="sidebar-logo">
             <!-- Reemplaza 'URL_DE_TU_IMAGEN' con el enlace real de tu logo -->
@@ -1775,6 +1788,15 @@
     </div>
 </div>
 
+<!-- Modal Ver Municipios Asignados (Usuario) -->
+<div id="view-assigned-municipalities-modal" class="modal" style="z-index: 3000;">
+    <div class="modal-content" style="width: 300px; max-height: 80vh; display: flex; flex-direction: column;">
+        <span class="close-btn" id="close-view-assigned-munis-btn">&times;</span>
+        <h3 id="view-assigned-munis-title" style="margin-top: 0; color: #2c3e50;">Municipios Asignados</h3>
+        <ul id="view-assigned-munis-list" style="text-align: left; overflow-y: auto; padding-left: 20px; margin-bottom: 0;"></ul>
+    </div>
+</div>
+
 <!-- Modal Detalles Cobros Reporte -->
 <div id="view-report-payments-modal" class="modal">
     <div class="modal-content" style="width: 95%; max-width: 800px;">
@@ -2496,6 +2518,18 @@
         const welcomeView = document.getElementById('welcome-view');
         const sidebar = document.querySelector('.sidebar');
         const sidebarLogo = document.querySelector('.sidebar-logo img');
+        const mobileNavBar = document.getElementById('mobile-nav-bar');
+
+        // Función para desvanecer pantalla de carga
+        function fadeOutLoadingScreen() {
+            loadingScreen.style.transition = 'opacity 0.5s ease-out';
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+                loadingScreen.style.opacity = '1';
+                loadingScreen.style.transition = '';
+            }, 500);
+        }
 
         // New JS for mobile sidebar
         const sidebarExpandBtn = document.getElementById('sidebar-expand-btn');
@@ -2683,6 +2717,12 @@
         const closeViewUserWeeklyModalBtn = document.getElementById('close-view-user-weekly-modal-btn');
         const viewUserWeeklyTitle = document.getElementById('view-user-weekly-title');
         const viewUserWeeklyReportsBody = document.getElementById('view-user-weekly-reports-body');
+        
+        // Elementos Modal Ver Municipios Asignados
+        const viewAssignedMunisModal = document.getElementById('view-assigned-municipalities-modal');
+        const closeViewAssignedMunisBtn = document.getElementById('close-view-assigned-munis-btn');
+        const viewAssignedMunisList = document.getElementById('view-assigned-munis-list');
+        const viewAssignedMunisTitle = document.getElementById('view-assigned-munis-title');
         
         let selectedUserUidForReports = null;
         let selectedUserNameForReports = null;
@@ -2886,7 +2926,7 @@
                     document.getElementById('welcome-message').textContent = `Admin en sesión: ${adminName}`;
                     document.getElementById('dashboard-welcome-text').innerHTML = `Bienvenido, ${adminName}<br><span style="display: block; margin-top: 10px;">selecciona un espacio de trabajo</span>`;
                     adminPanel.style.display = ''; // Quitar el display:none para que CSS tome el control
-                    loadingScreen.style.display = 'none';
+                    fadeOutLoadingScreen();
 
                     // Mostrar menú de bienvenida por defecto
                     showWelcomeView();
@@ -2898,7 +2938,7 @@
                 }
             } else {
                 // No hay usuario logueado, mostramos el login
-                loadingScreen.style.display = 'none';
+                fadeOutLoadingScreen();
                 loginContainer.style.display = 'flex';
                 adminPanel.style.display = 'none';
             }
@@ -2921,7 +2961,7 @@
             } catch (error) {
                 console.error("Error de inicio de sesión:", error);
                 showLoginError(getFirebaseErrorMessage(error));
-                loadingScreen.style.display = 'none';
+                fadeOutLoadingScreen();
                 loginContainer.style.display = 'flex';
             }
         });
@@ -2987,7 +3027,7 @@
             
             welcomeView.style.display = 'flex';
             document.querySelector('.sidebar').style.display = 'none';
-            sidebarExpandBtn.style.display = 'none';
+            if(mobileNavBar) mobileNavBar.style.display = 'none';
             
             // Quitar clase active de la barra lateral
             document.querySelectorAll('.sidebar ul li a').forEach(a => a.classList.remove('active'));
@@ -3068,7 +3108,9 @@
             e.preventDefault();
             closeAllModals();
             await handleWelcomeTransition(); // Ejecutar animación si aplica
-            sidebarExpandBtn.style.display = '';
+            if (window.innerWidth <= 768) {
+                mobileNavBar.style.display = 'flex';
+            }
             localStorage.setItem('lastSection', 'users');
             navAppData.classList.remove('active');
             navUsers.classList.add('active');
@@ -3102,7 +3144,7 @@
                 const delayPromise = new Promise(resolve => setTimeout(resolve, 3000));
                 await Promise.all([loadUsers(), delayPromise]);
                 isUsersViewInitialized = true;
-                loadingScreen.style.display = 'none';
+                fadeOutLoadingScreen();
             } else {
                 usersTable.style.display = 'table';
             }
@@ -3112,7 +3154,9 @@
             e.preventDefault();
             closeAllModals();
             await handleWelcomeTransition(); // Ejecutar animación si aplica
-            sidebarExpandBtn.style.display = '';
+            if (window.innerWidth <= 768) {
+                mobileNavBar.style.display = 'flex';
+            }
             localStorage.setItem('lastSection', 'appData');
             navUsers.classList.remove('active');
             navAppData.classList.add('active');
@@ -3148,7 +3192,7 @@
                 loadDashboardData();
                 await delayPromise;
                 isDashboardViewInitialized = true;
-                loadingScreen.style.display = 'none';
+                fadeOutLoadingScreen();
             }
         });
 
@@ -3156,7 +3200,9 @@
             e.preventDefault();
             closeAllModals();
             await handleWelcomeTransition(); // Ejecutar animación si aplica
-            sidebarExpandBtn.style.display = '';
+            if (window.innerWidth <= 768) {
+                mobileNavBar.style.display = 'flex';
+            }
             localStorage.setItem('lastSection', 'clients');
             navUsers.classList.remove('active');
             navAppData.classList.remove('active');
@@ -3193,7 +3239,7 @@
                 clientsTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Busque al cliente a revisar</td></tr>';
                 await delayPromise;
                 isClientsViewInitialized = true;
-                loadingScreen.style.display = 'none';
+                fadeOutLoadingScreen();
             }
 
             // Verificar alertas de represte al entrar
@@ -3251,7 +3297,9 @@
             e.preventDefault();
             closeAllModals();
             await handleWelcomeTransition(); // Ejecutar animación si aplica
-            sidebarExpandBtn.style.display = '';
+            if (window.innerWidth <= 768) {
+                mobileNavBar.style.display = 'flex';
+            }
             localStorage.setItem('lastSection', 'municipalities');
             navUsers.classList.remove('active');
             navAppData.classList.remove('active');
@@ -3283,7 +3331,7 @@
                 // Cargar departamentos
                 await Promise.all([populateDepartmentsList(), delayPromise]);
                 isMunicipalitiesViewInitialized = true;
-                loadingScreen.style.display = 'none';
+                fadeOutLoadingScreen();
             }
         });
 
@@ -3291,7 +3339,9 @@
             e.preventDefault();
             closeAllModals();
             await handleWelcomeTransition(); // Ejecutar animación si aplica
-            sidebarExpandBtn.style.display = '';
+            if (window.innerWidth <= 768) {
+                mobileNavBar.style.display = 'flex';
+            }
             localStorage.setItem('lastSection', 'reports');
             navUsers.classList.remove('active');
             navAppData.classList.remove('active');
@@ -3322,7 +3372,7 @@
                 // No resetear vista de informes para mantener persistencia
                 await delayPromise;
                 isReportsViewInitialized = true;
-                loadingScreen.style.display = 'none';
+                fadeOutLoadingScreen();
             }
         });
 
@@ -7705,6 +7755,9 @@
             if (event.target === approveReprestModal) {
                 return; // No cerrar al hacer clic fuera
             }
+            if (event.target === viewAssignedMunisModal) {
+                return; // No cerrar al hacer clic fuera (Solo X)
+            }
             // ... (resto de validaciones de cierre de modales existentes)
         });
 
@@ -8678,17 +8731,18 @@
                 usersSnapshot.forEach(doc => {
                     const user = doc.data();
 
-                    // Excluir al administrador de la tabla
-                    if (user.isAdmin) return;
-
                     // El ID del documento es el UID del usuario
                     const uid = doc.id; 
 
-                    // Generar el texto de los municipality
-                    let municipalityHtml = 'No aplica';
-                    municipalityHtml = user.assignedMunicipality && user.assignedMunicipality.length > 0
-                        ? user.assignedMunicipality.join(', ')
-                        : '—';
+                    // Generar el texto de los municipality (Conteo y Botón)
+                    const munisCount = user.assignedMunicipality ? user.assignedMunicipality.length : 0;
+                    const munisListStr = user.assignedMunicipality ? user.assignedMunicipality.join('|') : '';
+                    
+                    const municipalityHtml = `Asignados ${munisCount} <button class="btn view-assigned-munis-btn" data-munis="${munisListStr}" data-name="${user.name || 'Usuario'}" style="background-color: #3498db; padding: 2px 8px; font-size: 12px; margin-left: 5px; border-radius: 4px;" title="Ver Municipios"><i class="fas fa-eye"></i></button>`;
+
+                    const deleteButton = user.isAdmin 
+                        ? '' 
+                        : `<button class="btn delete-user-btn" data-uid="${uid}" data-name="${user.name || 'Usuario'}" style="padding: 5px 10px; font-size: 14px; background-color: #e74c3c;" title="Eliminar Usuario"><i class="fas fa-trash"></i></button>`;
 
                     userHtml += `<tr data-uid="${uid}">
                                     <td>${user.name || 'N/A'}</td>
@@ -8700,7 +8754,7 @@
                                         <div style="display: flex; flex-direction: row; align-items: center; gap: 10px;">
                                             <button class="btn edit-user-btn" data-uid="${uid}" style="padding: 5px 10px; font-size: 14px; background-color: #2ecc71;"><i class="fas fa-edit"></i></button>
                                             <button class="btn change-password-btn" data-uid="${uid}" data-name="${user.name || 'Usuario'}" style="padding: 5px 10px; font-size: 14px; background-color: #f39c12;" title="Cambiar Contraseña"><i class="fas fa-key"></i></button>
-                                            <button class="btn delete-user-btn" data-uid="${uid}" data-name="${user.name || 'Usuario'}" style="padding: 5px 10px; font-size: 14px; background-color: #e74c3c;" title="Eliminar Usuario"><i class="fas fa-trash"></i></button>
+                                            ${deleteButton}
                                         </div>
                                     </td>
                                 </tr>`;
@@ -8717,6 +8771,37 @@
                 }
             }
         }
+
+        // Listener para ver municipios asignados
+        usersTable.addEventListener('click', (e) => {
+            const btn = e.target.closest('.view-assigned-munis-btn');
+            if (btn) {
+                const munisStr = btn.dataset.munis;
+                const name = btn.dataset.name;
+                const munis = munisStr ? munisStr.split('|') : [];
+
+                viewAssignedMunisTitle.textContent = `Municipios de ${name}`;
+                viewAssignedMunisList.innerHTML = '';
+
+                if (munis.length === 0) {
+                    viewAssignedMunisList.innerHTML = '<li>No tiene municipios asignados.</li>';
+                } else {
+                    munis.sort().forEach(m => {
+                        const li = document.createElement('li');
+                        li.textContent = m;
+                        li.style.padding = '5px 0';
+                        li.style.borderBottom = '1px solid #eee';
+                        viewAssignedMunisList.appendChild(li);
+                    });
+                }
+                viewAssignedMunisModal.style.display = 'flex';
+            }
+        });
+
+        // Cerrar modal de municipios asignados
+        closeViewAssignedMunisBtn.addEventListener('click', () => {
+            viewAssignedMunisModal.style.display = 'none';
+        });
 
 
         // --- FUNCIONES AUXILIARES ---
