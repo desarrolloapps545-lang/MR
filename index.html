@@ -1958,24 +1958,26 @@
         <div id="client-recaudo-container" style="background-color: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #2ecc71;">
             <h4 style="margin: 0; color: #27ae60;">Recaudo Total: <span id="detail-total-recaudo" style="color: #2c3e50; font-size: 1.2em; font-weight: bold;">$0</span></h4>
         </div>
-        <div style="overflow-x: auto;">
-            <div class="table-responsive">
-                <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr style="background-color: #f4f7f9;">
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;">Tipo de credito</th>
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;">Intereses</th>
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;">Fecha</th>
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;">Valor Crédito</th>
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;">Saldo</th>
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;">Cuotas Rest.</th>
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;">Tipo credito</th>
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;">Asesor</th>
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;">ACCIONES</th>
-                    </tr>
-                </thead>
-                <tbody id="client-details-body"></tbody>
-                </table>
+        <div style="max-height: 400px; overflow-y: auto;">
+            <div style="overflow-x: auto;">
+                <div class="table-responsive">
+                    <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: #f4f7f9;">
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;">Tipo de credito</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;">Intereses</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;">Fecha</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;">Valor Crédito</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;">Saldo</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;">Cuotas Rest.</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;">Tipo credito</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;">Asesor</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;">ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="client-details-body"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -2177,20 +2179,22 @@
     <div class="modal-content" style="width: 90%; max-width: 600px;">
         <span class="close-btn" id="close-credit-payments-btn">&times;</span>
         <h2>Detalles del Crédito</h2>
-        <div class="table-responsive">
-            <div style="overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr style="background-color: #f4f7f9;">
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;">Fecha</th>
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;">Día</th>
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;">Abono</th>
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;">Método</th>
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;" id="credit-payments-actions-header">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="credit-payments-body"></tbody>
-                </table>
+        <div style="max-height: 400px; overflow-y: auto;">
+            <div class="table-responsive">
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: #f4f7f9;">
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;">Fecha</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;">Día</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;">Abono</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;">Método</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;" id="credit-payments-actions-header">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="credit-payments-body"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
