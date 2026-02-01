@@ -8420,6 +8420,9 @@
                 
                 // Calcular el nuevo día de la semana
                 const newDateObj = new Date(y, m - 1, d);
+                // Crear fecha para createdAt (mediodía para evitar problemas de zona horaria)
+                const newCreatedAt = new Date(y, m - 1, d, 12, 0, 0);
+
                 const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
                 const newDay = days[newDateObj.getDay()];
 
@@ -8427,6 +8430,7 @@
                     // 1. Actualizar el documento del pago
                     await db.collection('payments').doc(id).update({
                         paymentDate: formattedDate,
+                        createdAt: newCreatedAt,
                         paymentDay: newDay,
                         paymentAmount: newAmount,
                         paymentMethod: newMethod,
