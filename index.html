@@ -1375,12 +1375,15 @@
 
             <!-- Contenedor Informe de Créditos -->
             <div id="credits-report-container" style="display: none; margin-top: 20px;">
-                <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; margin-bottom: 20px; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                    <div style="flex: 0 1 200px; min-width: 150px;">
+                <div style="display: flex; flex-wrap: wrap; gap: 32px; margin-bottom: 20px; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="flex: 0 1 200px; min-width: 150px; display: flex; flex-direction: column;">
                         <label style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px;">Departamento:</label>
                         <div class="searchable-dropdown" style="margin-bottom: 0;">
                             <input type="text" id="cr-filter-department" placeholder="Seleccionar Departamento..." autocomplete="off" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
                             <div class="dropdown-options" id="list-cr-filter-department"></div>
+                        </div>
+                        <div style="margin-top: auto; padding-top: 15px;">
+                            <h3 style="margin: 0; color: #2c3e50; font-size: 14px;">TOTAL CREDITOS: <span id="cr-total-display">$0</span></h3>
                         </div>
                     </div>
                     <div style="flex: 0 1 200px; min-width: 150px;">
@@ -1443,12 +1446,16 @@
 
             <!-- Contenedor Informe de Cobros -->
             <div id="payments-report-container" style="display: none; margin-top: 20px;">
-                <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; margin-bottom: 20px; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                    <div style="flex: 0 1 200px; min-width: 150px;">
+                <div style="display: flex; flex-wrap: wrap; gap: 32px; margin-bottom: 20px; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="flex: 0 1 200px; min-width: 150px; display: flex; flex-direction: column;">
                         <label style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px;">Departamento:</label>
                         <div class="searchable-dropdown" style="margin-bottom: 0;">
                             <input type="text" id="pm-filter-department" placeholder="Seleccionar Departamento..." autocomplete="off" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
                             <div class="dropdown-options" id="list-pm-filter-department"></div>
+                        </div>
+                        <div style="margin-top: auto; padding-top: 15px;">
+                            <h4 style="margin: 0; color: #2c3e50; font-size: 13px;">COBRO REAL: <span id="pm-total-cobro-display">$0</span></h4>
+                            <h4 style="margin: 5px 0 0 0; color: #27ae60; font-size: 13px;">RECAUDO: <span id="pm-total-recaudo-display">$0</span></h4>
                         </div>
                     </div>
                     <div style="flex: 0 1 200px; min-width: 150px;">
@@ -2423,15 +2430,18 @@
             </div>
 
             <!-- Selectores Rango -->
-            <div id="pg-range-date-container" style="display: none; flex-wrap: wrap; gap: 5px; margin-bottom: 15px;">
-                <div style="display: flex; gap: 5px; width: 100%;">
+            <div id="pg-range-date-container" style="display: none; flex-direction: column; gap: 5px; margin-bottom: 15px;">
+                <div style="display: flex; gap: 5px; width: 100%; align-items: center;">
+                    <span style="font-size: 12px; width: 40px;">Desde:</span>
                     <select id="pg-range-start-day" class="btn" style="flex: 1; background-color: white; color: black; border: 1px solid #ccc;" title="Día Inicio"></select>
-                    <span style="align-self: center;">a</span>
-                    <select id="pg-range-end-day" class="btn" style="flex: 1; background-color: white; color: black; border: 1px solid #ccc;" title="Día Fin"></select>
+                    <select id="pg-range-start-month" class="btn" style="flex: 2; background-color: white; color: black; border: 1px solid #ccc;" title="Mes Inicio"></select>
+                    <select id="pg-range-start-year" class="btn" style="flex: 1.5; background-color: white; color: black; border: 1px solid #ccc;" title="Año Inicio"></select>
                 </div>
-                <div style="display: flex; gap: 5px; width: 100%; margin-top: 5px;">
-                    <select id="pg-range-month" class="btn" style="flex: 2; background-color: white; color: black; border: 1px solid #ccc;"></select>
-                    <select id="pg-range-year" class="btn" style="flex: 1.5; background-color: white; color: black; border: 1px solid #ccc;"></select>
+                <div style="display: flex; gap: 5px; width: 100%; margin-top: 5px; align-items: center;">
+                    <span style="font-size: 12px; width: 40px;">Hasta:</span>
+                    <select id="pg-range-end-day" class="btn" style="flex: 1; background-color: white; color: black; border: 1px solid #ccc;" title="Día Fin"></select>
+                    <select id="pg-range-end-month" class="btn" style="flex: 2; background-color: white; color: black; border: 1px solid #ccc;" title="Mes Fin"></select>
+                    <select id="pg-range-end-year" class="btn" style="flex: 1.5; background-color: white; color: black; border: 1px solid #ccc;" title="Año Fin"></select>
                 </div>
             </div>
 
@@ -3997,18 +4007,13 @@
 
                 // 2. Procesar Datos para Excel
                 const processDebtor = async (debtor) => {
-                    // Obtener ABONO (pago más reciente)
+                    // Obtener ABONO (suma de todos los pagos)
                     const paymentsSnapshot = await db.collection('payments').where('debtorId', '==', debtor.id).get();
-                    let payments = paymentsSnapshot.docs.map(d => d.data());
-                    
-                    payments.sort((a, b) => {
-                        const tA = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
-                        const tB = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;
-                        return tB - tA;
+                    let totalAbonoCredito = 0;
+                    paymentsSnapshot.forEach(doc => {
+                        totalAbonoCredito += (Number(doc.data().paymentAmount) || 0);
                     });
-                    
-                    const mostRecentPayment = payments.length > 0 ? payments[0] : null;
-                    const abono = mostRecentPayment ? (Number(mostRecentPayment.paymentAmount) || 0) : 0;
+                    const abono = totalAbonoCredito;
 
                     // Recaudo Total (Suma de todos los pagos por cédula)
                     const allPaymentsSnapshot = await db.collection('payments').where('cedula', '==', debtor.cedula).get();
@@ -9644,9 +9649,12 @@
             fill('pg-specific-year', years);
 
             fill('pg-range-start-day', days);
+            fill('pg-range-start-month', months, true);
+            fill('pg-range-start-year', years);
+
             fill('pg-range-end-day', days);
-            fill('pg-range-month', months, true);
-            fill('pg-range-year', years);
+            fill('pg-range-end-month', months, true);
+            fill('pg-range-end-year', years);
 
             fill('pg-week-number', weeks);
             fill('pg-wm-month', months, true);
@@ -9657,6 +9665,14 @@
             document.getElementById('pg-specific-day').value = now.getDate();
             document.getElementById('pg-specific-month').value = now.getMonth() + 1;
             document.getElementById('pg-specific-year').value = now.getFullYear();
+
+            document.getElementById('pg-range-start-day').value = now.getDate();
+            document.getElementById('pg-range-start-month').value = now.getMonth() + 1;
+            document.getElementById('pg-range-start-year').value = now.getFullYear();
+
+            document.getElementById('pg-range-end-day').value = now.getDate();
+            document.getElementById('pg-range-end-month').value = now.getMonth() + 1;
+            document.getElementById('pg-range-end-year').value = now.getFullYear();
 
             document.getElementById('pg-wm-month').value = now.getMonth() + 1;
             document.getElementById('pg-wm-year').value = now.getFullYear();
@@ -9704,10 +9720,14 @@
                 text = `${d}-${m}-${y}`;
             } else if (type === 'range') {
                 const dStart = String(document.getElementById('pg-range-start-day').value).padStart(2, '0');
+                const mStart = String(document.getElementById('pg-range-start-month').value).padStart(2, '0');
+                const yStart = document.getElementById('pg-range-start-year').value;
+                
                 const dEnd = String(document.getElementById('pg-range-end-day').value).padStart(2, '0');
-                const m = String(document.getElementById('pg-range-month').value).padStart(2, '0');
-                const y = document.getElementById('pg-range-year').value;
-                text = `${dStart}-${m}-${y} -> ${dEnd}-${m}-${y}`;
+                const mEnd = String(document.getElementById('pg-range-end-month').value).padStart(2, '0');
+                const yEnd = document.getElementById('pg-range-end-year').value;
+                
+                text = `${dStart}-${mStart}-${yStart} -> ${dEnd}-${mEnd}-${yEnd}`;
             } else if (type === 'week_of_month') {
                 const w = document.getElementById('pg-week-number').value;
                 const m = document.getElementById('pg-wm-month').options[document.getElementById('pg-wm-month').selectedIndex].text;
@@ -10097,11 +10117,15 @@
             } else if (type === 'range') {
                 // Rango manual
                 const dStart = document.getElementById('pg-range-start-day').value;
+                const mStart = document.getElementById('pg-range-start-month').value;
+                const yStart = document.getElementById('pg-range-start-year').value;
+                
                 const dEnd = document.getElementById('pg-range-end-day').value;
-                const m = document.getElementById('pg-range-month').value;
-                const y = document.getElementById('pg-range-year').value;
-                startDate = new Date(y, m - 1, dStart, 0, 0, 0);
-                endDate = new Date(y, m - 1, dEnd, 23, 59, 59);
+                const mEnd = document.getElementById('pg-range-end-month').value;
+                const yEnd = document.getElementById('pg-range-end-year').value;
+                
+                startDate = new Date(yStart, mStart - 1, dStart, 0, 0, 0);
+                endDate = new Date(yEnd, mEnd - 1, dEnd, 23, 59, 59);
             } else {
                 // Todos los tiempos (Rango amplio)
                 startDate = new Date(2000, 0, 1);
@@ -10565,11 +10589,15 @@
                 endDate = new Date(y, m, 0, 23, 59, 59);
             } else if (type === 'range') {
                 const dStart = document.getElementById('pg-range-start-day').value;
+                const mStart = document.getElementById('pg-range-start-month').value;
+                const yStart = document.getElementById('pg-range-start-year').value;
+                
                 const dEnd = document.getElementById('pg-range-end-day').value;
-                const m = document.getElementById('pg-range-month').value;
-                const y = document.getElementById('pg-range-year').value;
-                startDate = new Date(y, m - 1, dStart, 0, 0, 0);
-                endDate = new Date(y, m - 1, dEnd, 23, 59, 59);
+                const mEnd = document.getElementById('pg-range-end-month').value;
+                const yEnd = document.getElementById('pg-range-end-year').value;
+                
+                startDate = new Date(yStart, mStart - 1, dStart, 0, 0, 0);
+                endDate = new Date(yEnd, mEnd - 1, dEnd, 23, 59, 59);
             } else {
                 startDate = new Date(2000, 0, 1);
                 endDate = new Date(2100, 11, 31);
@@ -10947,6 +10975,7 @@
         async function generateCreditsReport() {
             const tbody = document.getElementById('cr-table-body');
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;"><div class="spinner" style="width:30px; height:30px; margin:0 auto;"></div></td></tr>';
+            document.getElementById('cr-total-display').textContent = '$0';
 
             const dept = document.getElementById('cr-filter-department').value;
             const muni = document.getElementById('cr-filter-municipality').value;
@@ -10980,11 +11009,15 @@
                 endDate = new Date(y, m, 0, 23, 59, 59);
             } else if (type === 'range') {
                 const dStart = document.getElementById('pg-range-start-day').value;
+                const mStart = document.getElementById('pg-range-start-month').value;
+                const yStart = document.getElementById('pg-range-start-year').value;
+                
                 const dEnd = document.getElementById('pg-range-end-day').value;
-                const m = document.getElementById('pg-range-month').value;
-                const y = document.getElementById('pg-range-year').value;
-                startDate = new Date(y, m - 1, dStart, 0, 0, 0);
-                endDate = new Date(y, m - 1, dEnd, 23, 59, 59);
+                const mEnd = document.getElementById('pg-range-end-month').value;
+                const yEnd = document.getElementById('pg-range-end-year').value;
+                
+                startDate = new Date(yStart, mStart - 1, dStart, 0, 0, 0);
+                endDate = new Date(yEnd, mEnd - 1, dEnd, 23, 59, 59);
             } else {
                 startDate = new Date(2000, 0, 1);
                 endDate = new Date(2100, 11, 31);
@@ -11038,9 +11071,12 @@
 
                 currentCrReportData = records; // Guardar para descarga
 
+                let totalCredits = 0;
                 let html = '';
                 records.forEach(r => {
                     const saleValue = Number(r.saleValue) || 0;
+                    totalCredits += saleValue;
+
                     const creditType = (r.CreditType || '').toUpperCase();
                     
                     let nuevo = 0;
@@ -11066,6 +11102,7 @@
                     </tr>`;
                 });
 
+                document.getElementById('cr-total-display').textContent = '$' + totalCredits.toLocaleString('es-CO');
                 tbody.innerHTML = html || '<tr><td colspan="6" style="text-align:center;">No se encontraron registros.</td></tr>';
             } catch (error) {
                 console.error("Error generating CR report:", error);
@@ -11107,11 +11144,15 @@
                 endDate = new Date(y, m, 0, 23, 59, 59);
             } else if (type === 'range') {
                 const dStart = document.getElementById('pg-range-start-day').value;
+                const mStart = document.getElementById('pg-range-start-month').value;
+                const yStart = document.getElementById('pg-range-start-year').value;
+                
                 const dEnd = document.getElementById('pg-range-end-day').value;
-                const m = document.getElementById('pg-range-month').value;
-                const y = document.getElementById('pg-range-year').value;
-                startDate = new Date(y, m - 1, dStart, 0, 0, 0);
-                endDate = new Date(y, m - 1, dEnd, 23, 59, 59);
+                const mEnd = document.getElementById('pg-range-end-month').value;
+                const yEnd = document.getElementById('pg-range-end-year').value;
+                
+                startDate = new Date(yStart, mStart - 1, dStart, 0, 0, 0);
+                endDate = new Date(yEnd, mEnd - 1, dEnd, 23, 59, 59);
             } else {
                 startDate = new Date(2000, 0, 1);
                 endDate = new Date(2100, 11, 31);
@@ -11199,11 +11240,15 @@
                 endDate = new Date(y, m, 0, 23, 59, 59);
             } else if (type === 'range') {
                 const dStart = document.getElementById('pg-range-start-day').value;
+                const mStart = document.getElementById('pg-range-start-month').value;
+                const yStart = document.getElementById('pg-range-start-year').value;
+                
                 const dEnd = document.getElementById('pg-range-end-day').value;
-                const m = document.getElementById('pg-range-month').value;
-                const y = document.getElementById('pg-range-year').value;
-                startDate = new Date(y, m - 1, dStart, 0, 0, 0);
-                endDate = new Date(y, m - 1, dEnd, 23, 59, 59);
+                const mEnd = document.getElementById('pg-range-end-month').value;
+                const yEnd = document.getElementById('pg-range-end-year').value;
+                
+                startDate = new Date(yStart, mStart - 1, dStart, 0, 0, 0);
+                endDate = new Date(yEnd, mEnd - 1, dEnd, 23, 59, 59);
             } else {
                 startDate = new Date(2000, 0, 1);
                 endDate = new Date(2100, 11, 31);
@@ -11540,6 +11585,8 @@
         async function generatePmReport() {
             const tbody = document.getElementById('pm-table-body');
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;"><div class="spinner" style="width:30px; height:30px; margin:0 auto;"></div></td></tr>';
+            document.getElementById('pm-total-cobro-display').textContent = '$0';
+            document.getElementById('pm-total-recaudo-display').textContent = '$0';
 
             const dept = document.getElementById('pm-filter-department').value;
             const muni = document.getElementById('pm-filter-municipality').value;
@@ -11573,11 +11620,15 @@
                 endDate = new Date(y, m, 0, 23, 59, 59);
             } else if (type === 'range') {
                 const dStart = document.getElementById('pg-range-start-day').value;
+                const mStart = document.getElementById('pg-range-start-month').value;
+                const yStart = document.getElementById('pg-range-start-year').value;
+                
                 const dEnd = document.getElementById('pg-range-end-day').value;
-                const m = document.getElementById('pg-range-month').value;
-                const y = document.getElementById('pg-range-year').value;
-                startDate = new Date(y, m - 1, dStart, 0, 0, 0);
-                endDate = new Date(y, m - 1, dEnd, 23, 59, 59);
+                const mEnd = document.getElementById('pg-range-end-month').value;
+                const yEnd = document.getElementById('pg-range-end-year').value;
+                
+                startDate = new Date(yStart, mStart - 1, dStart, 0, 0, 0);
+                endDate = new Date(yEnd, mEnd - 1, dEnd, 23, 59, 59);
             } else {
                 startDate = new Date(2000, 0, 1);
                 endDate = new Date(2100, 11, 31);
@@ -11671,12 +11722,18 @@
 
                 currentPmReportData = records; // Guardar para descarga
 
+                let totalCobro = 0;
+                let totalRecaudo = 0;
                 let html = '';
+
                 records.forEach(r => {
                     let dateStr = r.paymentDate || 'N/A';
                     if (r.createdAt && (!r.paymentDate || r.paymentDate === 'N/A')) {
                         dateStr = r.createdAt.toDate().toLocaleDateString();
                     }
+
+                    totalCobro += (Number(r.valorCuota) || 0);
+                    totalRecaudo += (Number(r.paymentAmount) || 0);
 
                     html += `<tr>
                         <td>${r.debtorName || 'N/A'}</td>
@@ -11688,6 +11745,8 @@
                     </tr>`;
                 });
 
+                document.getElementById('pm-total-cobro-display').textContent = '$' + totalCobro.toLocaleString('es-CO');
+                document.getElementById('pm-total-recaudo-display').textContent = '$' + totalRecaudo.toLocaleString('es-CO');
                 tbody.innerHTML = html || '<tr><td colspan="6" style="text-align:center;">No se encontraron registros.</td></tr>';
             } catch (error) {
                 console.error("Error generating PM report:", error);
