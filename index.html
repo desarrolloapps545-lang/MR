@@ -1636,6 +1636,10 @@
             <input type="text" id="new-user-cedula" placeholder="Cédula" required oninput="this.value = this.value.replace(/[^0-9]/g, '')">
             <input type="email" id="new-user-email" placeholder="Correo electrónico" required>
             <input type="password" id="new-user-password" placeholder="Contraseña (mín. 6 caracteres)" required>
+            <select id="new-user-role" class="btn" style="width: 100%; background-color: white; color: black; border: 1px solid #dfe3e8; margin-bottom: 15px; display: none;">
+                <option value="Usuario">Usuario</option>
+                <option value="Administrador">Administrador</option>
+            </select>
             
             <label style="display: block; margin-bottom: 5px; font-weight: bold;">Departamento:</label>
             <div class="searchable-dropdown">
@@ -1686,6 +1690,12 @@
                         <span id="edit-municipality-selected-text">Seleccionar municipios...</span>
                         <i class="fas fa-list"></i>
                 </button>
+            </div>
+            <label id="lbl-edit-user-role" style="display:none; margin-bottom:5px; font-weight:600;">Rol:</label>
+            <select id="edit-user-role" class="btn" style="width: 100%; background-color: white; color: black; border: 1px solid #dfe3e8; margin-bottom: 15px; display: none;">
+                <option value="Usuario">Usuario</option>
+                <option value="Administrador">Administrador</option>
+            </select>
             </div>
             <button type="submit" class="btn"><i class="fas fa-save"></i> Guardar Cambios</button>
             <p id="edit-user-error" style="display: none; color: #e74c3c; margin-top: 10px;"></p>
@@ -2523,6 +2533,7 @@
         const sidebar = document.querySelector('.sidebar');
         const sidebarLogo = document.querySelector('.sidebar-logo img');
         const mobileNavBar = document.getElementById('mobile-nav-bar');
+        let isMasterAdmin = false;
 
         // Función para desvanecer pantalla de carga
         function fadeOutLoadingScreen() {
@@ -2924,6 +2935,12 @@
                 if (userDoc.exists && userDoc.data().isAdmin === true) {
                     // Es admin, mostramos el panel
                     loginContainer.style.display = 'none';
+                    
+                    if (userDoc.data().role === 'Administrador maestro') {
+                        isMasterAdmin = true;
+                    } else {
+                        isMasterAdmin = false;
+                    }
                     
                     // Mostrar mensaje de bienvenida y panel
                     const adminName = userDoc.data().name || 'Administrador';
@@ -4561,6 +4578,15 @@
             isEditingUserMode = false;
             municipalitiesListContainer.innerHTML = '';
             municipalitySelectedText.textContent = 'Seleccione un departamento primero';
+
+            const roleSelect = document.getElementById('new-user-role');
+            if (isMasterAdmin) {
+                roleSelect.style.display = 'block';
+                roleSelect.value = 'Usuario';
+            } else {
+                roleSelect.style.display = 'none';
+                roleSelect.value = 'Usuario';
+            }
         });
 
         // Función para cerrar y resetear el modal
@@ -4897,7 +4923,9 @@
             const cedula = document.getElementById('new-user-cedula').value;
             const email = document.getElementById('new-user-email').value;
             const password = document.getElementById('new-user-password').value;
-            const role = 'Usuario'; // Rol unificado
+            const roleSelect = document.getElementById('new-user-role');
+            const role = roleSelect.value;
+            const isAdmin = (role === 'Administrador');
             addUserError.style.display = 'none';
 
             let assignedMunicipality = [];
@@ -4919,6 +4947,7 @@
                     cedula: cedula,
                     email: email,
                     role: role,
+                    isAdmin: isAdmin,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
                 userData.assignedMunicipality = assignedMunicipality;
@@ -5034,6 +5063,18 @@
 
                     document.getElementById('edit-user-email').value = data.email;
 
+                    const roleSelect = document.getElementById('edit-user-role');
+                    const roleLabel = document.getElementById('lbl-edit-user-role');
+                    
+                    if (isMasterAdmin) {
+                        roleSelect.style.display = 'block';
+                        if(roleLabel) roleLabel.style.display = 'block';
+                        roleSelect.value = data.role || 'Usuario';
+                    } else {
+                        roleSelect.style.display = 'none';
+                        if(roleLabel) roleLabel.style.display = 'none';
+                    }
+
                     // Resetear checkboxes
                     // Si el usuario ya tiene municipios asignados, se mostrarán cuando seleccione el departamento correcto
                     // O podríamos intentar cargar todos los municipios de todos los departamentos (muy costoso)
@@ -5067,10 +5108,24 @@
             if (deleteBtn) {
                 const uid = deleteBtn.dataset.uid;
                 const name = deleteBtn.dataset.name;
+                const isAdmin = deleteBtn.dataset.isAdmin === 'true';
 
                 userToDelete = { uid: uid, name: name };
-                document.getElementById('delete-user-name-display').textContent = name;
-                document.getElementById('delete-user-options-modal').style.display = 'flex';
+
+                if (isAdmin) {
+                    if (confirm(`¿Desea eliminar al administrador ${name}?`)) {
+                        try {
+                            await db.collection('users').doc(uid).delete();
+                            showToast(`Administrador ${name} eliminado.`);
+                            loadUsers();
+                        } catch (error) {
+                            alert("Error: " + error.message);
+                        }
+                    }
+                } else {
+                    document.getElementById('delete-user-name-display').textContent = name;
+                    document.getElementById('delete-user-options-modal').style.display = 'flex';
+                }
             }
         });
 
@@ -6756,6 +6811,12 @@
             const name = document.getElementById('edit-user-name').value;
             const cedula = document.getElementById('edit-user-cedula').value;
             const updateData = { name: name, cedula: cedula };
+
+            if (isMasterAdmin) {
+                const role = document.getElementById('edit-user-role').value;
+                updateData.role = role;
+                updateData.isAdmin = (role === 'Administrador');
+            }
 
             updateData.assignedMunicipality = currentEditAssignedMunicipalities;
 
@@ -8748,9 +8809,20 @@
                     
                     const municipalityHtml = `Asignados ${munisCount} <button class="btn view-assigned-munis-btn" data-munis="${munisListStr}" data-name="${user.name || 'Usuario'}" style="background-color: #3498db; padding: 2px 8px; font-size: 12px; margin-left: 5px; border-radius: 4px;" title="Ver Municipios"><i class="fas fa-eye"></i></button>`;
 
-                    const deleteButton = user.isAdmin 
-                        ? '' 
-                        : `<button class="btn delete-user-btn" data-uid="${uid}" data-name="${user.name || 'Usuario'}" style="padding: 5px 10px; font-size: 14px; background-color: #e74c3c;" title="Eliminar Usuario"><i class="fas fa-trash"></i></button>`;
+                    let canDelete = false;
+                    if (isMasterAdmin) {
+                        if (user.role !== 'Administrador maestro') {
+                            canDelete = true;
+                        }
+                    } else {
+                        if (!user.isAdmin) {
+                            canDelete = true;
+                        }
+                    }
+
+                    const deleteButton = canDelete 
+                        ? `<button class="btn delete-user-btn" data-uid="${uid}" data-name="${user.name || 'Usuario'}" data-is-admin="${user.isAdmin}" style="padding: 5px 10px; font-size: 14px; background-color: #e74c3c;" title="Eliminar Usuario"><i class="fas fa-trash"></i></button>`
+                        : '';
 
                     userHtml += `<tr data-uid="${uid}">
                                     <td>${user.name || 'N/A'}</td>
