@@ -2018,7 +2018,6 @@
             <label>Valor Crédito (Sale Value):</label>
             <input type="number" id="edit-credit-value" placeholder="0" required style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #dfe3e8; border-radius: 4px; box-sizing: border-box;">
             <label>Saldo:</label>
-            <input type="number" id="edit-credit-balance" placeholder="0" required style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #dfe3e8; border-radius: 4px; box-sizing: border-box;">
             <label>Cuotas Restantes:</label>
             <input type="number" id="edit-credit-remaining" required style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #dfe3e8; border-radius: 4px; box-sizing: border-box;">
             <label>Frecuencia:</label>
@@ -8259,6 +8258,7 @@
                             <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center; white-space: nowrap;" class="actions-cell">
                                 <button class="btn view-credit-payments-btn" data-id="${data.id}" style="background-color: #3498db; padding: 5px; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center;"><i class="fas fa-eye"></i></button>
                                 <button class="btn edit-credit-history-btn" data-id="${data.id}" data-remaining="${data.remainingPayments ?? ''}" data-term="${data.paymentTerm || ''}" style="background-color: #f39c12; padding: 5px; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; margin-left: 5px;"><i class="fas fa-edit"></i></button>
+                                <button class="btn delete-credit-history-btn" data-id="${data.id}" style="background-color: #e74c3c; padding: 5px; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; margin-left: 5px;" title="Eliminar Crédito (Emergencia)"><i class="fas fa-trash"></i></button>
                             </td>
                         </tr>`;
                     });
@@ -8305,6 +8305,32 @@
             if (editBtn) {
                 const id = editBtn.dataset.id;
                 openEditCreditModal(id);
+                return;
+            }
+
+            const deleteBtn = e.target.closest('.delete-credit-history-btn');
+            if (deleteBtn) {
+                const id = deleteBtn.dataset.id;
+                if (confirm("¿Estás seguro de eliminar este crédito y todos sus pagos asociados? Esta acción es irreversible y se debe usar solo en emergencias.")) {
+                    try {
+                        // 1. Eliminar pagos asociados
+                        const paymentsQuery = await db.collection('payments').where('debtorId', '==', id).get();
+                        const batch = db.batch();
+                        paymentsQuery.forEach(doc => {
+                            batch.delete(doc.ref);
+                        });
+                        // 2. Eliminar el crédito (debtor)
+                        const debtorRef = db.collection('debtors').doc(id);
+                        batch.delete(debtorRef);
+
+                        await batch.commit();
+                        showToast("Crédito eliminado correctamente");
+                        refreshClientView(); // Actualizar vista principal de clientes
+                    } catch (error) {
+                        console.error("Error deleting credit:", error);
+                        alert("Error al eliminar: " + error.message);
+                    }
+                }
                 return;
             }
         });
