@@ -2959,6 +2959,9 @@
 
                     // Mostrar menú de bienvenida por defecto
                     showWelcomeView();
+
+                    // Limpiar alertas antiguas silenciosamente
+                    cleanOldAlertsReprest();
                 } else {
                     // No es admin, lo deslogueamos y mostramos error
                     await auth.signOut();
@@ -3227,6 +3230,10 @@
 
         navClients.addEventListener('click', async (e) => {
             e.preventDefault();
+
+            // Limpiar alertas antiguas silenciosamente
+            cleanOldAlertsReprest();
+
             closeAllModals();
             await handleWelcomeTransition(); // Ejecutar animación si aplica
             if (window.innerWidth <= 768) {
@@ -11776,6 +11783,39 @@
             } catch (error) {
                 console.error("Error generating PM report:", error);
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Error al generar reporte.</td></tr>';
+            }
+        }
+
+        // Función para limpiar alertas antiguas (> 10 min) de alertsReprest
+        async function cleanOldAlertsReprest() {
+            try {
+                const snapshot = await db.collection('alertsReprest').get();
+                if (snapshot.empty) return;
+
+                const now = new Date();
+                const batch = db.batch();
+                let hasDeletions = false;
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.createdAt) {
+                        // createdAt suele ser Timestamp en Firestore
+                        const createdDate = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
+                        const diffMs = now - createdDate;
+                        const diffMinutes = diffMs / (1000 * 60);
+
+                        if (diffMinutes > 10) {
+                            batch.delete(doc.ref);
+                            hasDeletions = true;
+                        }
+                    }
+                });
+
+                if (hasDeletions) {
+                    await batch.commit();
+                }
+            } catch (error) {
+                console.error("Error cleaning old alertsReprest:", error);
             }
         }
 
