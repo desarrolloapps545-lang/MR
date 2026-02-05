@@ -537,6 +537,12 @@
             overflow-y: auto;
         }
 
+        /* Ajuste para modal de editar crédito */
+        #edit-credit-modal .modal-content {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
         /* Ocultar flechas de input number */
         input[type=number].no-spin::-webkit-outer-spin-button,
         input[type=number].no-spin::-webkit-inner-spin-button {
@@ -2018,6 +2024,7 @@
             <label>Valor Crédito (Sale Value):</label>
             <input type="number" id="edit-credit-value" placeholder="0" required style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #dfe3e8; border-radius: 4px; box-sizing: border-box;">
             <label>Saldo:</label>
+            <input type="number" id="edit-credit-balance" placeholder="0" required style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #dfe3e8; border-radius: 4px; box-sizing: border-box;">
             <label>Cuotas Restantes:</label>
             <input type="number" id="edit-credit-remaining" required style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #dfe3e8; border-radius: 4px; box-sizing: border-box;">
             <label>Frecuencia:</label>
