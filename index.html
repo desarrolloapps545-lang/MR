@@ -2960,7 +2960,7 @@
                     // Mostrar menú de bienvenida por defecto
                     showWelcomeView();
 
-                    // Limpiar alertas antiguas silenciosamente
+                    // REFUERZO: Limpiar alertas antiguas al abrir la app
                     cleanOldAlertsReprest();
                 } else {
                     // No es admin, lo deslogueamos y mostramos error
@@ -3026,6 +3026,13 @@
         setInterval(() => {
             refreshAllData(true);
         }, 590);
+
+        // Ejecutar limpieza de alertas cada 10 minutos (600000 ms) de manera silenciosa
+        setInterval(() => {
+            if (auth.currentUser) {
+                cleanOldAlertsReprest();
+            }
+        }, 600000);
 
         async function refreshAllData(isBackground = false) {
             if (!auth.currentUser) return;
@@ -3231,7 +3238,7 @@
         navClients.addEventListener('click', async (e) => {
             e.preventDefault();
 
-            // Limpiar alertas antiguas silenciosamente
+            // REFUERZO: Limpiar alertas antiguas al entrar a clientes
             cleanOldAlertsReprest();
 
             closeAllModals();
@@ -11786,7 +11793,7 @@
             }
         }
 
-        // Función para limpiar alertas antiguas (> 10 min) de alertsReprest
+        // Función ROBUSTA para limpiar alertas antiguas (> 10 min) de alertsReprest
         async function cleanOldAlertsReprest() {
             try {
                 const snapshot = await db.collection('alertsReprest').get();
@@ -11799,12 +11806,20 @@
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     if (data.createdAt) {
-                        // createdAt suele ser Timestamp en Firestore
-                        const createdDate = data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt);
-                        const diffMs = now - createdDate;
+                        let createdDate;
+                        // Detectar si es Timestamp de Firestore o fecha estándar
+                        if (data.createdAt.toDate) {
+                            createdDate = data.createdAt.toDate();
+                        } else {
+                            createdDate = new Date(data.createdAt);
+                        }
+
+                        // Calcular diferencia exacta en minutos tomando la hora de creación
+                        const diffMs = now.getTime() - createdDate.getTime();
                         const diffMinutes = diffMs / (1000 * 60);
 
-                        if (diffMinutes > 10) {
+                        // Si han pasado 10 minutos o más, eliminar
+                        if (diffMinutes >= 10) {
                             batch.delete(doc.ref);
                             hasDeletions = true;
                         }
