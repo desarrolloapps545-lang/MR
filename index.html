@@ -3967,7 +3967,7 @@
                 let query = db.collection('debtors');
 
                 // Filtro Usuario
-                const user = document.getElementById('export-user').value;
+                const user = document.getElementById('export-user').value.trim();
                 if (user && user !== 'Todos los usuarios') {
                     query = query.where('asesorName', '==', user);
                 }
@@ -3997,9 +3997,6 @@
                 const year = exportYearSelect.value;
 
                 debtors = debtors.filter(d => {
-                    // Excluir créditos con balance 0
-                    if ((Number(d.balance) || 0) === 0) return false;
-
                     // Parsear fecha dd-MM-yyyy o Timestamp
                     let dateObj = parseDate(d.saleDate);
                     
@@ -4629,6 +4626,37 @@
 
         // --- LÓGICA DEL MODAL DE AÑADIR USUARIO ---
 
+        // --- CACHE SYSTEM ---
+        let globalDepartmentsCache = null;
+        let globalUsersCache = null;
+
+        async function ensureDepartmentsCache() {
+            if (globalDepartmentsCache) return globalDepartmentsCache;
+            try {
+                const snapshot = await db.collection('municipality').get();
+                globalDepartmentsCache = {};
+                snapshot.forEach(doc => {
+                    globalDepartmentsCache[doc.id] = doc.data().municipalities || [];
+                });
+                return globalDepartmentsCache;
+            } catch (error) {
+                console.error("Error caching departments:", error);
+                return {};
+            }
+        }
+
+        async function ensureUsersCache() {
+            if (globalUsersCache) return globalUsersCache;
+            try {
+                const snapshot = await db.collection('users').get();
+                globalUsersCache = snapshot.docs.map(doc => doc.data());
+                return globalUsersCache;
+            } catch (error) {
+                console.error("Error caching users:", error);
+                return [];
+            }
+        }
+
         async function populateDepartments(inputId, municipalityInputId = null) {
             const input = document.getElementById(inputId);
             const listId = 'list-' + inputId;
@@ -4651,8 +4679,8 @@
             }
 
             try {
-                const snapshot = await db.collection('municipality').get();
-                const departments = snapshot.docs.map(doc => doc.id).sort();
+                const departmentsCache = await ensureDepartmentsCache();
+                const departments = Object.keys(departmentsCache).sort();
                 
                 setupSearchableInput(inputId, listId, departments);
 
@@ -4674,11 +4702,8 @@
         // Cargar municipios cuando se selecciona un departamento
         async function loadMunicipalitiesByDepartment(department) {
             try {
-                const doc = await db.collection('municipality').doc(department).get();
-                if (doc.exists && doc.data().municipalities) {
-                    return doc.data().municipalities.sort();
-                }
-                return [];
+                const cache = await ensureDepartmentsCache();
+                return (cache[department] || []).sort();
             } catch (error) {
                 console.error("Error cargando municipios:", error);
                 return [];
@@ -4698,12 +4723,9 @@
             }
 
             try {
-                const doc = await db.collection('municipality').doc(departmentId).get();
-                
-                let munis = [];
-                if (doc.exists && doc.data().municipalities) {
-                    munis = doc.data().municipalities.sort();
-                }
+                const departmentsCache = await ensureDepartmentsCache();
+                let munis = departmentsCache[departmentId] || [];
+                munis = [...munis].sort();
 
                 if (includeAllOption) {
                     munis.unshift("Todos los Municipios");
@@ -8073,7 +8095,13 @@
         // Función para abrir modal de edición de cliente
         async function openEditClientModal(id) {
             try {
-                const doc = await db.collection('clients').doc(id).get();
+                // Parallel fetch: Client doc + Cache warmup
+                const [doc, departmentsCache] = await Promise.all([
+                    db.collection('clients').doc(id).get(),
+                    ensureDepartmentsCache(),
+                    ensureUsersCache() // Warm up users cache in parallel
+                ]);
+
                 if (!doc.exists) return alert("Cliente no encontrado");
                 const data = doc.data();
 
@@ -8083,33 +8111,41 @@
                 document.getElementById('edit-client-phone').value = data.phone || '';
                 document.getElementById('edit-client-address').value = data.address || '';
                 
-                // Cargar departamentos (usando IDs como strings)
-                await populateDepartments('edit-client-department', 'edit-client-municipality');
+                // Setup Departments Dropdown from cache
+                const departments = Object.keys(departmentsCache).sort();
+                setupSearchableInput('edit-client-department', 'list-edit-client-department', departments);
                 
                 const deptInput = document.getElementById('edit-client-department');
                 const muniInput = document.getElementById('edit-client-municipality');
 
+                // Reset inputs
+                deptInput.value = '';
+                muniInput.value = '';
+                muniInput.disabled = true;
+
                 if (data.municipality) {
                     muniInput.value = data.municipality;
                     
-                    // Buscar a qué departamento pertenece este municipio
-                    const deptQuery = await db.collection('municipality')
-                        .where('municipalities', 'array-contains', data.municipality)
-                        .limit(1)
-                        .get();
+                    // Find department in memory
+                    let deptName = null;
+                    for (const [dept, munis] of Object.entries(departmentsCache)) {
+                        if (munis.includes(data.municipality)) {
+                            deptName = dept;
+                            break;
+                        }
+                    }
                     
-                    if (!deptQuery.empty) {
-                        const deptName = deptQuery.docs[0].id;
+                    if (deptName) {
                         deptInput.value = deptName;
                         // Cargar la lista de municipios para este departamento
                         await loadMunicipalitiesForSelect(deptName, muniInput, true, false);
                         // Restaurar el valor del municipio (porque loadMunicipalitiesForSelect lo limpia)
                         muniInput.value = data.municipality;
+                    } else {
+                        muniInput.disabled = false;
                     }
                 } else {
-                    muniInput.value = '';
                     muniInput.placeholder = 'Seleccione departamento primero';
-                    muniInput.disabled = true;
                 }
 
                 // Llenar asesores
@@ -8359,7 +8395,12 @@
         // Función para abrir modal de editar crédito
         async function openEditCreditModal(id) {
             try {
-                const doc = await db.collection('debtors').doc(id).get();
+                // Parallel fetch
+                const [doc] = await Promise.all([
+                    db.collection('debtors').doc(id).get(),
+                    ensureUsersCache() // Warm up users cache
+                ]);
+
                 if (!doc.exists) return alert("Crédito no encontrado");
                 const data = doc.data();
 
@@ -8690,13 +8731,9 @@
             if (!municipality) return;
 
             try {
-                // Consultar usuarios que tengan el municipio asignado en su array assignedMunicipality
-                const usersSnapshot = await db.collection('users')
-                    .where('assignedMunicipality', 'array-contains', municipality)
-                    .get();
-                
-                const users = [];
-                usersSnapshot.forEach(doc => users.push(doc.data()));
+                const allUsers = await ensureUsersCache();
+                // Filter in memory
+                const users = allUsers.filter(u => u.assignedMunicipality && u.assignedMunicipality.includes(municipality));
                 
                 // Ordenar alfabéticamente por nombre
                 users.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
