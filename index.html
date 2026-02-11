@@ -5865,10 +5865,12 @@
                         if (paymentTermFilter) {
                             const pTerm = data.paymentTerm;
                             let match = false;
+                            const filterUpper = paymentTermFilter.toUpperCase();
+                            
                             if (Array.isArray(pTerm)) {
-                                if (pTerm.includes(paymentTermFilter)) match = true;
-                            } else {
-                                if (pTerm === paymentTermFilter) match = true;
+                                if (pTerm.some(t => String(t).toUpperCase() === filterUpper)) match = true;
+                            } else if (pTerm) {
+                                if (String(pTerm).toUpperCase() === filterUpper) match = true;
                             }
                             if (match) credits.push({ id: doc.id, ...data });
                         } else {
