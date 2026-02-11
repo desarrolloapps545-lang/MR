@@ -5347,19 +5347,36 @@
                 saveBaseBtn.disabled = true;
 
                 try {
-                    if (field === 'initialBase') {
-                        const docRef = db.collection(collection).doc(id);
-                        const docSnap = await docRef.get();
-                        if (docSnap.exists) {
-                            const data = docSnap.data();
+                    const docRef = db.collection(collection).doc(id);
+                    const docSnap = await docRef.get();
+                    
+                    if (docSnap.exists) {
+                        const data = docSnap.data();
+                        
+                        if (field === 'initialBase') {
                             const payments = Number(data.paymentsReport) || 0;
                             const credits = Number(data.creditsReport) || 0;
                             const expenses = data.expenseReport !== undefined ? Number(data.expenseReport) : (Number(data.expensesReport) || 0);
                             const finalBase = (newVal + payments) - (credits + expenses);
-                            await docRef.update({ initialBase: newVal, finalBase: finalBase });
+                            
+                            const updatePayload = { initialBase: newVal };
+                            if (data.ogFinalBase !== undefined && data.ogFinalBase !== null) {
+                                updatePayload.ogFinalBase = finalBase;
+                            } else {
+                                updatePayload.finalBase = finalBase;
+                            }
+                            await docRef.update(updatePayload);
+                        } else if (field === 'finalBase') {
+                            const updatePayload = {};
+                            if (data.ogFinalBase !== undefined && data.ogFinalBase !== null) {
+                                updatePayload.ogFinalBase = newVal;
+                            } else {
+                                updatePayload.finalBase = newVal;
+                            }
+                            await docRef.update(updatePayload);
+                        } else {
+                            await docRef.update({ [field]: newVal });
                         }
-                    } else {
-                        await db.collection(collection).doc(id).update({ [field]: newVal });
                     }
                     showToast("Base actualizada");
                     refreshActiveReportView();
@@ -5811,7 +5828,14 @@
                         const credits = Number(rData.creditsReport) || 0;
                         const expenses = rData.expenseReport !== undefined ? Number(rData.expenseReport) : (Number(rData.expensesReport) || 0);
                         const finalBase = (initialBase + newTotalPayments) - (credits + expenses);
-                        await db.collection(collectionName).doc(rDoc.id).update({ paymentsReport: newTotalPayments, finalBase: finalBase });
+                        
+                        const updatePayload = { paymentsReport: newTotalPayments };
+                        if (rData.ogFinalBase !== undefined && rData.ogFinalBase !== null) {
+                            updatePayload.ogFinalBase = finalBase;
+                        } else {
+                            updatePayload.finalBase = finalBase;
+                        }
+                        await db.collection(collectionName).doc(rDoc.id).update(updatePayload);
                     }
 
                     showToast("Cobro actualizado");
@@ -6063,7 +6087,14 @@
                         const payments = Number(rData.paymentsReport) || 0;
                         const expenses = rData.expenseReport !== undefined ? Number(rData.expenseReport) : (Number(rData.expensesReport) || 0);
                         const finalBase = (initialBase + payments) - (newTotal + expenses);
-                        await db.collection(collectionName).doc(rDoc.id).update({ creditsReport: newTotal, finalBase: finalBase });
+                        
+                        const updatePayload = { creditsReport: newTotal };
+                        if (rData.ogFinalBase !== undefined && rData.ogFinalBase !== null) {
+                            updatePayload.ogFinalBase = finalBase;
+                        } else {
+                            updatePayload.finalBase = finalBase;
+                        }
+                        await db.collection(collectionName).doc(rDoc.id).update(updatePayload);
                     }
                     showToast("Crédito actualizado");
                     loadReportCreditsDetails(userName, dateStr, termFilter, collectionName);
@@ -7076,10 +7107,13 @@
                         const gastos = total;
                         const finalBase = (baseInicial + payments) - (credits + gastos);
 
-                        await db.collection('reports').doc(reportDoc.id).update({
-                            expenseReport: gastos,
-                            finalBase: finalBase
-                        });
+                        const updatePayload = { expenseReport: gastos };
+                        if (rData.ogFinalBase !== undefined && rData.ogFinalBase !== null) {
+                            updatePayload.ogFinalBase = finalBase;
+                        } else {
+                            updatePayload.finalBase = finalBase;
+                        }
+                        await db.collection('reports').doc(reportDoc.id).update(updatePayload);
                     }
                 }
                 // Actualizar Reporte Automáticamente (Semanal)
@@ -7106,10 +7140,13 @@
                         const gastos = total;
                         const finalBase = (baseInicial + payments) - (credits + gastos);
 
-                        await db.collection('wreports').doc(reportDoc.id).update({
-                            expenseReport: gastos,
-                            finalBase: finalBase
-                        });
+                        const updatePayload = { expenseReport: gastos };
+                        if (rData.ogFinalBase !== undefined && rData.ogFinalBase !== null) {
+                            updatePayload.ogFinalBase = finalBase;
+                        } else {
+                            updatePayload.finalBase = finalBase;
+                        }
+                        await db.collection('wreports').doc(reportDoc.id).update(updatePayload);
                     }
                 }
 
