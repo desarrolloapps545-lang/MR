@@ -338,6 +338,8 @@ const assignedMunisList = document.getElementById('assigned-munis-list');
 const btnCloseAssignedMunis = document.getElementById('btn-close-assigned-munis');
 
 let currentEditId = null; // Variable para saber a quién estamos editando
+let currentClientSearchQuery = null; // Persistencia de búsqueda de clientes
+let currentClientSearchType = null;
 let currentPassId = null; // Variable para el cambio de contraseña
 let tempSelectedMunis = []; // Almacena la selección actual de municipios
 let currentDeptMunis = []; // Almacena los municipios disponibles del departamento
@@ -346,6 +348,7 @@ let currentUserRole = null; // Variable para guardar el rol del administrador ac
 let currentUserIsDeveloper = false; // Bandera para saber si es desarrollador
 let currentUserId = null; // ID del usuario en sesión
 let currentClientEditId = null; // ID del cliente que se está editando
+let currentViewingClientId = null; // ID del cliente cuyo detalle se está viendo
 let currentQuotaClientData = null; // Datos del cliente para el proceso de cupo extra
 let clientToDeleteData = null; // Datos del cliente a eliminar
 let isMultiDeleteMode = false; // Modo eliminación múltiple
@@ -444,6 +447,65 @@ const DEPARTAMENTOS_COLOMBIA = [
     "Vichada"
 ];
 
+// Helper para fechas locales (Soluciona el desfase de -1/+1 día por zona horaria)
+function getLocalDateKey(dateObj) {
+    if (!dateObj || isNaN(dateObj.getTime())) return '';
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// Helper para parsear fechas (Soporta ISO y DD-MM-YYYY)
+// Helper para parsear fechas (Soporta ISO, YYYY-MM-DD, y DD-MM-YYYY)
+function parseDateValue(value) {
+    if (!value) return null;
+
+    // Si ya es un objeto Date, simplemente lo retornamos.
+    if (value instanceof Date) {
+        return isNaN(value.getTime()) ? null : value;
+    }
+
+    if (typeof value !== 'string') return null;
+
+    // Prioridad 1: Formato YYYY-MM-DD (común en inputs y a veces en BD como texto)
+    // Se parsea manualmente para forzar la zona horaria local y evitar el off-by-one.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [y, m, d] = value.split('-').map(Number);
+        return new Date(y, m - 1, d);
+    }
+
+    // Prioridad 2: Formato DD-MM-YYYY (común en importaciones o UI)
+    if (/^\d{2}-\d{2}-\d{4}$/.test(value)) {
+        const [d, m, y] = value.split('-').map(Number);
+        return new Date(y, m - 1, d);
+    }
+
+    // Fallback: Para formatos ISO completos (e.g., "2024-05-12T19:00:00.000Z")
+    // new Date() los maneja correctamente.
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d;
+}
+
+// --- Funciones de Pantalla de Carga ---
+function showLoading(type) {
+    const overlay = type === 'solid' ? document.getElementById('loading-overlay-solid') : document.getElementById('loading-overlay-transparent');
+    if (overlay) {
+        overlay.style.display = 'flex';
+        // Forzar estilos para asegurar cobertura total
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
+        overlay.style.zIndex = '9999';
+    }
+}
+
+function hideLoading() {
+    document.getElementById('loading-overlay-solid').style.display = 'none';
+    document.getElementById('loading-overlay-transparent').style.display = 'none';
+}
+
 // Cargar datos recordados al iniciar
 window.addEventListener('load', async () => {
     const savedEmail = localStorage.getItem('savedEmail');
@@ -466,7 +528,7 @@ loginBtn.addEventListener('click', async () => {
     const email = emailInput.value;
     const password = passwordInput.value;
 
-    statusMessage.innerText = 'Conectando...';
+    showLoading('solid');
 
     const { data, error } = await sbClient.auth.signInWithPassword({
         email: email,
@@ -474,11 +536,16 @@ loginBtn.addEventListener('click', async () => {
     });
 
     if (error) {
-        statusMessage.innerText = 'Error: ' + error.message;
+        let msg = 'Error: ' + error.message;
+        // Detectar errores de base de datos (Triggers rotos)
+        if (error.status === 500 || error.message.includes('Database error')) {
+            msg += '. (Posible error interno en Triggers de Base de Datos. Revise la consola de Supabase).';
+        }
+        statusMessage.innerText = msg;
+        hideLoading();
         console.error('Error de login:', error);
     } else {
         statusMessage.innerText = 'Verificando permisos...';
-
         // Llamar a la función de inicialización
         initializeSession(data.user.id, email, password);
     }
@@ -535,17 +602,60 @@ async function initializeSession(userId, email = null, password = null) {
                 devUpdateDataBtn.style.display = 'inline-block';
             }
 
+            hideLoading();
+
+            // Configurar listeners de tiempo real
+            setupRealtimeListeners();
         } else {
             if (statusMessage) statusMessage.innerText = 'Acceso denegado: No tienes permisos de administrador.';
             await sbClient.auth.signOut(); // Expulsar si no cumple requisitos
+            hideLoading();
         }
     }
+}
+
+// --- Lógica de Tiempo Real (Real-time) ---
+function setupRealtimeListeners() {
+    console.log('Setting up real-time listeners...');
+
+    const debounce = (func, delay) => {
+        let timeout;
+        return function(...args) {
+            const context = this;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), delay);
+        };
+    };
+
+    // Función de refresco debounced para evitar múltiples recargas seguidas
+    const debouncedRefresh = debounce(() => {
+        console.log(`Real-time: Refreshing active view.`);
+        if (sidebarContainer.style.display === 'flex') {
+            sbBtnRefresh.click(); // El botón de refrescar ya tiene la lógica para cada vista
+        }
+        // Refrescar modales abiertos
+        if (clientDetailsModal.style.display === 'block' && currentViewingClientId) {
+            openClientDetails(currentViewingClientId);
+        }
+        if (creditPaymentsModal.style.display === 'flex' && currentCreditPaymentsId) {
+            loadCreditPayments(currentCreditPaymentsId);
+        }
+    }, 2000);
+
+    // Un solo canal para escuchar todos los cambios en el esquema público
+    sbClient.channel('public-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+          console.log('Change detected on table:', payload.table);
+          debouncedRefresh();
+      })
+      .subscribe((status) => { if (status === 'SUBSCRIBED') console.log('¡Conectado al canal de tiempo real!'); });
 }
 
 // --- Navegación del Menú Principal ---
 
 // Función auxiliar para abrir espacios de trabajo con barra lateral
-function openWorkspace(containerToShow) {
+async function openWorkspace(containerToShow) {
+    showLoading('solid');
     if (dashboardInterval) clearInterval(dashboardInterval); // Detener polling del tablero si se cambia de vista
     // Ocultar menú principal y login
     mainMenuContainer.style.display = 'none';
@@ -562,6 +672,7 @@ function openWorkspace(containerToShow) {
 
     // Mostrar el contenedor deseado
     containerToShow.style.display = 'block';
+    setTimeout(hideLoading, 500); // Pequeño delay para transición suave
 }
 
 // Función auxiliar para volver al menú principal (cerrar barra lateral)
@@ -584,8 +695,12 @@ btnUsersMgmt.addEventListener('click', () => {
 btnClientsMgmt.addEventListener('click', () => {
     setActiveSidebar(sbBtnClients);
     openWorkspace(clientsContainer);
-    console.log('Entrando a gestión de clientes...');
-    loadClientsTable();
+    // No recargar si ya hay datos, para persistencia
+    if (allClientsData.length === 0) {
+        loadClientsTable();
+    } else {
+        // Si ya hay datos, mantener la vista actual (no limpiar)
+    }
 });
 
 btnMunicipalitiesMgmt.addEventListener('click', () => {
@@ -623,8 +738,15 @@ function setActiveSidebar(btn) {
     if(btn) btn.classList.add('active');
 }
 
-if(sbBtnUsers) sbBtnUsers.addEventListener('click', () => { setActiveSidebar(sbBtnUsers); openWorkspace(dashboardContainer); loadUsersTable(); });
-if(sbBtnClients) sbBtnClients.addEventListener('click', () => { setActiveSidebar(sbBtnClients); openWorkspace(clientsContainer); loadClientsTable(); });
+if(sbBtnUsers) sbBtnUsers.addEventListener('click', () => { setActiveSidebar(sbBtnUsers); openWorkspace(dashboardContainer); if(usersTableBody.children.length === 0) loadUsersTable(); });
+if(sbBtnClients) sbBtnClients.addEventListener('click', () => { 
+    setActiveSidebar(sbBtnClients); 
+    openWorkspace(clientsContainer); 
+    // Persistencia: Solo cargar si está vacío
+    if (allClientsData.length === 0) {
+        loadClientsTable();
+    }
+});
 if(sbBtnMunis) sbBtnMunis.addEventListener('click', () => { setActiveSidebar(sbBtnMunis); openWorkspace(municipalitiesContainer); populateDeptSelects(); });
 if(sbBtnDashboard) sbBtnDashboard.addEventListener('click', () => { 
     setActiveSidebar(sbBtnDashboard);
@@ -649,13 +771,35 @@ if(sbBtnExport) sbBtnExport.addEventListener('click', () => { /* No active state
 if(sbBtnInversiones) sbBtnInversiones.addEventListener('click', () => { handleLinkNavigation('INVERSIONES M&R'); });
 if(sbBtnDatabase) sbBtnDatabase.addEventListener('click', () => { handleLinkNavigation('Base de datos'); });
 if(sbBtnAdminReports) sbBtnAdminReports.addEventListener('click', () => { setActiveSidebar(sbBtnAdminReports); openReportsWorkspace(); });
-if(sbBtnRefresh) sbBtnRefresh.addEventListener('click', () => {
+if(sbBtnRefresh) sbBtnRefresh.addEventListener('click', async () => {
+    showLoading('transparent');
     // Actualizar según la vista activa
-    if (dashboardContainer.style.display === 'block') loadUsersTable();
-    if (clientsContainer.style.display === 'block') loadClientsTable();
-    if (municipalitiesContainer.style.display === 'block') populateDeptSelects();
-    if (dashboardControlContainer.style.display === 'block') loadDashboardData(currentDashboardMode);
-    if (adminReportsContainer.style.display === 'block' && currentUserIsDeveloper) loadDevReportsTable();
+    if (dashboardContainer.style.display === 'block') await loadUsersTable();
+    if (clientsContainer.style.display === 'block') {
+        // Recargar datos de clientes pero mantener la búsqueda
+        await loadClientsTable(true); // true = silent/refresh mode
+        if (currentClientSearchQuery) {
+            // Re-aplicar búsqueda
+            const term = currentClientSearchQuery;
+            const filtered = allClientsData.filter(c => 
+                (c.name && c.name.toLowerCase().includes(term.toLowerCase())) || 
+                (c.cedula && c.cedula.includes(term))
+            );
+            renderClientsTable(filtered);
+        }
+    }
+    if (municipalitiesContainer.style.display === 'block') await populateDeptSelects();
+    if (dashboardControlContainer.style.display === 'block') await loadDashboardData(currentDashboardMode);
+    if (reportsContainer.style.display === 'block') {
+        if (pgReportBox.style.display === 'block') await generatePgReport();
+        if (pbReportBox.style.display === 'block') await generatePaymentBehaviorReport();
+        if (crReportBox.style.display === 'block') await generateCreditsReport();
+        if (pmReportBox.style.display === 'block') await generatePmReport();
+        if (exReportBox.style.display === 'block') await generateExReport();
+        if (gnReportBox.style.display === 'block') await generateGnReport();
+    }
+    if (adminReportsContainer.style.display === 'block' && currentUserIsDeveloper) await loadDevReportsTable();
+    hideLoading();
 });
 if(sbBtnLogout) sbBtnLogout.addEventListener('click', async () => {
     await sbClient.auth.signOut();
@@ -732,7 +876,7 @@ async function loadUsersTable() {
 }
 
 // Función para cargar la tabla de clientes
-async function loadClientsTable() {
+async function loadClientsTable(isRefresh = false) {
     console.log('Iniciando carga de clientes...');
     
     // 2. Cargar Alertas Activas
@@ -758,7 +902,10 @@ async function loadClientsTable() {
     }
 
     allClientsData = clients || []; // Guardar para búsqueda
-    clientsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Realice una búsqueda de clientes por favor</td></tr>';
+    
+    if (!isRefresh) {
+        clientsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Realice una búsqueda de clientes por favor</td></tr>';
+    }
 }
 
 async function renderClientsTable(clients) {
@@ -872,89 +1019,7 @@ clientsTableBody.addEventListener('click', async (e) => {
     }
 
     if (target.classList.contains('btn-ver-cliente')) {
-        clientDetailsModal.style.display = 'block';
-        
-        // Limpiar datos previos
-        document.getElementById('detail-client-name').innerText = 'Cargando...';
-        document.getElementById('client-credits-table-body').innerHTML = '';
-
-        // Obtener nombre y cédula del cliente
-        const { data: clientData, error: clientError } = await sbClient
-            .from('clients')
-            .select('name, cedula, total_recaudo')
-            .eq('id', clientId)
-            .single();
-        
-        let credits = null;
-        let error = null;
-
-        if (clientError) {
-            error = clientError;
-        } else if (clientData) {
-            document.getElementById('detail-client-name').innerText = clientData.name;
-            
-            if (clientData.cedula) {
-                // --- Lógica de Recaudo Total ---
-                // 1. Base importada
-                const baseImportada = parseFloat(clientData.total_recaudo) || 0;
-                
-                // 2. Sumatoria Pagos Nativos (Tabla payments filtrada por cédula)
-                const { data: payments } = await sbClient
-                    .from('payments')
-                    .select('payment_amount')
-                    .eq('cedula', clientData.cedula);
-                
-                const totalNativo = (payments || []).reduce((sum, p) => sum + (parseFloat(p.payment_amount) || 0), 0);
-                
-                // 3. Total
-                const totalRecaudo = baseImportada + totalNativo;
-                document.getElementById('detail-total-collection').innerText = `$${totalRecaudo.toLocaleString()}`;
-
-                // Cargar historial de créditos desde 'debtors' usando la CÉDULA
-                const result = await sbClient
-                    .from('debtors')
-                    .select('id, credit_type, valor_cuota, interests, sale_date, sale_value, balance, remaining_payments, payment_term, asesor_name') // Incluimos ID para acciones
-                    .eq('cedula', clientData.cedula)
-                    .order('sale_date', { ascending: true }); // Ordenar del más viejo al más reciente
-                
-                credits = result.data;
-                error = result.error;
-            } else {
-                // Si no tiene cédula, no hay créditos que buscar
-                credits = [];
-            }
-        }
-
-        const tbody = document.getElementById('client-credits-table-body');
-        if (error) {
-            console.error('Error cargando historial:', error);
-            tbody.innerHTML = `<tr><td colspan="9" style="color: red; text-align: center;">Error: ${error.message}<br><small>Verifica en Supabase que existan las columnas 'cedula' y 'asesor_name' en 'debtors'.</small></td></tr>`;
-        } else if (credits.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9">No hay créditos registrados</td></tr>';
-        } else {
-            credits.forEach(c => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${c.credit_type || ''}</td>
-                    <td>$ ${(Number(c.valor_cuota) || 0).toLocaleString('es-CO')}</td>
-                    <td>$ ${(Number(c.interests) || 0).toLocaleString('es-CO')}</td>
-                    <td>${c.sale_date || ''}</td>
-                    <td>$ ${(Number(c.sale_value) || 0).toLocaleString('es-CO')}</td>
-                    <td>$ ${(Number(c.balance) || 0).toLocaleString('es-CO')}</td>
-                    <td>${c.remaining_payments || ''}</td>
-                    <td>${c.payment_term || ''}</td>
-                    <td>${c.asesor_name || ''}</td>
-                    <td style="white-space: nowrap;">
-                        <div style="display: flex; gap: 5px; justify-content: center;">
-                            <button class="btn-view-payments" data-id="${c.id}" title="Ver Pagos" style="width: 25px; height: 25px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 12px;">👁️</button>
-                            <button class="btn-edit-credit-history" data-id="${c.id}" title="Editar Crédito" style="width: 25px; height: 25px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 12px;">✏️</button>
-                            <button class="btn-delete-credit-history" data-id="${c.id}" title="Eliminar Crédito" style="width: 25px; height: 25px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 12px;">🗑️</button>
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
+        openClientDetails(clientId);
     }
     if (target.classList.contains('btn-editar-cliente')) {
         // 1. Obtener datos del cliente
@@ -1128,7 +1193,9 @@ btnConfirmReprest.addEventListener('click', async () => {
     else {
         alert('Pago represte autorizado.');
         approveReprestModal.style.display = 'none';
-        loadClientsTable(); // Recargar para actualizar estado visual
+        // Actualizar estado visual sin recargar todo si es posible, o recargar silenciosamente
+        const btn = document.querySelector(`.status-alert[data-id="${currentAlertActionId}"]`);
+        if(btn) btn.parentElement.innerHTML = '<div class="status-capsule status-open">Crédito Abierto</div>';
     }
 });
 
@@ -1142,7 +1209,8 @@ btnRejectReprest.addEventListener('click', async () => {
     else {
         alert('Solicitud rechazada y eliminada.');
         approveReprestModal.style.display = 'none';
-        loadClientsTable();
+        const btn = document.querySelector(`.status-alert[data-id="${currentAlertActionId}"]`);
+        if(btn) btn.remove();
     }
 });
 
@@ -1156,7 +1224,8 @@ btnConfirmReactivate.addEventListener('click', async () => {
     else {
         alert('Crédito reactivado exitosamente.');
         reactivateCreditModal.style.display = 'none';
-        loadClientsTable();
+        const btn = document.querySelector(`.status-closed[data-id="${currentReactivateClientId}"]`);
+        if(btn) btn.parentElement.innerHTML = '<div class="status-capsule status-open">Crédito Abierto</div>';
     }
 });
 
@@ -1294,14 +1363,32 @@ usersTableBody.addEventListener('click', async (e) => {
 
     // Botón Eliminar
     if (target.classList.contains('btn-eliminar')) {
-        if (confirm('¿Estás seguro de eliminar este usuario y su cuenta de acceso?')) {
-            // Llamada a la función RPC para borrar de auth y public
-            const { error } = await sbClient.rpc('delete_user_complete', { 
-                target_user_id: userId 
+        if (confirm('¿Estás seguro de eliminar este usuario y su cuenta de acceso? Esta acción es irreversible.')) {
+            showLoading('transparent');
+            // Obtener la sesión actual para asegurar que el token de autorización se envía.
+            const { data: { session } } = await sbClient.auth.getSession();
+            if (!session) {
+                hideLoading();
+                return alert('Error: Sesión no encontrada. Por favor, inicie sesión de nuevo.');
+            }
+            // Llamada a la Edge Function para borrar de auth y public
+            const { data, error } = await sbClient.functions.invoke('delete-user-admin', {
+                body: { target_user_id: userId },
+                headers: { Authorization: `Bearer ${session.access_token}` }
             });
             
+            hideLoading();
+
             if (error) {
-                alert('Error al eliminar: ' + error.message);
+                // Mejorar el mensaje de error para mostrar el detalle de la Edge Function
+                let errorMessage = 'Error al eliminar: ' + error.message;
+                if (error.context && error.context.error) {
+                    errorMessage += `\n\nDetalle: ${error.context.error.message || JSON.stringify(error.context.error)}`;
+                } else if (error.context) {
+                    errorMessage += `\n\nRespuesta: ${JSON.stringify(error.context)}`;
+                }
+                alert(errorMessage);
+                console.error('Error invoking delete-user-admin:', error, error.context);
             } else {
                 alert('Usuario eliminado del sistema.');
                 loadUsersTable(); // Recargar la tabla
@@ -1505,16 +1592,22 @@ document.getElementById('saveCreateBtn').addEventListener('click', async () => {
     }
 
     const selectedRole = createRole.value;
-    const isAdmin = selectedRole === 'Administrador';
 
-    const { error } = await sbClient.rpc('create_user_complete', {
-        new_email: createEmail.value,
-        new_password: createPassword.value,
-        new_name: createName.value,
-        new_cedula: createCedula.value,
-        new_role: selectedRole,
-        new_municipios: tempSelectedMunis,
-        new_is_admin: ['Administrador', 'Administrador maestro', 'Desarrollador'].includes(selectedRole)
+    // Obtener sesión para autorización
+    const { data: { session } } = await sbClient.auth.getSession();
+    if (!session) return alert('Sesión expirada. Por favor inicie sesión nuevamente.');
+
+    const { error } = await sbClient.functions.invoke('create-user-admin', {
+        body: {
+            email: createEmail.value,
+            password: createPassword.value,
+            name: createName.value,
+            cedula: createCedula.value,
+            role: selectedRole,
+            municipios: tempSelectedMunis,
+            is_admin: ['Administrador', 'Administrador maestro', 'Desarrollador'].includes(selectedRole)
+        },
+        headers: { Authorization: `Bearer ${session.access_token}` }
     });
 
     if (error) {
@@ -1522,7 +1615,7 @@ document.getElementById('saveCreateBtn').addEventListener('click', async () => {
     } else {
         alert('Usuario creado exitosamente');
         createModal.style.display = 'none';
-        loadUsersTable();
+        loadUsersTable(); // Recargar tabla
     }
 });
 
@@ -1537,40 +1630,47 @@ editRole.addEventListener('change', (e) => {
 // --- Lógica Modal Contraseña ---
 
 savePassBtn.addEventListener('click', async () => {
-    if (!newPasswordInput.value) return alert('Escribe una contraseña');
-    
+    if (!newPasswordInput.value) return alert('Escribe una nueva contraseña.');
+    if (newPasswordInput.value.length < 6) return alert('La contraseña debe tener al menos 6 caracteres.');
+
     savePassBtn.disabled = true;
     savePassBtn.innerText = 'Actualizando...';
 
-    let rpcFunction = 'update_user_password';
-    let rpcParams = {
-        target_user_id: currentPassId,
-        new_password: newPasswordInput.value
-    };
-
-    // Si estamos en modo recuperación, usamos la otra función y parámetros
+    // El modo de recuperación personalizado está roto y es inseguro.
+    // Se deshabilita temporalmente. Se recomienda usar el flujo de recuperación de Supabase.
     if (isRecoveryMode) {
-        rpcFunction = 'reset_password_by_identity';
-        rpcParams = {
-            target_name: recoveryData.name,
-            target_email: recoveryData.email,
-            target_role: recoveryData.role,
-            new_password: newPasswordInput.value
-        };
-    }
-
-    // Llamada a la Función de Base de Datos (RPC)
-    const { data, error } = await sbClient.rpc(rpcFunction, rpcParams);
-
-    savePassBtn.disabled = false;
-    savePassBtn.innerText = 'Actualizar';
-
-    if (error || (isRecoveryMode && data === false)) {
-        alert('Error al cambiar contraseña: ' + (error.message || 'Verifica que la Edge Function esté desplegada.'));
-    } else {
-        alert('Contraseña actualizada correctamente');
+        alert('La recuperación de contraseña por este método no está disponible. Contacte al desarrollador.');
+        savePassBtn.disabled = false;
+        savePassBtn.innerText = 'Actualizar';
         passwordModal.style.display = 'none';
         isRecoveryMode = false;
+        return;
+    }
+
+    // --- NUEVA LÓGICA: Llamada a Edge Function para actualizar contraseña ---
+    try {
+        const { data: { session } } = await sbClient.auth.getSession();
+        if (!session) throw new Error('Sesión expirada. Por favor inicie sesión nuevamente.');
+
+        const { error } = await sbClient.functions.invoke('update-user-password-admin', {
+            body: {
+                target_user_id: currentPassId,
+                new_password: newPasswordInput.value
+            },
+            headers: { Authorization: `Bearer ${session.access_token}` }
+        });
+
+        if (error) throw error;
+
+        alert('Contraseña actualizada correctamente');
+        passwordModal.style.display = 'none';
+
+    } catch (err) {
+        alert('Error al cambiar contraseña: ' + err.message);
+    } finally {
+        savePassBtn.disabled = false;
+        savePassBtn.innerText = 'Actualizar';
+        currentPassId = null;
     }
 });
 
@@ -1597,40 +1697,46 @@ forgotPassBtn.addEventListener('click', () => {
 });
 
 confirmForgotBtn.addEventListener('click', async () => {
-    if (!forgotName.value || !forgotEmail.value || !forgotRole.value) {
-        return alert('Complete todos los campos, incluyendo el rol.');
+    const name = forgotName.value;
+    const email = forgotEmail.value;
+    const role = forgotRole.value;
+    const newPassword = document.getElementById('forgot-new-password').value;
+    const confirmPassword = document.getElementById('forgot-confirm-password').value;
+
+    if (!name || !email || !role || !newPassword || !confirmPassword) {
+        return alert('Por favor, complete todos los campos.');
+    }
+    if (newPassword.length < 6) {
+        return alert('La nueva contraseña debe tener al menos 6 caracteres.');
+    }
+    if (newPassword !== confirmPassword) {
+        return alert('Las contraseñas no coinciden.');
     }
 
-    confirmForgotBtn.innerText = 'Verificando...';
+    confirmForgotBtn.innerText = 'Procesando...';
     confirmForgotBtn.disabled = true;
 
-    // 1. Verificar identidad primero, incluyendo el rol
-    const { data, error } = await sbClient.rpc('verify_user_identity', {
-        target_name: forgotName.value,
-        target_email: forgotEmail.value,
-        target_role: forgotRole.value
-    });
+    try {
+        const { data, error } = await sbClient.functions.invoke('reset-password-identity', {
+            body: {
+                name: name,
+                email: email,
+                role: role,
+                new_password: newPassword
+            }
+        });
 
-    confirmForgotBtn.innerText = 'Consultar';
-    confirmForgotBtn.disabled = false;
+        if (error) throw error;
 
-    if (error || !data || !data.success) {
-        alert('Error: No se encontró un usuario con los datos proporcionados o no tiene los permisos adecuados.');
-    } else {
-        // 2. Si existe, abrir modal de cambio de contraseña
-        recoveryData = {
-            name: forgotName.value,
-            email: forgotEmail.value,
-            role: forgotRole.value
-        };
-        isRecoveryMode = true;
-        
+        alert('Contraseña restablecida exitosamente. Ahora puede iniciar sesión con su nueva contraseña.');
         forgotPassModal.style.display = 'none';
-        
-        // Configurar modal de password
-        passUserName.innerText = data.name;
-        newPasswordInput.value = '';
-        passwordModal.style.display = 'block';
+
+    } catch (err) {
+        const errorMessage = err.context?.error?.message || err.message || 'Ocurrió un error desconocido.';
+        alert(`Error al restablecer la contraseña: ${errorMessage}`);
+    } finally {
+        confirmForgotBtn.innerText = 'Restablecer Contraseña';
+        confirmForgotBtn.disabled = false;
     }
 });
 
@@ -1772,13 +1878,13 @@ saveEditClientBtn.addEventListener('click', async () => {
         await Promise.all(promises);
         alert('Cliente y registros asociados actualizados correctamente.');
         editClientModal.style.display = 'none';
-        loadClientsTable();
+        loadClientsTable(true);
+        clientsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Cliente actualizado. Realice una búsqueda para ver los cambios.</td></tr>';
     } catch (err) {
         console.error('Error en actualización en cascada:', err);
-        // No revertimos el cliente, pero avisamos
         alert('Cliente actualizado, pero hubo errores actualizando registros históricos: ' + err.message);
         editClientModal.style.display = 'none';
-        loadClientsTable();
+        loadClientsTable(true);
     }
 });
 
@@ -1954,7 +2060,7 @@ saveCreateClientBtn.addEventListener('click', async () => {
     } else {
         alert('Cliente creado exitosamente');
         createClientModal.style.display = 'none';
-        loadClientsTable();
+        // No recargar tabla completa
     }
 });
 
@@ -2275,7 +2381,8 @@ btnDeleteExtraOnly.addEventListener('click', async () => {
     else {
         alert('Cupo extra eliminado.');
         deleteClientOptionsModal.style.display = 'none';
-        loadClientsTable();
+        loadClientsTable(true);
+        clientsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Cupo eliminado. Realice una búsqueda para ver los cambios.</td></tr>';
     }
 });
 
@@ -2296,7 +2403,8 @@ btnDeleteFullHistory.addEventListener('click', async () => {
     else {
         alert('Cliente y todo su historial eliminados.');
         deleteClientOptionsModal.style.display = 'none';
-        loadClientsTable();
+        loadClientsTable(true);
+        clientsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Cliente eliminado. Realice una búsqueda para ver los cambios.</td></tr>';
     }
 });
 
@@ -2355,9 +2463,9 @@ btnDeleteSelected.addEventListener('click', async () => {
     alert('Eliminación múltiple completada.');
     btnDeleteSelected.disabled = false;
     btnDeleteSelected.innerText = `Borrar (0)`;
-    isMultiDeleteMode = false;
-    btnMultiDeleteMode.click(); // Desactivar modo
-    loadClientsTable();
+    if (isMultiDeleteMode) btnMultiDeleteMode.click(); // Desactivar modo
+    loadClientsTable(true);
+    clientsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Clientes eliminados. Realice una búsqueda para ver los cambios.</td></tr>';
 });
 
 // --- Lógica Buscador ---
@@ -2371,6 +2479,7 @@ modalSearchInput.addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {
         const term = modalSearchInput.value.trim();
         
+        currentClientSearchQuery = term; // Guardar para persistencia
         searchClientModal.style.display = 'none';
         clientsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Buscando en base de datos...</td></tr>';
 
@@ -2394,6 +2503,7 @@ btnCloseSearch.addEventListener('click', () => {
 });
 
 btnShowAllClients.addEventListener('click', () => {
+    currentClientSearchQuery = ''; // Resetear búsqueda
     renderClientsTable(allClientsData);
     searchClientModal.style.display = 'none';
 });
@@ -3246,10 +3356,8 @@ clientCreditsTableBody.addEventListener('click', async (e) => {
                 alert('Error al eliminar crédito: ' + error.message);
             } else {
                 alert('Crédito eliminado correctamente.');
-                // Recargar la tabla de historial simulando click en ver cliente
-                // Necesitamos el ID del cliente actual. Lo podemos sacar del DOM o variable global si existiera.
-                // Por simplicidad, cerramos el modal para obligar a recargar.
-                clientDetailsModal.style.display = 'none';
+                // Recargar el modal de detalles del cliente para ver el cambio.
+                if (currentViewingClientId) openClientDetails(currentViewingClientId);
             }
         }
     }
@@ -3289,7 +3397,8 @@ btnSaveEditCredit.addEventListener('click', async () => {
     } else {
         alert('Crédito actualizado.');
         editCreditModal.style.display = 'none';
-        clientDetailsModal.style.display = 'none'; // Cerrar para recargar al volver a abrir
+        // Recargar el modal de detalles del cliente para ver el cambio.
+        if (currentViewingClientId) openClientDetails(currentViewingClientId);
     }
 });
 
@@ -3470,6 +3579,72 @@ closeCreditPaymentsX.addEventListener('click', () => {
     creditPaymentsModal.style.display = 'none';
 });
 
+// --- Función reutilizable para abrir detalles de cliente ---
+async function openClientDetails(clientId) {
+    currentViewingClientId = clientId;
+    clientDetailsModal.style.display = 'block';
+    
+    document.getElementById('detail-client-name').innerText = 'Cargando...';
+    const tbody = document.getElementById('client-credits-table-body');
+    tbody.innerHTML = '<tr><td colspan="10">Cargando créditos...</td></tr>';
+
+    const { data: clientData, error: clientError } = await sbClient
+        .from('clients')
+        .select('name, cedula, total_recaudo')
+        .eq('id', clientId)
+        .single();
+
+    if (clientError) {
+        tbody.innerHTML = `<tr><td colspan="10" style="color: red;">Error al cargar datos del cliente: ${clientError.message}</td></tr>`;
+        return;
+    }
+
+    if (clientData) {
+        document.getElementById('detail-client-name').innerText = clientData.name;
+        
+        const baseImportada = parseFloat(clientData.total_recaudo) || 0;
+        const { data: payments } = await sbClient.from('payments').select('payment_amount').eq('cedula', clientData.cedula);
+        const totalNativo = (payments || []).reduce((sum, p) => sum + (parseFloat(p.payment_amount) || 0), 0);
+        document.getElementById('detail-total-collection').innerText = `$${(baseImportada + totalNativo).toLocaleString()}`;
+
+        const { data: credits, error: creditsError } = await sbClient
+            .from('debtors')
+            .select('id, credit_type, valor_cuota, interests, sale_date, sale_value, balance, remaining_payments, payment_term, asesor_name')
+            .eq('cedula', clientData.cedula)
+            .order('sale_date', { ascending: true });
+
+        if (creditsError) {
+            tbody.innerHTML = `<tr><td colspan="10" style="color: red;">Error al cargar créditos: ${creditsError.message}</td></tr>`;
+        } else if (!credits || credits.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10">No hay créditos registrados para este cliente.</td></tr>';
+        } else {
+            tbody.innerHTML = '';
+            credits.forEach(c => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="white-space: nowrap;">${c.credit_type || ''}</td>
+                    <td style="white-space: nowrap;">$ ${(Number(c.valor_cuota) || 0).toLocaleString('es-CO')}</td>
+                    <td style="white-space: nowrap;">$ ${(Number(c.interests) || 0).toLocaleString('es-CO')}</td>
+                    <td style="white-space: nowrap;">${c.sale_date || ''}</td>
+                    <td style="white-space: nowrap;">$ ${(Number(c.sale_value) || 0).toLocaleString('es-CO')}</td>
+                    <td style="white-space: nowrap;">$ ${(Number(c.balance) || 0).toLocaleString('es-CO')}</td>
+                    <td style="white-space: nowrap;">${c.remaining_payments || ''}</td>
+                    <td style="white-space: nowrap;">${c.payment_term || ''}</td>
+                    <td>${c.asesor_name || ''}</td>
+                    <td style="white-space: nowrap;">
+                        <div style="display: flex; gap: 5px; justify-content: center;">
+                            <button class="btn-view-payments" data-id="${c.id}" title="Ver Pagos" style="width: 25px; height: 25px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 12px;">👁️</button>
+                            <button class="btn-edit-credit-history" data-id="${c.id}" title="Editar Crédito" style="width: 25px; height: 25px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 12px;">✏️</button>
+                            <button class="btn-delete-credit-history" data-id="${c.id}" title="Eliminar Crédito" style="width: 25px; height: 25px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 12px;">🗑️</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+    }
+}
+
 // ==========================================
 // LÓGICA INFORMES P&G (PROFIT & LOSS)
 // ==========================================
@@ -3480,12 +3655,14 @@ btnPgDaily.addEventListener('click', () => {
     currentPgMode = 'daily';
     btnPgDaily.className = 'btn-primary';
     btnPgWeekly.className = 'btn-secondary';
+    pgFilterDateText.innerText = 'Seleccionar Fecha'; // Limpiar fecha al cambiar modo
 });
 
 btnPgWeekly.addEventListener('click', () => {
     currentPgMode = 'weekly';
     btnPgWeekly.className = 'btn-primary';
     btnPgDaily.className = 'btn-secondary';
+    pgFilterDateText.innerText = 'Seleccionar Fecha'; // Limpiar fecha al cambiar modo
 });
 
 // Función auxiliar para ocultar todos los reportes y resetear botones
@@ -3678,10 +3855,12 @@ btnPgFilterDate.addEventListener('click', () => {
     if (mode === 'daily') {
         pgModalDateType.innerHTML += '<option value="specific">Día Específico</option>';
         pgModalDateType.innerHTML += '<option value="range">Rango de Fechas</option>';
+        pgModalDateType.innerHTML += '<option value="all">Mostrar Todo</option>';
     } else {
         // Modo Semanal
         pgModalDateType.innerHTML += '<option value="month">Mes Completo</option>';
         pgModalDateType.innerHTML += '<option value="range">Rango Personalizado</option>';
+        pgModalDateType.innerHTML += '<option value="all">Mostrar Todo</option>';
     }
 
     // Seleccionar el tipo actual si es compatible, sino el primero
@@ -3701,6 +3880,7 @@ btnPbFilterDate.addEventListener('click', () => {
     if (mode === 'daily') {
         pgModalDateType.innerHTML += '<option value="specific">Día Específico</option>';
         pgModalDateType.innerHTML += '<option value="range">Rango de Fechas</option>';
+        pgModalDateType.innerHTML += '<option value="all">Mostrar Todo</option>';
     } else {
         // Modo Semanal
         pgModalDateType.innerHTML += '<option value="month">Mes Completo</option>';
@@ -3720,6 +3900,7 @@ btnCrFilterDate.addEventListener('click', () => {
     if (mode === 'daily') {
         pgModalDateType.innerHTML += '<option value="specific">Día Específico</option>';
         pgModalDateType.innerHTML += '<option value="range">Rango de Fechas</option>';
+        pgModalDateType.innerHTML += '<option value="all">Mostrar Todo</option>';
     } else {
         // Modo Semanal
         pgModalDateType.innerHTML += '<option value="month">Mes Completo</option>';
@@ -3739,6 +3920,7 @@ btnPmFilterDate.addEventListener('click', () => {
     if (mode === 'daily') {
         pgModalDateType.innerHTML += '<option value="specific">Día Específico</option>';
         pgModalDateType.innerHTML += '<option value="range">Rango de Fechas</option>';
+        pgModalDateType.innerHTML += '<option value="all">Mostrar Todo</option>';
     } else {
         // Modo Semanal
         pgModalDateType.innerHTML += '<option value="month">Mes Completo</option>';
@@ -3758,6 +3940,7 @@ btnExFilterDate.addEventListener('click', () => {
     if (mode === 'daily') {
         pgModalDateType.innerHTML += '<option value="specific">Día Específico</option>';
         pgModalDateType.innerHTML += '<option value="range">Rango de Fechas</option>';
+        pgModalDateType.innerHTML += '<option value="all">Mostrar Todo</option>';
     } else {
         // Modo Semanal
         pgModalDateType.innerHTML += '<option value="month">Mes Completo</option>';
@@ -3777,6 +3960,7 @@ btnGnFilterDate.addEventListener('click', () => {
     if (mode === 'daily') {
         pgModalDateType.innerHTML += '<option value="specific">Día Específico</option>';
         pgModalDateType.innerHTML += '<option value="range">Rango de Fechas</option>';
+        pgModalDateType.innerHTML += '<option value="all">Mostrar Todo</option>';
     } else {
         // Modo Semanal
         pgModalDateType.innerHTML += '<option value="month">Mes Completo</option>';
@@ -3793,7 +3977,7 @@ function updatePgModalView() {
     const type = pgModalDateType.value;
     pgModalDateInputsContainer.innerHTML = '';
     const now = new Date();
-    const todayISO = now.toISOString().split('T')[0];
+    const todayISO = getLocalDateKey(now);
     const currentMonthISO = now.toISOString().slice(0, 7); // YYYY-MM
 
     if (type === 'specific') {
@@ -3825,6 +4009,8 @@ function updatePgModalView() {
                 <option value="4">Semana 4 (22-Fin)</option>
             </select>
         `;
+    } else if (type === 'all') {
+        pgModalDateInputsContainer.innerHTML = '<p>Se mostrarán todos los registros disponibles.</p>';
     }
 
     // Agregar listeners a los nuevos inputs para actualizar preview
@@ -3853,6 +4039,8 @@ function updatePgDatePreview() {
         const month = document.getElementById('pg-input-month-week').value;
         const week = document.getElementById('pg-input-week-num').value;
         text = month ? `Semana ${week} de ${month}` : '--';
+    } else if (type === 'all') {
+        text = 'Todos los registros';
     }
     
     pgDatePreview.innerText = text;
@@ -3904,6 +4092,10 @@ btnPgDateAccept.addEventListener('click', () => {
             start.setDate(22);
             end = new Date(year, month, 0); // Fin de mes
         }
+    } else if (type === 'all') {
+        // Rango muy amplio
+        start = new Date(2000, 0, 1);
+        end = new Date(2100, 11, 31);
     }
 
     // Ajustar horas
@@ -3959,30 +4151,19 @@ async function generatePgReport() {
 
     try {
         // B. Estrategia de Consulta
+        // Se eliminan filtros de created_at para usar sale_date/payment_date/etc en memoria
         
-        // 1. Créditos (Debtors) con Lookback
-        // Necesitamos créditos antiguos para calcular el "Cobro Esperado"
-        const lookbackDays = currentPgMode === 'daily' ? 180 : 365;
-        const lookbackDate = new Date(start);
-        lookbackDate.setDate(lookbackDate.getDate() - lookbackDays);
-        
-        const { data: debtors, error: debtError } = await sbClient
-            .from('debtors')
-            .select('*')
-            .gte('created_at', lookbackDate.toISOString()); // Traer desde hace X días
+        // 1. Créditos (Debtors)
+        const { data: debtors, error: debtError } = await sbClient.from('debtors').select('*');
 
         if (debtError) throw debtError;
 
-        // 2. Pagos (Payments) - Rango estricto
-        const { data: payments, error: payError } = await sbClient
-            .from('payments')
-            .select('*')
-            .gte('created_at', startISO)
-            .lte('created_at', endISO);
+        // 2. Pagos (Payments)
+        const { data: payments, error: payError } = await sbClient.from('payments').select('*');
 
         if (payError) throw payError;
 
-        // 3. Gastos (Reports/Wreports) - Rango estricto
+        // 3. Gastos (Reports/Wreports)
         const expenseTable = currentPgMode === 'daily' ? 'reports' : 'wreports'; // Asumiendo nombres de tablas
         // Nota: Si las tablas no existen, esto fallará. Asumimos que existen según prompt.
         // Si no existen, comentar esta parte.
@@ -3990,9 +4171,7 @@ async function generatePgReport() {
         try {
             const { data: exp } = await sbClient
                 .from(expenseTable)
-                .select('*')
-                .gte('created_at', startISO)
-                .lte('created_at', endISO);
+                .select('*');
             expenses = exp || [];
         } catch (e) { console.warn("Tabla de gastos no encontrada o error", e); }
 
@@ -4002,14 +4181,14 @@ async function generatePgReport() {
 
         // Helper para generar claves
         const getKey = (dateObj, asesor, muni) => {
-            const d = dateObj.toISOString().split('T')[0];
+            const d = getLocalDateKey(dateObj);
             return `${d}|${asesor || 'Sin Asesor'}|${muni || 'Sin Muni'}`;
         };
 
         // Iterar día por día en el rango para calcular "Cobro Esperado"
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
             const currentDayTime = d.getTime();
-            const currentDayISO = d.toISOString().split('T')[0];
+            const currentDayISO = getLocalDateKey(d);
 
             debtors.forEach(debt => {
                 // Filtros de Entidad (Dept, Muni, User)
@@ -4031,8 +4210,9 @@ async function generatePgReport() {
                 // Cálculo "Cobro" (Expectativa)
                 // Si el crédito fue creado ANTES o DURANTE este día, y no está terminado (o terminó después)
                 // Simplificación robusta: Si created_at <= hoy.
-                // Y manejo de importados: usar sale_date si existe.
-                const creationTime = new Date(debt.sale_date || debt.created_at).getTime();
+                // Y manejo de importados: usar sale_date si existe. Usamos parseDateValue para robustez.
+                const debtDateObj = parseDateValue(debt.sale_date) || parseDateValue(debt.created_at);
+                const creationTime = debtDateObj ? debtDateObj.getTime() : 0;
                 
                 if (creationTime <= currentDayTime) {
                     // Sumar cuota (asumiendo que debe pagar todos los días/semanas)
@@ -4043,7 +4223,7 @@ async function generatePgReport() {
 
                 // Cálculo "Créditos" (Ventas Nuevas) y "Ganancia"
                 // Solo si fue creado EXACTAMENTE este día
-                const debtCreatedDay = new Date(debt.created_at).toISOString().split('T')[0];
+                const debtCreatedDay = getLocalDateKey(debtDateObj);
                 if (debtCreatedDay === currentDayISO) {
                     if (debt.imported !== true) {
                         dataMap[key].creditos += (parseFloat(debt.sale_value) || 0);
@@ -4079,10 +4259,15 @@ async function generatePgReport() {
             if (pgFilterUser.value && debtor.asesor_name !== pgFilterUser.value) return;
             if (pgFilterMuni.value && debtor.municipality !== pgFilterMuni.value) return;
 
-            const pDate = new Date(p.created_at);
+            // Usar payment_date si existe, sino created_at
+            const pDate = parseDateValue(p.payment_date) || parseDateValue(p.created_at);
+            
+            // Validar si el pago cae en el rango del reporte (ya que trajimos todos los pagos)
+            if (pDate < start || pDate > end) return;
+
             const key = getKey(pDate, debtor.asesor_name, debtor.municipality);
             
-            if (!dataMap[key]) dataMap[key] = { date: pDate.toISOString().split('T')[0], user: debtor.asesor_name, muni: debtor.municipality, cobro: 0, gastos: 0, creditos: 0, ganancia: 0, cobroReal: 0 };
+            if (!dataMap[key]) dataMap[key] = { date: getLocalDateKey(pDate), user: debtor.asesor_name, muni: debtor.municipality, cobro: 0, gastos: 0, creditos: 0, ganancia: 0, cobroReal: 0 };
 
             dataMap[key].cobroReal += (parseFloat(p.payment_amount) || 0);
         });
@@ -4125,7 +4310,7 @@ btnDownloadPg.addEventListener('click', () => {
     if (!currentPgReportData.length) return alert('No hay datos para descargar');
     
     const exportData = currentPgReportData.map(row => ({
-        "FECHA": row.date,
+        "FECHA": adjustDateForExport(row.date),
         "ASESOR": row.user,
         "MUNICIPIO": row.muni,
         "COBRO REAL": row.cobro, // Expectativa
@@ -4149,12 +4334,14 @@ btnPbDaily.addEventListener('click', () => {
     currentPbMode = 'daily';
     btnPbDaily.className = 'btn-primary';
     btnPbWeekly.className = 'btn-secondary';
+    pbFilterDateText.innerText = 'Seleccionar Fecha';
 });
 
 btnPbWeekly.addEventListener('click', () => {
     currentPbMode = 'weekly';
     btnPbWeekly.className = 'btn-primary';
     btnPbDaily.className = 'btn-secondary';
+    pbFilterDateText.innerText = 'Seleccionar Fecha';
 });
 
 async function loadPbFilters() {
@@ -4238,22 +4425,24 @@ async function generatePaymentBehaviorReport() {
         });
 
         // Paso 2: Mapa de Pagos Realizados
+        // Traemos todos los pagos para filtrar en memoria por payment_date
         const { data: payments, error: payError } = await sbClient
             .from('payments')
-            .select('debtor_id, created_at, payment_date')
-            .gte('created_at', startISO)
-            .lte('created_at', endISO);
+            .select('debtor_id, created_at, payment_date');
 
         if (payError) throw payError;
 
         const paymentsMap = new Set();
         payments.forEach(p => {
             // Usamos payment_date si existe (fecha real del pago), sino created_at
-            const pDate = new Date(p.payment_date || p.created_at);
-            const dateStr = pDate.toISOString().split('T')[0];
+            const pDate = parseDateValue(p.payment_date) || parseDateValue(p.created_at);
             
-            // Clave compuesta: ID_FECHA
-            paymentsMap.add(`${p.debtor_id}|${dateStr}`);
+            // Solo considerar pagos dentro del rango seleccionado
+            if (pDate >= start && pDate <= end) {
+                const dateStr = getLocalDateKey(pDate);
+                // Clave compuesta: ID_FECHA
+                paymentsMap.add(`${p.debtor_id}|${dateStr}`);
+            }
         });
 
         // Paso 3: El Cruce (Detección de "Misses")
@@ -4261,7 +4450,7 @@ async function generatePaymentBehaviorReport() {
 
         // Iterar sobre el rango de fechas
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            const checkDateStr = d.toISOString().split('T')[0];
+            const checkDateStr = getLocalDateKey(d);
             const checkDateTs = d.getTime();
 
             // En modo semanal, podríamos simplificar verificando solo un día de la semana o agrupando
@@ -4310,7 +4499,8 @@ async function generatePaymentBehaviorReport() {
                         
                         // Buscar en payments array crudo
                         const hasPaymentInWeek = payments.some(p => {
-                            const pTs = new Date(p.payment_date || p.created_at).getTime();
+                            const pObj = parseDateValue(p.payment_date) || parseDateValue(p.created_at);
+                            const pTs = pObj.getTime();
                             return p.debtor_id === debtor.id && pTs >= weekStartTs && pTs <= checkDateTs;
                         });
                         
@@ -4411,7 +4601,7 @@ async function toggleMissedPaymentDetails(debtorId, idx) {
             let html = '<div style="margin-bottom: 10px;"><button class="btn-download-history" data-idx="' + idx + '" style="background-color: #28a745; color: white; border: none; padding: 5px 10px; cursor: pointer;">Descargar Historial Excel</button></div>';
             html += '<table border="1" style="width:100%; font-size:0.85em;"><thead><tr><th>Fecha Pago</th><th>Abono</th><th>Método</th></tr></thead><tbody>';
             history.forEach(h => {
-                const date = h.payment_date || new Date(h.created_at).toISOString().split('T')[0];
+                const date = h.payment_date || getLocalDateKey(new Date(h.created_at));
                 html += `<tr><td>${date}</td><td>$${parseFloat(h.payment_amount).toLocaleString()}</td><td>${h.payment_method || 'Efectivo'}</td></tr>`;
             });
             html += '</tbody></table>';
@@ -4464,7 +4654,7 @@ async function downloadMissedPaymentHistory(idx) {
     }
 
     history.forEach(h => {
-        const dateStr = h.payment_date || new Date(h.created_at).toISOString().split('T')[0];
+        const dateStr = h.payment_date || getLocalDateKey(new Date(h.created_at));
         const amount = parseFloat(h.payment_amount) || 0;
         const quota = parseFloat(debtor.valor_cuota) || 0;
 
@@ -4499,7 +4689,7 @@ btnDownloadPb.addEventListener('click', () => {
     if (!currentPbReportData.length) return alert('No hay datos para descargar');
     
     const exportData = currentPbReportData.map(item => ({
-        "FECHA REVISION": item.date,
+        "FECHA REVISION": adjustDateForExport(item.date),
         "CLIENTE": item.debtor.name,
         "MUNICIPIO": item.debtor.municipality,
         "ASESOR": item.debtor.asesor_name,
@@ -4520,12 +4710,14 @@ btnCrDaily.addEventListener('click', () => {
     currentCrMode = 'daily';
     btnCrDaily.className = 'btn-primary';
     btnCrWeekly.className = 'btn-secondary';
+    crFilterDateText.innerText = 'Seleccionar Fecha';
 });
 
 btnCrWeekly.addEventListener('click', () => {
     currentCrMode = 'weekly';
     btnCrWeekly.className = 'btn-primary';
     btnCrDaily.className = 'btn-secondary';
+    crFilterDateText.innerText = 'Seleccionar Fecha';
 });
 
 async function loadCrFilters() {
@@ -4616,19 +4808,12 @@ async function generateCreditsReport() {
             if (!isTermValid) return false;
 
             // B. Filtro de Fecha
-            // Prioridad: sale_date (si existe y es válida) > created_at
-            let recordDateTs = 0;
-            if (d.sale_date) {
-                // Intentar parsear dd-MM-yyyy o ISO
-                if (/^\d{2}-\d{2}-\d{4}$/.test(d.sale_date)) {
-                    const parts = d.sale_date.split('-');
-                    recordDateTs = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).getTime();
-                } else {
-                    recordDateTs = new Date(d.sale_date).getTime();
-                }
-            } else {
-                recordDateTs = new Date(d.created_at).getTime();
-            }
+            // Usamos el helper robusto que maneja zonas horarias correctamente.
+            const recordDate = parseDateValue(d.sale_date) || parseDateValue(d.created_at);
+
+            if (!recordDate) return false; // Si no se puede parsear la fecha, se excluye.
+
+            const recordDateTs = recordDate.getTime();
 
             // Comparar rango (start y end ya tienen horas ajustadas 00:00 a 23:59)
             return recordDateTs >= startTs && recordDateTs <= endTs;
@@ -4688,7 +4873,7 @@ btnDownloadCr.addEventListener('click', () => {
         
         return {
             "CLIENTE": r.name,
-            "FECHA": r.sale_date || new Date(r.created_at).toLocaleDateString(),
+            "FECHA": adjustDateForExport(r.sale_date || r.created_at),
             "ASESOR": r.asesor_name,
             "MUNICIPIO": r.municipality,
             "NUEVO": isNew ? saleVal : 0,
@@ -4710,12 +4895,14 @@ btnPmDaily.addEventListener('click', () => {
     currentPmMode = 'daily';
     btnPmDaily.className = 'btn-primary';
     btnPmWeekly.className = 'btn-secondary';
+    pmFilterDateText.innerText = 'Seleccionar Fecha';
 });
 
 btnPmWeekly.addEventListener('click', () => {
     currentPmMode = 'weekly';
     btnPmWeekly.className = 'btn-primary';
     btnPmDaily.className = 'btn-secondary';
+    pmFilterDateText.innerText = 'Seleccionar Fecha';
 });
 
 async function loadPmFilters() {
@@ -4791,8 +4978,6 @@ async function generatePmReport() {
         // Para este caso, usaremos created_at como filtro principal para la consulta a BD.
         
         let query = sbClient.from('payments').select('*')
-            .gte('created_at', startISO)
-            .lte('created_at', endISO);
 
         // Filtros directos si es posible (debtor_name no siempre es fiable para filtrar por asesor, mejor cruzar)
         // Pero payments no tiene asesor_name ni municipality directamente, solo debtor_id o debtor_name.
@@ -4836,6 +5021,10 @@ async function generatePmReport() {
             const debtor = debtorsMap.get(p.debtor_id);
             if (!debtor) return; // Pago huérfano
 
+            // Filtro de Fecha (payment_date)
+            const pDate = parseDateValue(p.payment_date) || parseDateValue(p.created_at);
+            if (pDate < start || pDate > end) return;
+
             // Filtros de Entidad (UI)
             if (pmFilterUser.value && debtor.asesor_name !== pmFilterUser.value) return;
             if (pmFilterMuni.value && debtor.municipality !== pmFilterMuni.value) return;
@@ -4857,7 +5046,7 @@ async function generatePmReport() {
 
             processedData.push({
                 debtorName: debtor.name,
-                paymentDate: p.payment_date || new Date(p.created_at).toLocaleDateString(),
+                paymentDate: getLocalDateKey(pDate),
                 userName: debtor.asesor_name,
                 municipality: debtor.municipality,
                 valorCuota: quotaVal,
@@ -4904,7 +5093,7 @@ btnDownloadPm.addEventListener('click', () => {
 
     const exportData = currentPmReportData.map(r => ({
         "CLIENTE": r.debtorName,
-        "FECHA": r.paymentDate,
+        "FECHA": adjustDateForExport(r.paymentDate || r.created_at),
         "ASESOR": r.userName,
         "MUNICIPIO": r.municipality,
         "CUOTA": r.valorCuota,
@@ -4925,12 +5114,14 @@ btnExDaily.addEventListener('click', () => {
     currentExMode = 'daily';
     btnExDaily.className = 'btn-primary';
     btnExWeekly.className = 'btn-secondary';
+    exFilterDateText.innerText = 'Seleccionar Fecha';
 });
 
 btnExWeekly.addEventListener('click', () => {
     currentExMode = 'weekly';
     btnExWeekly.className = 'btn-primary';
     btnExDaily.className = 'btn-secondary';
+    exFilterDateText.innerText = 'Seleccionar Fecha';
 });
 
 async function loadExFilters() {
@@ -4965,8 +5156,6 @@ async function generateExReport() {
         // 2. Consulta a Firestore
         let query = sbClient.from(collectionName)
             .select('*')
-            .gte('created_at', startISO)
-            .lte('created_at', endISO);
 
         // Filtro opcional por usuario
         if (exFilterUser.value) {
@@ -4981,6 +5170,10 @@ async function generateExReport() {
 
         if (reports) {
             reports.forEach(r => {
+                // Filtro de Fecha (expenses_date o created_at)
+                const rDate = parseDateValue(r.expenses_date) || parseDateValue(r.created_at);
+                if (rDate < start || rDate > end) return;
+
                 // Extraer información del campo 'others'
                 // others es un array: [valor, descripcion]
                 let others = r.others;
@@ -4998,7 +5191,7 @@ async function generateExReport() {
                     if (valor > 0) {
                         processedData.push({
                             userName: r.user_name,
-                            createdAt: r.created_at,
+                            createdAt: r.expenses_date || r.created_at,
                             valor: valor,
                             descripcion: descripcion
                         });
@@ -5041,7 +5234,7 @@ btnDownloadEx.addEventListener('click', () => {
 
     const exportData = currentExReportData.map(r => ({
         "ASESOR": r.userName,
-        "FECHA": new Date(r.createdAt).toLocaleDateString(),
+        "FECHA": adjustDateForExport(r.createdAt),
         "VALOR": r.valor,
         "DESCRIPCION": r.descripcion
     }));
@@ -5060,12 +5253,14 @@ btnGnDaily.addEventListener('click', () => {
     currentGnMode = 'daily';
     btnGnDaily.className = 'btn-primary';
     btnGnWeekly.className = 'btn-secondary';
+    gnFilterDateText.innerText = 'Seleccionar Fecha';
 });
 
 btnGnWeekly.addEventListener('click', () => {
     currentGnMode = 'weekly';
     btnGnWeekly.className = 'btn-primary';
     btnGnDaily.className = 'btn-secondary';
+    gnFilterDateText.innerText = 'Seleccionar Fecha';
 });
 
 async function loadGnFilters() {
@@ -5096,8 +5291,6 @@ async function generateGnReport() {
         // 2. Consulta a Firestore
         let query = sbClient.from(collectionName)
             .select('*')
-            .gte('created_at', startISO)
-            .lte('created_at', endISO)
             .order('created_at', { ascending: false }); // Orden descendente para inyección
 
         if (gnFilterUser.value) {
@@ -5107,7 +5300,12 @@ async function generateGnReport() {
         const { data: reports, error } = await query;
         if (error) throw error;
 
-        currentGnReportData = reports || [];
+        // Filtro de Fecha en Memoria (report_date o created_at)
+        currentGnReportData = (reports || []).filter(r => {
+            const rDate = parseDateValue(r.report_date) || parseDateValue(r.created_at);
+            return rDate >= start && rDate <= end;
+        });
+        
         renderGnTable(currentGnReportData);
 
     } catch (e) {
@@ -5119,24 +5317,78 @@ async function generateGnReport() {
 function renderGnTable(data) {
     gnTableBody.innerHTML = '';
 
-    // 3. Lógica de "Inyección" (Proyección)
-    // Solo si hay un usuario seleccionado y hay datos previos
-    if (gnFilterUser.value && data.length > 0) {
-        const lastRecord = data[0]; // El más reciente (orden desc)
+    if (data.length === 0) {
+        gnTableBody.innerHTML = '<tr><td colspan="8">No se encontraron reportes.</td></tr>';
+        return;
+    }
+
+    // 1. Agrupar los reportes por usuario
+    const reportsByUser = data.reduce((acc, report) => {
+        const user = report.user_name;
+        if (!acc[user]) {
+            acc[user] = [];
+        }
+        acc[user].push(report);
+        return acc;
+    }, {});
+
+    // 2. Iterar sobre cada usuario y renderizar su bloque
+    Object.keys(reportsByUser).forEach(userName => {
+        const userReports = reportsByUser[userName];
+
+        // 4. Renderizar los reportes normales para este usuario
+        userReports.forEach(r => {
+            const row = document.createElement('tr');
+            
+            const creditsVal = parseFloat(r.credits_report) || 0;
+            const paymentsVal = parseFloat(r.payments_report) || 0;
+            const expensesVal = parseFloat(r.expense_report) || parseFloat(r.expenses_report) || 0;
+            const initialBase = parseFloat(r.initial_base) || 0;
+            const finalBase = parseFloat(r.final_base) || 0;
+            const dateObj = new Date(r.created_at);
+
+            row.innerHTML = `
+                <td>${r.user_name}</td>
+                <td>
+                    $${creditsVal.toLocaleString()}
+                    <button class="btn btn-view-gn-credits" data-user="${r.user_name}" data-date="${r.created_at}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #3498db;">👁️</button>
+                </td>
+                <td>
+                    $${paymentsVal.toLocaleString()}
+                    <button class="btn btn-view-gn-payments" data-user="${r.user_name}" data-date="${r.created_at}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #3498db;">👁️</button>
+                </td>
+                <td>
+                    $${expensesVal.toLocaleString()}
+                    <button class="btn btn-edit-gn-expenses" data-id="${r.id}" data-user="${r.user_name}" data-date="${r.created_at}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #f39c12;">✏️</button>
+                    <button class="btn btn-view-gn-expenses" data-user="${r.user_name}" data-date="${r.created_at}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #3498db;">👁️</button>
+                </td>
+                <td>
+                    $${initialBase.toLocaleString()}
+                    <button class="btn btn-edit-base" data-type="initial" data-id="${r.id}" data-val="${initialBase}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #f39c12;">✏️</button>
+                </td>
+                <td>
+                    $${finalBase.toLocaleString()}
+                    <button class="btn btn-edit-base" data-type="final" data-id="${r.id}" data-val="${finalBase}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #f39c12;">✏️</button>
+                </td>
+                <td>${dateObj.toLocaleDateString('es-ES', { weekday: 'long' })}</td>
+                <td>${dateObj.toLocaleDateString()}</td>
+            `;
+            gnTableBody.appendChild(row);
+        });
+
+        // El primer reporte en la lista es el más reciente porque los datos vienen ordenados desc.
+        const lastRecord = userReports[0];
+
+        // 3. Renderizar la fila de "Inyección" para este usuario
         const lastDate = new Date(lastRecord.created_at);
-        
-        // Cálculo Fecha Futura
         const nextDate = new Date(lastDate);
         if (currentGnMode === 'daily') {
             nextDate.setDate(nextDate.getDate() + 1);
         } else {
             nextDate.setDate(nextDate.getDate() + 7);
         }
-
-        // Proyección de Base: Inicial Futura = Final Anterior
         const projectedBase = parseFloat(lastRecord.final_base) || 0;
 
-        // Renderizar fila de inyección
         const injectionRow = document.createElement('tr');
         injectionRow.style.backgroundColor = '#d4edda'; // Verde claro
         injectionRow.innerHTML = `
@@ -5153,51 +5405,6 @@ function renderGnTable(data) {
             <td>${nextDate.toLocaleDateString()}</td>
         `;
         gnTableBody.appendChild(injectionRow);
-    }
-
-    if (data.length === 0) {
-        gnTableBody.innerHTML = '<tr><td colspan="8">No se encontraron reportes.</td></tr>';
-        return;
-    }
-
-    data.forEach(r => {
-        const row = document.createElement('tr');
-        
-        // Mapeo de datos
-        const creditsVal = parseFloat(r.credits_report) || 0;
-        const paymentsVal = parseFloat(r.payments_report) || 0;
-        const expensesVal = parseFloat(r.expense_report) || parseFloat(r.expenses_report) || 0;
-        const initialBase = parseFloat(r.initial_base) || 0;
-        const finalBase = parseFloat(r.final_base) || 0;
-        const dateObj = new Date(r.created_at);
-
-        row.innerHTML = `
-            <td>${r.user_name}</td>
-            <td>
-                $${creditsVal.toLocaleString()}
-                <button class="btn btn-view-gn-credits" data-user="${r.user_name}" data-date="${r.created_at}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #3498db;">👁️</button>
-            </td>
-            <td>
-                $${paymentsVal.toLocaleString()}
-                <button class="btn btn-view-gn-payments" data-user="${r.user_name}" data-date="${r.created_at}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #3498db;">👁️</button>
-            </td>
-            <td>
-                $${expensesVal.toLocaleString()}
-                <button class="btn btn-edit-gn-expenses" data-id="${r.id}" data-user="${r.user_name}" data-date="${r.created_at}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #f39c12;">✏️</button>
-                <button class="btn btn-view-gn-expenses" data-user="${r.user_name}" data-date="${r.created_at}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #3498db;">👁️</button>
-            </td>
-            <td>
-                $${initialBase.toLocaleString()}
-                <button class="btn btn-edit-base" data-type="initial" data-id="${r.id}" data-val="${initialBase}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #f39c12;">✏️</button>
-            </td>
-            <td>
-                $${finalBase.toLocaleString()}
-                <button class="btn btn-edit-base" data-type="final" data-id="${r.id}" data-val="${finalBase}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #f39c12;">✏️</button>
-            </td>
-            <td>${dateObj.toLocaleDateString('es-ES', { weekday: 'long' })}</td>
-            <td>${dateObj.toLocaleDateString()}</td>
-        `;
-        gnTableBody.appendChild(row);
     });
 }
 
@@ -5240,9 +5447,11 @@ gnTableBody.addEventListener('click', async (e) => {
         
         // Replace content with input and save button
         cell.innerHTML = `
-            <input type="number" id="input-base-${type}-${id}" value="${currentVal}" style="width: 80px; padding: 2px;">
-            <button class="btn btn-save-base btn-action-small" data-id="${id}" data-type="${type}" data-collection="${collection}" style="background-color: #2ecc71;"><i class="fas fa-save"></i></button>
-            <button class="btn btn-cancel-base btn-action-small" onclick="generateGnReport()" style="background-color: #e74c3c;"><i class="fas fa-times"></i></button>
+            <div style="display: flex; align-items: center; gap: 2px;">
+                <input type="number" id="input-base-${type}-${id}" value="${currentVal}" style="width: 70px; padding: 2px;">
+                <button class="btn btn-save-base btn-action-small" data-id="${id}" data-type="${type}" data-collection="${collection}" style="background-color: #2ecc71; width: 30px; height: 30px; padding: 0; display: inline-flex; justify-content: center; align-items: center;"><i class="fas fa-save"></i></button>
+                <button class="btn btn-cancel-base btn-action-small" onclick="generateGnReport()" style="background-color: #e74c3c; width: 30px; height: 30px; padding: 0; display: inline-flex; justify-content: center; align-items: center;"><i class="fas fa-times"></i></button>
+            </div>
         `;
     }
 
@@ -5311,13 +5520,16 @@ gnTableBody.addEventListener('click', async (e) => {
         if (expData) {
             currentExpEditData = { ...expData, parentId: id, collection: detailCollection };
             
-            editExpGas.value = expData.gasoline || 0;
+            editExpGas.value = expData.fuel || 0;
             editExpLunch.value = expData.lunch || 0;
             // others es array [val, desc]
             const others = expData.others || [0, ''];
             editExpOtherVal.value = others[0] || 0;
             editExpOtherDesc.value = others[1] || '';
             
+            // Calcular total inicial al abrir
+            const initialTotal = (parseFloat(editExpGas.value) || 0) + (parseFloat(editExpLunch.value) || 0) + (parseFloat(editExpOtherVal.value) || 0);
+            document.getElementById('edit-exp-total-display').innerText = '$ ' + initialTotal.toLocaleString();
             editExpensesModal.style.display = 'block';
         } else {
             alert('No se encontraron detalles de gastos para este registro.');
@@ -5348,7 +5560,7 @@ gnTableBody.addEventListener('click', async (e) => {
         }
             
         if (expData) {
-            viewExpGas.innerText = '$ ' + (expData.gasoline || 0).toLocaleString();
+            viewExpGas.innerText = '$ ' + (expData.fuel || 0).toLocaleString();
             viewExpLunch.innerText = '$ ' + (expData.lunch || 0).toLocaleString();
             const others = expData.others || [0, ''];
             viewExpOtherVal.innerText = '$ ' + (others[0] || 0).toLocaleString();
@@ -5378,6 +5590,17 @@ gnTableBody.addEventListener('click', async (e) => {
     }
 });
 
+// Listeners para recalcular total en tiempo real en el modal de edición
+function updateEditExpTotal() {
+    const gas = parseFloat(editExpGas.value) || 0;
+    const lunch = parseFloat(editExpLunch.value) || 0;
+    const other = parseFloat(editExpOtherVal.value) || 0;
+    document.getElementById('edit-exp-total-display').innerText = '$ ' + (gas + lunch + other).toLocaleString();
+}
+editExpGas.addEventListener('input', updateEditExpTotal);
+editExpLunch.addEventListener('input', updateEditExpTotal);
+editExpOtherVal.addEventListener('input', updateEditExpTotal);
+
 // --- Lógica Guardar Edición Gastos ---
 btnSaveExpChanges.addEventListener('click', async () => {
     if (!currentExpEditData) return;
@@ -5392,7 +5615,7 @@ btnSaveExpChanges.addEventListener('click', async () => {
     // 1. Actualizar colección hija (expenses/wexpenses)
     const { error: childError } = await sbClient.from(currentExpEditData.collection)
         .update({
-            gasoline: newGas,
+            fuel: newGas,
             lunch: newLunch,
             others: [newOtherVal, newOtherDesc],
             total_expenses: newTotal
@@ -5446,6 +5669,33 @@ function getReportDateRange(dateStr) {
         end.setHours(23,59,59,999);
     }
     return { start, end };
+}
+
+// Helper para ajustar fecha a mediodía local para exportación
+function adjustDateForExport(dateInput) {
+    if (!dateInput) return null;
+    
+    // Si es string YYYY-MM-DD, parsear manualmente para evitar desfase UTC
+    if (typeof dateInput === 'string') {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+            const [y, m, d] = dateInput.split('-').map(Number);
+            return new Date(y, m - 1, d, 12, 0, 0);
+        }
+        // Si es string DD-MM-YYYY
+        if (/^\d{2}-\d{2}-\d{4}$/.test(dateInput)) {
+            const [d, m, y] = dateInput.split('-').map(Number);
+            return new Date(y, m - 1, d, 12, 0, 0);
+        }
+        // ISO String (YYYY-MM-DDTHH:mm:ss...) - Extraer partes para evitar desfase UTC
+        if (/^\d{4}-\d{2}-\d{2}T/.test(dateInput)) {
+            const [y, m, d] = dateInput.split('T')[0].split('-').map(Number);
+            return new Date(y, m - 1, d, 12, 0, 0);
+        }
+    }
+
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return null;
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0);
 }
 
 async function loadReportCreditsDetails(userName, dateStr) {
@@ -5516,11 +5766,11 @@ reportCreditsDetailBody.addEventListener('click', async (e) => {
                 dateVal = `${parts[2]}-${parts[1]}-${parts[0]}`;
             } else {
                 const d = new Date(data.sale_date);
-                if (!isNaN(d)) dateVal = d.toISOString().split('T')[0];
+                if (!isNaN(d)) dateVal = getLocalDateKey(d);
             }
         } else {
             const d = new Date(data.created_at);
-            if (!isNaN(d)) dateVal = d.toISOString().split('T')[0];
+            if (!isNaN(d)) dateVal = getLocalDateKey(d);
         }
 
         row.innerHTML = `
@@ -5564,7 +5814,7 @@ reportCreditsDetailBody.addEventListener('click', async (e) => {
             number_of_payments: parseInt(row.querySelector('.edit-c-ncuotas').value) || 0,
             valor_cuota: parseFloat(row.querySelector('.edit-c-vcuota').value) || 0,
             credit_type: row.querySelector('.edit-c-type').value,
-            payment_term: row.querySelector('.edit-c-term').value,
+            payment_term: [row.querySelector('.edit-c-term').value],
             municipality: row.querySelector('.edit-c-muni').value
         };
 
@@ -5669,7 +5919,7 @@ reportPaymentsDetailBody.addEventListener('click', async (e) => {
         });
 
         // Fecha input
-        let dateVal = data.payment_date || new Date(data.created_at).toISOString().split('T')[0];
+        let dateVal = data.payment_date || getLocalDateKey(new Date(data.created_at));
         // Si es dd-MM-yyyy convertir
         if (/^\d{2}-\d{2}-\d{4}$/.test(dateVal)) {
              const parts = dateVal.split('-');
@@ -5779,7 +6029,7 @@ btnDownloadReportCreditsDetails.addEventListener('click', async () => {
     if (!credits || credits.length === 0) return alert('No hay datos');
 
     const exportData = credits.map(c => ({
-        "FECHA": new Date(c.created_at).toLocaleDateString(),
+        "FECHA": adjustDateForExport(c.created_at),
         "CLIENTE": c.name,
         "CEDULA": c.cedula,
         "TELEFONO": c.phone,
@@ -5800,15 +6050,18 @@ btnDownloadReportCreditsDetails.addEventListener('click', async () => {
 
 btnDownloadReportPaymentsDetails.addEventListener('click', async () => {
     const { start, end } = getReportDateRange(currentDownloadDate);
-    const { data: payments } = await sbClient.from('payments')
-        .select('*, debtors(municipality, asesor_name)') // Intentar join si Supabase lo permite, sino manual
+    const { data: payments, error } = await sbClient.from('payments')
+        .select('*')
         .gte('created_at', start.toISOString()).lte('created_at', end.toISOString());
+
+    if (error) return alert('Error al obtener datos: ' + error.message);
+    if (!payments || payments.length === 0) return alert('No hay datos para descargar');
 
     // Filtrado manual y mapeo (si el join no funciona directo en JS client simple)
     // Asumimos que payments tiene debtor_id. Hacemos fetch de deudores para filtrar por asesor.
     const debtorIds = [...new Set(payments.map(p => p.debtor_id))];
     const { data: debtors } = await sbClient.from('debtors').select('id, municipality, asesor_name').in('id', debtorIds);
-    const debtorMap = new Map(debtors.map(d => [d.id, d]));
+    const debtorMap = new Map((debtors || []).map(d => [d.id, d]));
 
     const filteredPayments = payments.filter(p => {
         const d = debtorMap.get(p.debtor_id);
@@ -5820,7 +6073,7 @@ btnDownloadReportPaymentsDetails.addEventListener('click', async () => {
     const exportData = filteredPayments.map(p => {
         const d = debtorMap.get(p.debtor_id);
         return {
-            "FECHA": p.payment_date || new Date(p.created_at).toLocaleDateString(),
+            "FECHA": adjustDateForExport(p.payment_date || p.created_at),
             "CLIENTE": p.debtor_name,
             "ABONO": parseFloat(p.payment_amount) || 0,
             "METODO": p.payment_method,
@@ -5846,7 +6099,7 @@ btnDownloadGn.addEventListener('click', () => {
         "BASE INICIAL": parseFloat(r.initial_base) || 0,
         "BASE FINAL": parseFloat(r.final_base) || 0,
         "DIA": new Date(r.created_at).toLocaleDateString('es-ES', { weekday: 'long' }),
-        "FECHA": new Date(r.created_at).toLocaleDateString()
+        "FECHA": adjustDateForExport(r.created_at)
     }));
 
     const wb = XLSX.utils.book_new();
@@ -6059,8 +6312,11 @@ async function processDebtorForExport(d) {
     if (d.sale_date || d.saleDate) {
         const sDate = d.sale_date || d.saleDate;
         if (/^\d{2}-\d{2}-\d{4}$/.test(sDate)) {
-            const parts = sDate.split('-');
-            dateObj = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+            const [d, m, y] = sDate.split('-').map(Number);
+            dateObj = new Date(y, m - 1, d);
+        } else if (/^\d{4}-\d{2}-\d{2}$/.test(sDate)) {
+            const [y, m, d] = sDate.split('-').map(Number);
+            dateObj = new Date(y, m - 1, d);
         } else {
             dateObj = new Date(sDate);
         }
@@ -6102,7 +6358,7 @@ async function processDebtorForExport(d) {
         "ASESOR": d.asesor_name,
         "DIRECCION": d.address || '',
         "TELEFONO": d.phone || '',
-        "FECHA DE PRESTAMO": dateObj, // Objeto Date para formato Excel
+        "FECHA DE PRESTAMO": adjustDateForExport(d.sale_date || d.saleDate || d.created_at), // Usar dato crudo para evitar desfase
         "CREDITO NUEVO": (d.credit_type === 'Nuevo') ? (parseFloat(d.sale_value) || 0) : 0,
         "REPRESTE": (d.credit_type === 'Represte') ? (parseFloat(d.sale_value) || 0) : 0,
         "CUOTA": parseInt(d.remaining_payments) || 0,

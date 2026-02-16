@@ -1,21 +1,25 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { corsHeaders } from '../_shared/cors.ts'
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight request
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   try {
-    // 1. Configuración con tus credenciales proporcionadas
-    const SUPABASE_URL = 'https://fiahwrkuouceyncxoukj.supabase.co'
-    // Usamos la clave secreta (sb_secret) para tener permisos de borrado (Service Role)
-    const SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_602DmNyNuatkCv-jxrNOXg_2qzrHC_g'
+    // 1. Inicializar cliente de Supabase usando variables de entorno (más seguro)
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
 
-    // 2. Inicializar cliente de Supabase
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-
-    // 3. Calcular la fecha límite (hace 15 minutos)
+    // 2. Calcular la fecha límite (hace 15 minutos)
     const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString()
 
     console.log(`Ejecutando limpieza. Borrando alertas anteriores a: ${fifteenMinsAgo}`)
 
-    // 4. Ejecutar borrado en la tabla alerts_represt
+    // 3. Ejecutar borrado en la tabla alerts_represt
     const { error, count } = await supabase
       .from('alerts_represt')
       .delete({ count: 'exact' }) // Contar cuántos se borran
@@ -24,26 +28,26 @@ Deno.serve(async (req) => {
     if (error) {
       console.error('Error borrando alertas:', error)
       return new Response(JSON.stringify({ error: error.message }), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       })
     }
 
-    // 5. Responder éxito
+    // 4. Responder éxito
     return new Response(
       JSON.stringify({ 
         message: 'Limpieza completada exitosamente', 
         deleted_count: count 
       }),
       { 
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200 
       }
     )
 
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
     })
   }
