@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Supabase</title>
+    <!-- Importar Supabase desde CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Importar SheetJS (XLSX) para exportar a Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.min.js"></script>
+    <link rel="icon" href="img/spinner.png" type="image/png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="sidebar-container" style="display: none;">
+        <img src="img/logo.png" alt="Logo" style="width: 70px; height: 70px; display: block; margin: 0 auto 10px auto; border-radius: 15px; border: 3px solid white;">
+        <p id="sidebar-welcome-msg" style="color: white; text-align: center; font-size: 0.9em; margin-bottom: 20px;"></p>
+        <button id="sb-btn-users" class="sidebar-btn">Usuarios</button>
+        <button id="sb-btn-clients" class="sidebar-btn">Clientes</button>
+        <button id="sb-btn-munis" class="sidebar-btn">Municipios</button>
+        <button id="sb-btn-dashboard" class="sidebar-btn">Tablero</button>
+        <button id="sb-btn-reports" class="sidebar-btn">Informes</button>
+        <button id="sb-btn-import" class="sidebar-btn">Importar</button>
+        <button id="sb-btn-export" class="sidebar-btn">Exportar</button>
+        <button id="sb-btn-inversiones" class="sidebar-btn">INVERSIONES M&R</button>
+        <button id="sb-btn-database" class="sidebar-btn">Base de datos</button>
+        <button id="sb-btn-admin-reports" class="sidebar-btn">Reportar</button>
+        <button id="sb-btn-refresh" class="sidebar-btn">Actualizar</button>
+        <div style="flex-grow: 1;"></div>
+        <button id="sb-btn-logout" class="sidebar-btn" style="background-color: #e74c3c; border-color: #e74c3c;">Cerrar Sesión</button>
+    </div>
+
+    <div id="login-container">
+        <div class="login-box">
+            <img src="img/spinner.png" alt="Logo" style="width: 80px; height: 80px;">
+            <h2>Iniciar Sesión</h2>
+            
+            <input type="email" id="email" placeholder="Correo electrónico" />
+            <input type="password" id="password" placeholder="Contraseña" />
+                    <div style="margin: 10px 0; text-align: left;">
+                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                            <input type="checkbox" id="rememberMe" style="width: auto; margin: 0;"> Recordar datos
+                        </label>
+                    </div>            <button id="loginBtn" class="btn-primary" style="width: 100%;">Ingresar</button>
+            <p style="margin-top: 10px;"><button id="forgotPassBtn" style="background:none; border:none; color:#16233c; text-decoration:underline; cursor:pointer; padding: 0;">¿Olvidó su contraseña?</button></p>
+            <p id="statusMessage"></p>
+        </div>
+    </div>
+
+    <div id="main-menu-container" style="display: none; text-align: center; margin-top: 20px;">
+        <img src="img/logo.png" alt="Logo" style="width: 80px; height: 80px; display: block; margin: 0 auto 10px auto; border-radius: 15px; border: 3px solid white;">
+        <h2 id="main-menu-welcome" style="font-size: 1.2rem; margin-top: 5px;">Bienvenido</h2>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
+            <button id="btn-users-mgmt" class="btn-primary">Gestión de Usuarios</button>
+            <button id="btn-clients-mgmt" class="btn-primary">Gestión de Clientes</button>
+            <button id="btn-municipalities-mgmt" class="btn-primary">Gestión de Municipios</button>
+            <button id="btn-dashboard-control" class="btn-primary">Tablero de Control</button>
+            <button id="btn-reports-section" class="btn-primary">Informes</button>
+            <button id="btn-inversiones-menu" class="btn-primary">INVERSIONES M&R</button>
+            <button id="btn-database-menu" class="btn-primary">Base de datos</button>
+            <button id="btn-admin-reports-menu" class="btn-primary">Reportar</button>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 10px;">
+            <button id="btn-import-excel" class="btn-primary">Importar Excel</button>
+            <button id="btn-export-menu" class="btn-primary">Exportar</button>
+            <input type="file" id="importExcelInput" accept=".xlsx, .xls" style="display: none;" />
+        </div>
+        <button id="logoutBtn" class="btn-primary" style="margin-top: 20px;">Cerrar Sesión</button>
+</div>
+
+    <div id="dashboard-container" style="display: none;">
+        <h1>Gestión de Usuarios</h1>
+        <button id="createUserBtn" class="btn-primary" style="margin-bottom: 15px;">Nuevo Usuario</button>
+        <button id="devChangePassBtn" class="btn-primary" style="display:none; margin-left: 10px;">Cambiar contraseña</button>
+        <button id="devUpdateDataBtn" class="btn-primary" style="display:none; margin-left: 10px;">Actualizacion de datos</button>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Cédula</th>
+                    <th>Email</th>
+                    <th>Rol</th>
+                    <th>Municipios</th>
+                    <th>Fecha de Registro</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="users-table-body"></tbody>
+        </table>
+    </div>
+
+    <div id="clients-container" style="display: none;">
+        <h1>Gestión de Clientes</h1>
+        <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <div style="flex-grow: 1;"></div>
+            <button id="btn-multi-delete-mode" class="btn-primary">Eliminación múltiple</button>
+            <button id="btn-delete-selected" class="btn-primary" style="display:none;">Borrar (<span id="selected-count">0</span>)</button>
+            <button id="btn-search-client" class="btn-primary">Buscar Cliente</button>
+            <button id="btn-new-client" class="btn-primary">+ Nuevo Cliente</button>
+        </div>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th class="multi-delete-col" style="display:none;">Select</th>
+                    <th>Cliente</th>
+                    <th>Cédula</th>
+                    <th>Teléfono</th>
+                    <th>Municipio</th>
+                    <th>Estado Crédito</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="clients-table-body"></tbody>
+        </table>
+    </div>
+
+    <div id="municipalities-container" style="display: none;">
+        <h1>Gestión de Municipios</h1>
+        <div style="margin-bottom: 20px;">
+            <button id="btn-view-munis-section" class="btn-primary">Ver Municipios</button>
+            <button id="btn-create-munis-section" class="btn-primary">Crear Municipios</button>
+        </div>
+
+        <!-- Sección Ver Municipios -->
+        <div id="view-munis-box" style="display: none; background-color: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); padding: 20px; max-width: 600px; margin: 0 auto;">
+            <h2>Ver Municipios</h2>
+            <label>Seleccionar Departamento:</label>
+            <select id="view-muni-dept-select" style="width: 100%; padding: 8px; margin-bottom: 10px;"></select>
+            <button id="btn-search-munis-db" class="btn-primary">Buscar</button>
+            
+            <div id="munis-list-container" style="margin-top: 20px; max-height: 400px; overflow-y: auto; border-top: 1px solid #eee;"></div>
+        </div>
+
+        <!-- Sección Crear Municipios -->
+        <div id="create-munis-box" style="display: none; background-color: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); padding: 20px; max-width: 600px; margin: 0 auto;">
+            <h2>Crear Municipios</h2>
+            <label>Departamento:</label>
+            <select id="create-muni-dept-select" style="width: 100%; padding: 8px; margin-bottom: 10px;"></select>
+            
+            <div id="new-munis-inputs-container">
+                <!-- Aquí se agregarán los inputs dinámicamente -->
+            </div>
+            
+            <button id="btn-add-muni-field" class="btn-primary" style="margin-bottom: 15px;">+ Agregar otro campo</button>
+            <br>
+            <button id="btn-save-new-muni" class="btn-primary">Guardar</button>
+            <button id="btn-cancel-new-muni" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Tablero de Control -->
+    <div id="dashboard-control-container" style="display: none;">
+        <h1>Tablero de Control</h1>
+        
+        <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+            <button id="btn-dashboard-daily" class="btn-secondary">Diario</button>
+            <button id="btn-dashboard-weekly" class="btn-secondary">Semanal</button>
+            <button id="btn-dashboard-download" class="btn-primary">Descargar</button>
+        </div>
+
+        <h3 id="dashboard-date-range" style="color: #555;">Seleccione un modo</h3>
+
+        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+            <!-- Tabla Izquierda: Créditos -->
+            <div style="flex: 1; min-width: 400px;">
+                <h3>Créditos</h3>
+                <table border="1" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                    <thead style="background-color: #f8f9fa;">
+                        <tr>
+                            <th>Asesor</th>
+                            <th>Municipio</th>
+                            <th>Tipo Crédito</th>
+                            <th>Valor Crédito</th>
+                            <th>Ganancias</th>
+                            <th>Valor Cuota</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashboard-credits-body"></tbody>
+                </table>
+            </div>
+
+            <!-- Tabla Derecha: Cobros y Recaudos -->
+            <div style="flex: 1; min-width: 400px;">
+                <h3>Cobros</h3>
+                <table border="1" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                    <thead style="background-color: #f8f9fa;">
+                        <tr>
+                            <th>Asesor</th>
+                            <th>Municipio</th>
+                            <th>Cobro (Esperado)</th>
+                            <th>Recaudo (Real)</th>
+                            <th>% Cobro</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashboard-collections-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Informes -->
+    <div id="reports-container" style="display: none;">
+        <h1>Informes y Reportes</h1>
+
+        <!-- Navegación de Informes (Por ahora solo P&G) -->
+        <div style="margin-bottom: 20px; border-bottom: 1px solid #cccccc; padding-bottom: 10px;">
+            <button id="btn-report-pg" class="btn-primary">P&G</button>
+            <button id="btn-report-pb" class="btn-primary">Comportamiento de Pago</button>
+            <button id="btn-report-cr" class="btn-primary">Créditos</button>
+            <button id="btn-report-pm" class="btn-primary">Cobros</button>
+            <button id="btn-report-ex" class="btn-primary">Gastos</button>
+            <button id="btn-report-gn" class="btn-primary">Reportes</button>
+        </div>
+
+        <!-- Contenedor Informe P&G -->
+        <div id="pg-report-box" style="display: none;">
+            <h2>Informe P&G</h2>
+            
+            <!-- Filtros P&G -->
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <div style="margin-bottom: 10px;">
+                    <label><strong>Modo:</strong></label>
+                    <button id="btn-pg-daily" class="btn-secondary">Diario</button>
+                    <button id="btn-pg-weekly" class="btn-secondary">Semanal</button>
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                    <div>
+                        <label>Fecha:</label>
+                        <button id="btn-pg-filter-date" class="btn-primary">Seleccionar Fecha</button>
+                        <span id="pg-filter-date-text" style="margin-left: 10px; font-weight: bold; color: #495057;">Hoy</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <select id="pg-filter-dept"><option value="">Todos los Departamentos</option></select>
+                    <select id="pg-filter-muni"><option value="">Todos los Municipios</option></select>
+                    <select id="pg-filter-user"><option value="">Todos los Asesores</option></select>
+                    <button id="btn-generate-pg" class="btn-primary">Consultar</button>
+                    <button id="btn-download-pg" class="btn-primary">Informe Excel</button>
+                </div>
+            </div>
+
+            <!-- Tabla Resultados P&G -->
+            <div style="overflow-x: auto;">
+                <table border="1" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                    <thead style="background-color: #343a40; color: white;">
+                        <tr><th>FECHA</th><th>ASESOR</th><th>MUNICIPIO</th><th>COBRO REAL</th><th>GASTOS</th><th>CREDITOS</th><th>GANANCIA</th><th>RECAUDO</th></tr>
+                    </thead>
+                    <tbody id="pg-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Contenedor Informe Comportamiento de Pago (PB) -->
+        <div id="pb-report-box" style="display: none;">
+            <h2>Comportamiento de Pago</h2>
+            
+            <!-- Filtros PB -->
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <div style="margin-bottom: 10px;">
+                    <label><strong>Modo:</strong></label>
+                    <button id="btn-pb-daily" class="btn-secondary">Diario</button>
+                    <button id="btn-pb-weekly" class="btn-secondary">Semanal</button>
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                    <div>
+                        <label>Fecha:</label>
+                        <button id="btn-pb-filter-date" class="btn-primary">Seleccionar Fecha</button>
+                        <span id="pb-filter-date-text" style="margin-left: 10px; font-weight: bold; color: #495057;">Hoy</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <select id="pb-filter-dept"><option value="">Todos los Departamentos</option></select>
+                    <select id="pb-filter-muni"><option value="">Todos los Municipios</option></select>
+                    <select id="pb-filter-user"><option value="">Todos los Asesores</option></select>
+                    <button id="btn-generate-pb" class="btn-primary">Consultar</button>
+                    <button id="btn-download-pb" class="btn-primary">Informe Excel</button>
+                </div>
+            </div>
+
+            <!-- Tabla Resultados PB -->
+            <div style="overflow-x: auto;">
+                <table border="1" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                    <thead style="background-color: #343a40; color: white;">
+                        <tr>
+                            <th>CLIENTE</th>
+                            <th>MUNICIPIO</th>
+                            <th>ASESOR</th>
+                            <th>FECHA PRESTAMO</th>
+                            <th>NUEVOS</th>
+                            <th>REPRESTES</th>
+                            <th>VALOR CUOTA</th>
+                            <th>ABONOS</th>
+                            <th>SALDO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pb-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Contenedor Informe de Créditos (CR) -->
+        <div id="cr-report-box" style="display: none;">
+            <h2>Créditos</h2>
+            
+            <!-- Filtros CR -->
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <div style="margin-bottom: 10px;">
+                    <label><strong>Modo:</strong></label>
+                    <button id="btn-cr-daily" class="btn-secondary">Diario</button>
+                    <button id="btn-cr-weekly" class="btn-secondary">Semanal</button>
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                    <div>
+                        <label>Fecha</label>
+                        <button id="btn-cr-filter-date" class="btn-primary">Seleccionar Fecha</button>
+                        <span id="cr-filter-date-text" style="margin-left: 10px; font-weight: bold; color: #495057;">Hoy</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <select id="cr-filter-dept"><option value="">Todos los Departamentos</option></select>
+                    <select id="cr-filter-muni"><option value="">Todos los Municipios</option></select>
+                    <select id="cr-filter-user"><option value="">Todos los Asesores</option></select>
+                    <button id="btn-generate-cr" class="btn-primary">Consultar</button>
+                    <button id="btn-download-cr" class="btn-primary">Informe Excel</button>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 10px; font-size: 1.2em;">
+                <strong>Total  Creditos: </strong> <span id="cr-total-display" style="color: green;">$0</span>
+            </div>
+
+            <!-- Tabla Resultados CR -->
+            <div style="overflow-x: auto;">
+                <table border="1" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                    <thead style="background-color: #343a40; color: white;">
+                        <tr>
+                            <th>CLIENTE</th>
+                            <th>FECHA</th>
+                            <th>ASESOR</th>
+                            <th>MUNICIPIO</th>
+                            <th>NUEVO</th>
+                            <th>REPRESTE</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cr-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Contenedor Informe de Cobros (PM) -->
+        <div id="pm-report-box" style="display: none;">
+            <h2>Cobros</h2>
+            
+            <!-- Filtros PM -->
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <div style="margin-bottom: 10px;">
+                    <label><strong>Modo:</strong></label>
+                    <button id="btn-pm-daily" class="btn-secondary">Diario</button>
+                    <button id="btn-pm-weekly" class="btn-secondary">Semanal</button>
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                    <div>
+                        <label>Fecha:</label>
+                        <button id="btn-pm-filter-date" class="btn-primary">Seleccionar Fecha</button>
+                        <span id="pm-filter-date-text" style="margin-left: 10px; font-weight: bold; color: #495057;">Hoy</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <select id="pm-filter-dept"><option value="">Todos los Departamentos</option></select>
+                    <select id="pm-filter-muni"><option value="">Todos los Municipios</option></select>
+                    <select id="pm-filter-user"><option value="">Todos los Asesores</option></select>
+                    <button id="btn-generate-pm" class="btn-primary">Consultar</button>
+                    <button id="btn-download-pm" class="btn-primary">Infrome Excel</button>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 10px; font-size: 1.2em; display: flex; gap: 20px;">
+                <span><strong>Cobro Real: </strong> <span id="pm-total-cobro-display" style="color: blue;">$0</span></span>
+                <span><strong>Recaudo: </strong> <span id="pm-total-recaudo-display" style="color: green;">$0</span></span>
+            </div>
+
+            <!-- Tabla Resultados PM -->
+            <div style="overflow-x: auto;">
+                <table border="1" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                    <thead style="background-color: #343a40; color: white;">
+                        <tr>
+                            <th>CLIENTE</th>
+                            <th>FECHA</th>
+                            <th>ASESOR</th>
+                            <th>MUNICIPIO</th>
+                            <th>CUOTA</th>
+                            <th>ABONO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pm-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Contenedor Informe de Otros Gastos (EX) -->
+        <div id="ex-report-box" style="display: none;">
+            <h2>Otros Gastos</h2>
+            
+            <!-- Filtros EX -->
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <div style="margin-bottom: 10px;">
+                    <label><strong>Modo:</strong></label>
+                    <button id="btn-ex-daily" class="btn-secondary">Diario</button>
+                    <button id="btn-ex-weekly" class="btn-secondary">Semanal</button>
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                    <div>
+                        <label>Fecha:</label>
+                        <button id="btn-ex-filter-date" class="btn-primary">Seleccionar Fecha</button>
+                        <span id="ex-filter-date-text" style="margin-left: 10px; font-weight: bold; color: #495057;">Hoy</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <select id="ex-filter-user"><option value="">Todos los Asesores</option></select>
+                    <button id="btn-generate-ex" class="btn-primary">Consultar</button>
+                    <button id="btn-download-ex" class="btn-primary">Informe Excel</button>
+                </div>
+            </div>
+
+            <!-- Tabla Resultados EX -->
+            <div style="overflow-x: auto;">
+                <table border="1" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
+                    <thead style="background-color: #343a40; color: white;">
+                        <tr>
+                            <th>ASESOR</th>
+                            <th>FECHA</th>
+                            <th>VALOR</th>
+                            <th>DESCRIPCION</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ex-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Contenedor Informe General (GN) -->
+        <div id="gn-report-box" style="display: none;">
+            <h2>Reportes</h2>
+            
+            <!-- Filtros GN -->
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <div style="margin-bottom: 10px;">
+                    <label><strong>Modo:</strong></label>
+                    <button id="btn-gn-daily" class="btn-secondary">Diario</button>
+                    <button id="btn-gn-weekly" class="btn-secondary">Semanal</button>
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+                    <div>
+                        <label>Fecha:</label>
+                        <button id="btn-gn-filter-date" class="btn-primary">Seleccionar Periodo</button>
+                        <span id="gn-filter-date-text" style="margin-left: 10px; font-weight: bold; color: #495057;"></span>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <select id="gn-filter-user"><option value="">Todos los Asesores</option></select>
+                    <button id="btn-generate-gn" class="btn-primary">Conultar</button>
+                    <button id="btn-download-gn" class="btn-primary">Informe Excel</button>
+                </div>
+            </div>
+
+            <!-- Tabla Resultados GN -->
+            <div style="overflow-x: auto;">
+                <table border="1" style="width: 100%; border-collapse: collapse; font-size: 0.9em;" id="gn-table">
+                    <thead style="background-color: #343a40; color: white;">
+                        <tr><th>ASESOR</th><th>CREDITO</th><th>COBRO</th><th>GASTOS</th><th>BASE INICIAL</th><th>BASE FINAL</th><th>DIA</th><th>FECHA</th></tr>
+                    </thead>
+                    <tbody id="gn-table-body"></tbody>
+                </table>
+            </div>
+
+            <!-- Sección Exportación Avanzada -->
+            <div style="margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px;">
+                
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Reportes Admin/Dev -->
+    <div id="admin-reports-container" style="display: none;">
+        <h1>Reportes y Solicitudes</h1>
+        
+        <!-- Vista para Administradores -->
+        <div id="admin-view-reports" style="display: none; margin-bottom: 20px;">
+            <button id="btn-create-admin-report" class="btn-primary">Enviar reporte a desarrollador</button>
+        </div>
+
+        <!-- Vista para Desarrolladores -->
+        <div id="dev-view-reports" style="display: none;">
+            <table border="1" style="width: 100%; border-collapse: collapse;">
+                <thead><tr><th>Nombre</th><th>Descripción</th><th>Fecha</th><th>Hecho</th></tr></thead>
+                <tbody id="dev-reports-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal de Edición -->
+    <div id="editModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+        <div style="background:white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding:20px; width:350px; display:flex; flex-direction:column; gap:10px; border-radius: 8px; max-height: 90vh; overflow-y: auto;">
+            <h2>Editar Usuario</h2>
+            <input type="text" id="edit-name" placeholder="Nombre">
+            <input type="text" id="edit-cedula" placeholder="Cédula">
+            <input type="email" id="edit-email" placeholder="Correo" readonly style="background-color: #f0f0f0;">
+            
+            <div id="edit-location-container">
+                <label>Departamento:</label>
+                <select id="edit-dept"></select>
+                
+                <label>Municipios:</label>
+                <input type="text" id="edit-muni-count" readonly placeholder="0 seleccionados (Click para editar)" style="cursor: pointer; background-color: #3f495b;">
+            </div>
+            
+            <label>Rol:</label>
+            <select id="edit-role">
+                <option value="Administrador">Administrador</option>
+                <option value="Usuario">Usuario</option>
+            </select>
+            
+            <button id="saveEditBtn" class="btn-primary">Guardar Cambios</button>
+            <button id="cancelEditBtn" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal de Creación de Usuario -->
+    <div id="createModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 1500;">
+        <div style="background:white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding:20px; width:350px; display:flex; flex-direction:column; gap:10px; max-height: 90vh; overflow-y: auto; border-radius: 8px;">
+            <h2>Añadir Nuevo Usuario</h2>
+            <input type="text" id="create-name" placeholder="Nombre completo">
+            <input type="text" id="create-cedula" placeholder="Cédula">
+            <input type="email" id="create-email" placeholder="Correo electrónico">
+            <input type="password" id="create-password" placeholder="Contraseña (mín. 6 caracteres)">
+            
+            <label>Rol:</label>
+            <select id="create-role">
+                <option value="Usuario">Usuario</option>
+                <option value="Administrador">Administrador</option>
+            </select>
+
+            <div id="create-location-container">
+                <label>Departamento:</label>
+                <select id="create-dept"></select>
+                
+                <label>Asigne municipios:</label>
+                <input type="text" id="create-muni-count" readonly placeholder="Seleccionar municipios..." style="cursor: pointer; background-color: #3f495b;">
+            </div>
+            
+            <button id="saveCreateBtn" class="btn-primary">Guardar Usuario</button>
+            <button id="cancelCreateBtn" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal de Selección de Municipios -->
+    <div id="muniModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 2000;">
+        <div style="background:white; margin:10% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:10px;">
+            <h2>Seleccionar Municipios</h2>
+            <div id="muni-container" style="border: 1px solid #ccc; padding: 10px; max-height: 300px; overflow-y: auto;"></div>
+            <button id="confirmMuniBtn" class="btn-primary">Listo</button>
+        </div>
+    </div>
+
+    <!-- Modal Cambio Contraseña -->
+    <div id="passwordModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 3000;">
+        <div style="background:white; margin:15% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:10px;">
+            <h2>Cambiar Contraseña</h2>
+            <p>Usuario: <span id="pass-user-name" style="font-weight:bold;"></span></p>
+            <input type="password" id="new-password" placeholder="Nueva contraseña">
+            <button id="savePassBtn" class="btn-primary">Actualizar</button>
+            <button id="cancelPassBtn" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Olvidé mi Contraseña -->
+    <div id="forgotPassModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 3500;">
+        <div style="background:white; margin:10% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:10px;">
+            <h2>Recuperar Contraseña</h2>
+            <p style="font-size: 0.9em; color: #666;">Ingrese sus datos exactos para verificar su identidad.</p>
+            <input type="text" id="forgot-name" placeholder="Nombre completo"/>
+            <input type="email" id="forgot-email" placeholder="Correo electrónico">
+            <select id="forgot-role" style="padding: 8px; font-size: 1em;">
+                <option value="" disabled selected>Seleccione su rol</option>
+                <option value="Administrador">Administrador</option>
+                <option value="Administrador maestro">Administrador maestro</option>
+                <option value="Desarrollador">Desarrollador</option>
+            </select>
+            <button id="confirmForgotBtn" class="btn-primary">Consultar</button>
+            <button id="cancelForgotBtn" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Actualizar Datos Desarrollador-->
+    <div id="devUpdateModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 3100;">
+        <div style="background:white; margin:10% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:10px;">
+            <h2>Actualizacion de datos</h2>
+            <input type="text" id="dev-edit-name" placeholder="Nombre">
+            <input type="text" id="dev-edit-cedula" placeholder="Cédula">
+            <input type="email" id="dev-edit-email" placeholder="Correo">
+            <button id="saveDevUpdateBtn" class="btn-primary">Guardar Cambios</button>
+            <button id="cancelDevUpdateBtn" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Detalles Cliente (Créditos) -->
+    <div id="clientDetailsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 2500;">
+        <div style="background:white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding:20px; width:95%; max-width: 1200px; display:flex; flex-direction:column; gap:10px; max-height: 90vh; overflow-y: auto; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+            <span id="closeClientDetailsX" style="position: absolute; top: 10px; right: 20px; font-size: 24px; cursor: pointer; font-weight: bold;">&times;</span>
+            <h2>Historial de creditos</h2>
+            <h3 id="detail-client-name" style="margin: 0;"></h3>
+            <p style="margin: 0;">Recaudo total: <span id="detail-total-collection" style="color: gray;">--</span></p>
+            <table border="1" style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                <thead>
+                    <tr>
+                        <th>Tipo de crédito</th>
+                        <th>Valor Cuota</th>
+                        <th>Intereses</th>
+                        <th>Fecha</th>
+                        <th>Valor Crédito</th>
+                        <th>Saldo</th>
+                        <th>Cuotas Rest.</th>
+                        <th>Tipo de pago</th>
+                        <th>Asesor</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="client-credits-table-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Editar Cliente -->
+    <div id="editClientModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 2600;">
+        <div style="background:white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding:20px; width:90%; max-width: 500px; display:flex; flex-direction:column; gap:10px; max-height: 90vh; overflow-y: auto; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+            <h2>Editar Cliente</h2>
+            <label>Nombre:</label>
+            <input type="text" id="edit-client-name">
+            <label>Cédula:</label>
+            <input type="text" id="edit-client-cedula">
+            <label>Teléfono:</label>
+            <input type="text" id="edit-client-phone">
+            <label>Dirección:</label>
+            <input type="text" id="edit-client-address">
+            
+            <label>Departamento:</label>
+            <select id="edit-client-dept"></select>
+            
+            <label>Municipio:</label>
+            <select id="edit-client-muni"></select>
+            
+            <label>Asesor:</label>
+            <select id="edit-client-advisor"></select>
+            
+            <label>Tipo de pago permitido:</label>
+            <select id="edit-client-frequency">
+                <option value="Diario">Diario</option>
+                <option value="Semanal">Semanal</option>
+            </select>
+            
+            <button id="saveEditClientBtn" class="btn-primary">Guardar Cambios</button>
+            <button id="cancelEditClientBtn" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Nuevo Cliente -->
+    <div id="createClientModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 2600;">
+        <div style="background:white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding:20px; width:90%; max-width: 500px; display:flex; flex-direction:column; gap:10px; max-height: 90vh; overflow-y: auto; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+            <h2>Nuevo Cliente</h2>
+            <label>Nombre:</label>
+            <input type="text" id="create-client-name">
+            <label>Cédula:</label>
+            <input type="text" id="create-client-cedula">
+            <label>Teléfono:</label>
+            <input type="text" id="create-client-phone">
+            <label>Dirección:</label>
+            <input type="text" id="create-client-address">
+            
+            <label>Departamento:</label>
+            <select id="create-client-dept"></select>
+            
+            <label>Municipio:</label>
+            <select id="create-client-muni"></select>
+            
+            <label>Asesor:</label>
+            <select id="create-client-advisor"></select>
+            
+            <label>Tipo de pago permitido:</label>
+            <select id="create-client-frequency">
+                <option value="Diario">Diario</option>
+                <option value="Semanal">Semanal</option>
+            </select>
+            
+            <button id="saveCreateClientBtn" class="btn-primary">Guardar Cliente</button>
+            <button id="cancelCreateClientBtn" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Opciones de Eliminación -->
+    <div id="deleteClientOptionsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 2900;">
+        <div style="background:white; margin:15% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:10px;">
+            <h2>Eliminar</h2>
+            <p>Cliente: <span id="delete-client-name-display" style="font-weight:bold;"></span></p>
+            <p>¿Qué desea eliminar?</p>
+            
+            <button id="btn-delete-extra-only" class="btn-primary">
+                Eliminar Cupo extra
+            </button>
+            
+            <button id="btn-delete-full-history" class="btn-primary">
+                Eliminar Cliente y Todo su Historial
+            </button>
+            
+            <button id="btn-cancel-delete-options" class="btn-primary" style="margin-top: 10px;">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Editar Crédito -->
+    <div id="editCreditModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 2600;">
+        <div style="background:white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding:20px; width:90%; max-width: 600px; display:flex; flex-direction:column; gap:10px; max-height: 90vh; overflow-y: auto; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+            <h2>Editar Crédito</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                    <label>Fecha Venta:</label>
+                    <input type="date" id="edit-credit-date" style="width: 100%;">
+                </div>
+                <div>
+                    <label>Tipo Crédito:</label>
+                    <select id="edit-credit-type" style="width: 100%; padding: 8px;">
+                        <option value="Nuevo">Nuevo</option>
+                        <option value="Represte">Represte</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Valor Crédito:</label>
+                    <input type="number" id="edit-credit-value" style="width: 100%;">
+                </div>
+                <div>
+                    <label>Intereses:</label>
+                    <input type="number" id="edit-credit-interests" style="width: 100%;">
+                </div>
+                <div>
+                    <label>Valor Cuota:</label>
+                    <input type="number" id="edit-credit-quota" style="width: 100%;">
+                </div>
+                <div>
+                    <label>Saldo Actual:</label>
+                    <input type="number" id="edit-credit-balance" style="width: 100%;">
+                </div>
+                <div>
+                    <label>Cuotas Restantes:</label>
+                    <input type="number" id="edit-credit-remaining" style="width: 100%;">
+                </div>
+                <div>
+                    <label>Frecuencia:</label>
+                    <select id="edit-credit-term" style="width: 100%; padding: 8px;">
+                        <option value="Diario">Diario</option>
+                        <option value="Semanal">Semanal</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Municipio:</label>
+                    <input type="text" id="edit-credit-municipality" style="width: 100%;">
+                </div>
+                <div>
+                    <label>Asesor:</label>
+                    <input type="text" id="edit-credit-advisor" style="width: 100%;">
+                </div>
+            </div>
+            
+            <button id="btn-save-edit-credit" class="btn-primary">Guardar Cambios</button>
+            <button id="btn-cancel-edit-credit" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Pagos del Crédito -->
+    <div id="creditPaymentsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 2600; justify-content: center; align-items: center;">
+        <div style="background:white; padding:20px; width:90%; max-width: 800px; display:flex; flex-direction:column; gap:10px; max-height: 90vh; overflow-y: auto; position: relative; border-radius: 8px;">
+            <span id="closeCreditPaymentsX" style="position: absolute; top: 10px; right: 20px; font-size: 24px; cursor: pointer; font-weight: bold;">&times;</span>
+            <h2>Pagos del Crédito</h2>
+            <div style="max-height: 300px; overflow-y: auto;">
+            <table border="1" style="width: 100%; border-collapse: collapse;">
+                <thead><tr><th>Fecha</th><th>Día</th><th>Abono</th><th>Método</th><th>Acciones</th></tr></thead>
+                <tbody id="credit-payments-body"></tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Buscar Cliente -->
+    <div id="searchClientModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 2650;">
+        <div style="background:white; margin:10% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:10px;">
+            <h2>Buscar Cliente</h2>
+            <input type="text" id="modal-search-input" placeholder="Cédula o Nombre (Enter para buscar)">
+            <div style="display:flex; gap:5px;">
+                <button id="btn-search-advisor" class="btn-primary" style="flex:1;">Buscar por asesor</button>
+                <button id="btn-search-muni" class="btn-primary" style="flex:1;">Buscar por municipio</button>
+            </div>
+            <button id="btn-show-all-clients" class="btn-primary">Mostrar todos los clientes</button>
+            <button id="btn-close-search" class="btn-primary">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Modal Buscar por Asesor -->
+    <div id="searchByAdvisorModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 2700;">
+        <div style="background:white; margin:10% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:10px;">
+            <h2>Buscar por Asesor</h2>
+            <label>Asesor:</label>
+            <select id="search-advisor-select"></select>
+            <label>Municipio:</label>
+            <select id="search-advisor-muni-select"></select>
+            <button id="btn-do-search-advisor" class="btn-primary">Buscar</button>
+            <button id="btn-close-search-advisor" class="btn-primary">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Modal Buscar por Municipio -->
+    <div id="searchByMuniModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 2700;">
+        <div style="background:white; margin:10% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:10px;">
+            <h2>Buscar por Municipio</h2>
+            <label>Departamento:</label>
+            <select id="search-muni-dept-select"></select>
+            <label>Municipio:</label>
+            <select id="search-muni-muni-select"></select>
+            <button id="btn-do-search-muni" class="btn-primary">Buscar</button>
+            <button id="btn-close-search-muni" class="btn-primary">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Modal Advertencia de Mora -->
+    <div id="warningMoraModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 2700;">
+        <div style="background:white; margin:15% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:10px; border: 2px solid red;">
+            <h2 style="color:red;">Advertencia de Mora</h2>
+            <p>El cliente tiene <span id="mora-payments-count" style="font-weight:bold;"></span> pagos pendientes en un crédito activo. ¿Desea habilitar un nuevo cupo de todas formas?</p>
+            <p>Escriba "AUTORIZAR" para confirmar:</p>
+            <input type="text" id="mora-auth-input" placeholder="AUTORIZAR">
+            <button id="btn-mora-accept" disabled class="btn-primary">Aceptar y Continuar</button>
+            <button id="btn-mora-cancel" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Habilitar Cupo Extra -->
+    <div id="enableQuotaModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 2800;">
+        <div style="background:white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding:20px; width:300px; display:flex; flex-direction:column; gap:10px; border-radius: 8px;">
+            <h2>Habilitar Cupo Extra</h2>
+            <p>Cliente: <span id="quota-client-name" style="font-weight:bold;"></span></p>
+            <label>Tipo de Pago:</label>
+            <label><input type="checkbox" class="quota-check" value="Diario"> Diario</label>
+            <label><input type="checkbox" class="quota-check" value="Semanal"> Semanal</label>
+            <button id="btn-quota-confirm" class="btn-primary">Confirmar y Habilitar</button>
+            <button id="btn-quota-cancel" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Selección de Fechas P&G -->
+    <div id="pg-date-selection-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 3000;">
+        <div style="background:white; margin:10% auto; padding:20px; width:350px; display:flex; flex-direction:column; gap:15px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <h3 style="margin: 0;">Seleccionar Periodo</h3>
+            
+            <label>Tipo de Filtro:</label>
+            <select id="pg-modal-date-type" style="padding: 5px;"></select>
+            
+            <div id="pg-modal-date-inputs-container" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- Inputs dinámicos se inyectarán aquí -->
+            </div>
+
+            <div style="background:#f8f9fa; padding:10px; border-radius:5px; border: 1px solid #dee2e6;">
+                <small style="color: #000000;">Previsualización:</small><br>
+                <strong id="pg-date-preview" style="color: #000000;">--</strong>
+            </div>
+
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top: 10px;">
+                <button id="btn-pg-date-cancel" class="btn-primary">Cancelar</button>
+                <button id="btn-pg-date-accept" class="btn-primary">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ver Municipios Asignados -->
+    <div id="view-assigned-municipalities-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 3000;">
+        <div style="background:white; margin:10% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <h3 style="margin-top: 0;">Municipios Asignados</h3>
+            <ul id="assigned-munis-list" style="max-height: 300px; overflow-y: auto; padding-left: 20px; margin: 0;"></ul>
+            <button id="btn-close-assigned-munis" class="btn-primary" style="margin-top: 10px;">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Modal Detalles Reporte (Créditos) -->
+    <div id="view-report-credits-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 3200;">
+        <div style="background:white; margin:2% auto; padding:20px; width:95%; max-width: 1100px; display:flex; flex-direction:column; gap:10px; max-height: 95vh; overflow-y: auto;">
+            <h3>Detalle de Créditos</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#f8f9fa; padding:10px;">
+                <span><strong>Total Créditos:</strong> <span id="report-credits-total" style="color:blue;">$0</span></span>
+                <button id="download-report-credits-details-btn" class="btn-primary">Descargar Excel</button>
+            </div>
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table border="1" style="width:100%; border-collapse: collapse; font-size: 0.85em;">
+                    <thead style="position: sticky; top: 0; background: white;">
+                        <tr><th>Fecha</th><th>Cliente</th><th>Cédula</th><th>Teléfono</th><th>Crédito</th><th>Intereses</th><th>Cuotas</th><th>Valor Cuota</th><th>Tipo</th><th>Frecuencia</th><th>Municipio</th><th>Acciones</th></tr>
+                    </thead>
+                    <tbody id="report-credits-detail-body"></tbody>
+                </table>
+            </div>
+            <button onclick="document.getElementById('view-report-credits-modal').style.display='none'" class="btn-primary">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Modal Detalles Reporte (Cobros) -->
+    <div id="view-report-payments-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 3200;">
+        <div style="background:white; margin:5% auto; padding:20px; width:90%; max-width: 900px; display:flex; flex-direction:column; gap:10px; max-height: 90vh;">
+            <h3>Detalle de Cobros</h3>
+            <div style="display:flex; gap: 15px; background:#f8f9fa; padding:10px; flex-wrap: wrap;">
+                <span><strong>Total General:</strong> <span id="report-payments-total" style="color:blue;">$0</span></span>
+                <span><strong>Efectivo:</strong> <span id="report-payments-cash" style="color:green;">$0</span></span>
+                <span><strong>Transferencia:</strong> <span id="report-payments-transfer" style="color:orange;">$0</span></span>
+                <button id="download-report-payments-details-btn" class="btn-primary" style="margin-left: auto;">Descargar</button>
+            </div>
+            <!-- Contenedor con scroll limitado a aprox 6 filas -->
+            <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ccc;">
+                <table border="1" style="width:100%; border-collapse: collapse;">
+                    <thead style="position: sticky; top: 0; background: white; z-index: 1;">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Abono</th>
+                            <th>Método</th>
+                            <th>Municipio</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-payments-detail-body"></tbody>
+                </table>
+            </div>
+            <button onclick="document.getElementById('view-report-payments-modal').style.display='none'" class="btn-danger">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Modal Ver Gastos (Solo Lectura) -->
+    <div id="viewExpensesModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 3300;">
+        <div style="background:white; margin:10% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:10px;">
+            <h3>Detalle de Gastos</h3>
+            <p><strong>Gasolina:</strong> <span id="view-exp-gas"></span></p>
+            <p><strong>Almuerzo:</strong> <span id="view-exp-lunch"></span></p>
+            <p><strong>Otros (Valor):</strong> <span id="view-exp-other-val"></span></p>
+            <p><strong>Otros (Observaciones):</strong> <span id="view-exp-other-desc"></span></p>
+            <hr>
+            <p><strong>Total:</strong> <span id="view-exp-total" style="font-weight:bold; color:red;"></span></p>
+            <button onclick="document.getElementById('viewExpensesModal').style.display='none'" class="btn-primary">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Modal Edición Gastos -->
+    <div id="editExpensesModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 3300;">
+        <div style="background:white; margin:10% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:10px;">
+            <h3>Editar Gastos</h3>
+            <label>Gasolina:</label>
+            <input type="number" id="edit-exp-gas">
+            <label>Almuerzo:</label>
+            <input type="number" id="edit-exp-lunch">
+            <label>Otros (Valor):</label>
+            <input type="number" id="edit-exp-other-val">
+            <label>Otros (Observaciones):</label>
+            <input type="text" id="edit-exp-other-desc">
+            <div style="margin-top: 10px; font-weight: bold;">
+                Total Nuevo: <span id="edit-exp-total-display">$0</span>
+            </div>
+            <button id="btn-save-exp-changes" class="btn-primary">Guardar y Recalcular</button>
+            <button onclick="document.getElementById('editExpensesModal').style.display='none'" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Notificación Alertas Represte -->
+    <div id="alert-represt-notification-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 5000;">
+        <div style="background:white; margin:15% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:15px; border-radius: 8px; border-left: 5px solid #3498db;">
+            <h3 style="color: #3498db; margin:0;">⚠️ Alertas Pendientes</h3>
+            <p>Existen solicitudes de pago para represte pendientes de aprobación.</p>
+            <button onclick="document.getElementById('alert-represt-notification-modal').style.display='none'" class="btn-primary">Entendido</button>
+        </div>
+    </div>
+
+    <!-- Modal Aprobar Represte -->
+    <div id="approve-represt-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 5100;">
+        <div style="background:white; margin:15% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:15px; border-radius: 8px;">
+            <h3>Aprobar Represte</h3>
+            <p>¿Autoriza el pago para este crédito represte?</p>
+            <button id="btn-confirm-represt" class="btn-primary">Autorizar</button>
+            <button id="btn-reject-represt" class="btn-primary">Rechazar</button>
+        </div>
+    </div>
+
+    <!-- Modal Reactivar Crédito (Cerrado) -->
+    <div id="reactivate-credit-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 5100;">
+        <div style="background:white; margin:15% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:15px; border-radius: 8px;">
+            <h3>Reactivar Crédito</h3>
+            <p>Este cliente tiene el crédito cerrado. ¿Desea reactivarlo para permitir nuevas operaciones?</p>
+            <button id="btn-confirm-reactivate" class="btn-primary">Reactivar</button>
+            <button onclick="document.getElementById('reactivate-credit-modal').style.display='none'" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Configuración Exportación (Principal) -->
+    <div id="export-report-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 4000;">
+        <div style="background:white; margin:5% auto; padding:20px; width:400px; display:flex; flex-direction:column; gap:15px; border-radius: 5px;">
+            <h2>Exportar Reporte</h2>
+            
+            <label>Departamento:</label>
+            <select id="export-department"></select>
+            
+            <label>Municipio:</label>
+            <select id="export-municipality"></select>
+            
+            <label>Asesor:</label>
+            <select id="export-user"></select>
+            
+            <div style="background: #f8f9fa; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                <label style="display:block; margin-bottom:5px;">Periodo:</label>
+                <strong id="export-period-text" style="color: #007bff;">Todas las Fechas</strong>
+                <button id="btn-open-export-date-modal" style="margin-top:5px; padding: 5px; font-size: 0.8em; cursor: pointer;">Seleccionar Periodo</button>
+            </div>
+
+            <button id="btn-export-action" class="btn-primary">Exportar</button>
+            <button onclick="document.getElementById('export-report-modal').style.display='none'" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Filtro Fechas Exportación (Auxiliar) -->
+    <div id="export-date-filter-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 4100;">
+        <div style="background:white; margin:15% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:10px; border-radius: 5px;">
+            <h3>Filtrar por Fecha</h3>
+            
+            <label>Día:</label>
+            <select id="export-day"></select>
+            
+            <label>Mes:</label>
+            <select id="export-month"></select>
+            
+            <label>Año:</label>
+            <select id="export-year"></select>
+
+            <button id="btn-apply-export-date" class="btn-primary">Aplicar Filtros</button>
+        </div>
+    </div>
+
+    <!-- Modal Registrar Link (Conexión) -->
+    <div id="linkProvisionModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 4500;">
+        <div style="background:white; margin:15% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:10px;">
+            <h2>Registrar Enlace</h2>
+            <p>Este enlace no ha sido configurado. Ingrese los datos para guardarlo.</p>
+            <input type="text" id="prov-link-name" placeholder="Nombre del Link" readonly style="background-color: #f0f0f0;">
+            <input type="text" id="prov-link-url" placeholder="URL (https://...)">
+            <button id="btn-save-provision-link" class="btn-primary">Guardar y Acceder</button>
+            <button onclick="document.getElementById('linkProvisionModal').style.display='none'" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Crear Reporte (Admin) -->
+    <div id="createAdminReportModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 4500;">
+        <div style="background:white; margin:10% auto; padding:20px; width:400px; display:flex; flex-direction:column; gap:10px;">
+            <h2>Nuevo Reporte</h2>
+            <input type="text" id="report-name" placeholder="Nombre del reporte">
+            <textarea id="report-desc" placeholder="Descripción del reporte" style="min-height: 100px; resize: vertical; padding: 10px;"></textarea>
+            <button id="btn-send-admin-report" class="btn-primary">Enviar</button>
+            <button onclick="document.getElementById('createAdminReportModal').style.display='none'" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Ver Descripción Reporte (Dev) -->
+    <div id="viewReportDescModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 4600;">
+        <div style="background:white; margin:15% auto; padding:20px; width:400px; display:flex; flex-direction:column; gap:10px;">
+            <h2 id="view-report-title">Titulo Reporte</h2>
+            <p id="view-report-content" style="white-space: pre-wrap; background: #f9f9f9; padding: 10px; border-radius: 5px;"></p>
+            <button onclick="document.getElementById('viewReportDescModal').style.display='none'" class="btn-primary">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Modal Marcar Atendido (Dev) -->
+    <div id="markReportDoneModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 4600;">
+        <div style="background:white; margin:15% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:10px; position: relative;">
+            <span onclick="document.getElementById('markReportDoneModal').style.display='none'" style="position: absolute; top: 10px; right: 15px; cursor: pointer; font-weight: bold; font-size: 20px;">&times;</span>
+            <h3>¿Reporte atendido?</h3>
+            <button id="btn-confirm-report-done" class="btn-primary">Atendido</button>
+        </div>
+    </div>
+
+    <script src="functions.js"></script>
+</body>
+</html>
