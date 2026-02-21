@@ -325,6 +325,11 @@ const btnRejectReprest = document.getElementById('btn-reject-represt');
 const reactivateCreditModal = document.getElementById('reactivate-credit-modal');
 const btnConfirmReactivate = document.getElementById('btn-confirm-reactivate');
 
+// Referencias Modal Segundo Pago
+const approveSecondPaymentModal = document.getElementById('approveSecondPaymentModal');
+const btnConfirmSecondPayment = document.getElementById('btn-confirm-second-payment');
+const btnRejectSecondPayment = document.getElementById('btn-reject-second-payment');
+
 // Referencias Modal Fechas P&G
 const pgDateSelectionModal = document.getElementById('pg-date-selection-modal');
 const pgModalDateType = document.getElementById('pg-modal-date-type');
@@ -380,6 +385,8 @@ let currentExpEditData = null; // Datos temporales para edición de gastos
 let currentAlertsData = []; // Almacena alertas activas
 let currentAlertActionId = null; // ID de la alerta a aprobar/rechazar
 let currentReactivateClientId = null; // ID del cliente a reactivar
+let currentSecondPaymentAlerts = []; // Almacena alertas de segundo pago
+let currentSecondPaymentActionId = null; // ID de la alerta de segundo pago
 // Estado Exportación
 let dashboardInterval = null;
 let currentDashboardMode = 'daily';
@@ -883,6 +890,10 @@ async function loadClientsTable(isRefresh = false) {
     const { data: alerts } = await sbClient.from('alerts_represt').select('*');
     currentAlertsData = alerts || [];
 
+    // Cargar Alertas de Segundo Pago
+    const { data: secondPaymentAlerts } = await sbClient.from('payments_alerts').select('*').is('pay', null);
+    currentSecondPaymentAlerts = secondPaymentAlerts || [];
+
     // Notificación Masiva si hay alertas pendientes (represt === false)
     const pendingAlerts = currentAlertsData.filter(a => a.represt === false);
     if (pendingAlerts.length > 0) {
@@ -920,6 +931,10 @@ async function renderClientsTable(clients) {
     const alertsMap = new Map();
     currentAlertsData.forEach(a => alertsMap.set(a.cedula, a));
 
+    // Mapa de Alertas Segundo Pago
+    const secondPaymentMap = new Map();
+    currentSecondPaymentAlerts.forEach(a => secondPaymentMap.set(a.cedula, a));
+
     // Obtener todos los cupos extras válidos para verificar
     const { data: validExtras } = await sbClient.from('extras').select('cedula').eq('valid', true);
     const validExtrasCedulas = new Set(validExtras ? validExtras.map(e => e.cedula) : []);
@@ -947,11 +962,16 @@ async function renderClientsTable(clients) {
         
         // Lógica de Semáforo de Estados (Prioridad Visual)
         const alertInfo = alertsMap.get(client.cedula);
+        const secondPaymentInfo = secondPaymentMap.get(client.cedula);
 
         // 1. Prioridad Absoluta: Alerta de Represte
         if (alertInfo && alertInfo.represt === false) {
             statusHtml = `<div class="status-capsule status-alert" data-id="${alertInfo.id}">Intento de pago represte</div>`;
         } 
+        // 1.1 Prioridad Alta: Alerta Segundo Pago
+        else if (secondPaymentInfo) {
+            statusHtml = `<div class="status-capsule status-second-payment" data-id="${secondPaymentInfo.id}" style="background-color: orange; cursor: pointer;">Intento de segundo pago</div>`;
+        }
         // 2. Prioridad Alta: Crédito Cerrado
         else if (client.closed === true) {
             statusHtml = `<div class="status-capsule status-closed" data-id="${client.id}">Crédito cerrado</div>`;
@@ -1008,6 +1028,13 @@ clientsTableBody.addEventListener('click', async (e) => {
     if (target.classList.contains('status-alert')) {
         currentAlertActionId = target.dataset.id;
         approveReprestModal.style.display = 'block';
+        return;
+    }
+
+    // Botón Naranja: Alerta Segundo Pago
+    if (target.classList.contains('status-second-payment')) {
+        currentSecondPaymentActionId = target.dataset.id;
+        approveSecondPaymentModal.style.display = 'block';
         return;
     }
 
@@ -1186,6 +1213,12 @@ clientsTableBody.addEventListener('click', async (e) => {
 btnConfirmReprest.addEventListener('click', async () => {
     if (!currentAlertActionId) return;
     
+    // Actualizar estado del cliente a abierto (closed = false)
+    const alertObj = currentAlertsData.find(a => a.id == currentAlertActionId);
+    if (alertObj && alertObj.cedula) {
+        await sbClient.from('clients').update({ closed: false }).eq('cedula', alertObj.cedula);
+    }
+
     // Actualizar alerta a TRUE (Autorizado)
     const { error } = await sbClient.from('alerts_represt').update({ represt: true }).eq('id', currentAlertActionId);
     
@@ -1196,6 +1229,7 @@ btnConfirmReprest.addEventListener('click', async () => {
         // Actualizar estado visual sin recargar todo si es posible, o recargar silenciosamente
         const btn = document.querySelector(`.status-alert[data-id="${currentAlertActionId}"]`);
         if(btn) btn.parentElement.innerHTML = '<div class="status-capsule status-open">Crédito Abierto</div>';
+        loadClientsTable(true); // Recargar para sincronizar estado
     }
 });
 
@@ -1211,6 +1245,39 @@ btnRejectReprest.addEventListener('click', async () => {
         approveReprestModal.style.display = 'none';
         const btn = document.querySelector(`.status-alert[data-id="${currentAlertActionId}"]`);
         if(btn) btn.remove();
+    }
+});
+
+// --- Lógica Modal Aprobar Segundo Pago ---
+btnConfirmSecondPayment.addEventListener('click', async () => {
+    if (!currentSecondPaymentActionId) return;
+    
+    // Actualizar estado del cliente a abierto (closed = false)
+    const alertObj = currentSecondPaymentAlerts.find(a => a.id == currentSecondPaymentActionId);
+    if (alertObj && alertObj.cedula) {
+        await sbClient.from('clients').update({ closed: false }).eq('cedula', alertObj.cedula);
+    }
+
+    const { error } = await sbClient.from('payments_alerts').update({ pay: true }).eq('id', currentSecondPaymentActionId);
+    
+    if (error) alert('Error al aprobar: ' + error.message);
+    else {
+        alert('Segundo pago aprobado.');
+        approveSecondPaymentModal.style.display = 'none';
+        loadClientsTable(true);
+    }
+});
+
+btnRejectSecondPayment.addEventListener('click', async () => {
+    if (!currentSecondPaymentActionId) return;
+    
+    const { error } = await sbClient.from('payments_alerts').update({ pay: false }).eq('id', currentSecondPaymentActionId);
+    
+    if (error) alert('Error al rechazar: ' + error.message);
+    else {
+        alert('Segundo pago rechazado.');
+        approveSecondPaymentModal.style.display = 'none';
+        loadClientsTable(true);
     }
 });
 
@@ -4978,6 +5045,9 @@ async function generatePmReport() {
         // Para este caso, usaremos created_at como filtro principal para la consulta a BD.
         
         let query = sbClient.from('payments').select('*')
+            .gte('created_at', startISO)
+            .lte('created_at', endISO)
+            .limit(10000);
 
         // Filtros directos si es posible (debtor_name no siempre es fiable para filtrar por asesor, mejor cruzar)
         // Pero payments no tiene asesor_name ni municipality directamente, solo debtor_id o debtor_name.
@@ -5716,13 +5786,23 @@ async function loadReportCreditsDetails(userName, dateStr) {
         .lte('created_at', end.toISOString());
 
     reportCreditsDetailBody.innerHTML = '';
-    if (!credits || credits.length === 0) {
+
+    // Filtrar por modo (Diario/Semanal)
+    const targetTerm = currentGnMode === 'daily' ? 'DIARIO' : 'SEMANAL';
+    const filteredCredits = (credits || []).filter(c => {
+        let term = c.payment_term;
+        if (Array.isArray(term)) return term.some(t => t.toUpperCase() === targetTerm);
+        if (typeof term === 'string') return term.toUpperCase() === targetTerm;
+        return false;
+    });
+
+    if (!filteredCredits || filteredCredits.length === 0) {
         reportCreditsDetailBody.innerHTML = '<tr><td colspan="12">No hay créditos.</td></tr>';
         return;
     }
 
     let total = 0;
-    credits.forEach(c => {
+    filteredCredits.forEach(c => {
         const val = parseFloat(c.sale_value) || 0;
         total += val;
         
@@ -5858,17 +5938,28 @@ async function loadReportPaymentsDetails(userName, dateStr) {
 
     // Obtener municipios de los deudores para mostrar
     const debtorIds = [...new Set(payments.map(p => p.debtor_id))];
-    const { data: debtors } = await sbClient.from('debtors').select('id, municipality, asesor_name').in('id', debtorIds);
+    const { data: debtors } = await sbClient.from('debtors').select('id, municipality, asesor_name, payment_term').in('id', debtorIds);
     const debtorMap = new Map(debtors.map(d => [d.id, d]));
 
     let total = 0;
     let cash = 0;
     let transfer = 0;
 
+    const targetTerm = currentGnMode === 'daily' ? 'DIARIO' : 'SEMANAL';
+
     payments.forEach(p => {
         const debtor = debtorMap.get(p.debtor_id);
         // Filtrar por asesor si es necesario (doble check)
         if (debtor && debtor.asesor_name !== userName) return;
+
+        // Filtrar por modo (Diario/Semanal)
+        if (debtor) {
+            let term = debtor.payment_term;
+            let isTermValid = false;
+            if (Array.isArray(term)) isTermValid = term.some(t => t.toUpperCase() === targetTerm);
+            else if (typeof term === 'string') isTermValid = term.toUpperCase() === targetTerm;
+            if (!isTermValid) return;
+        }
 
         const val = parseFloat(p.payment_amount) || 0;
         const method = (p.payment_method || 'Efectivo').toLowerCase();
@@ -5970,13 +6061,21 @@ reportPaymentsDetailBody.addEventListener('click', async (e) => {
 // Función Genérica de Recálculo en Cascada
 async function recalculateParentReport(userName, dateStr) {
     const { start, end } = getReportDateRange(dateStr);
+    const targetTerm = currentGnMode === 'daily' ? 'DIARIO' : 'SEMANAL';
     
     // 1. Calcular nuevos totales reales
     // Créditos
     const { data: credits } = await sbClient.from('debtors')
-        .select('sale_value').eq('asesor_name', userName)
+        .select('sale_value, payment_term').eq('asesor_name', userName)
         .gte('created_at', start.toISOString()).lte('created_at', end.toISOString());
-    const totalCredits = (credits || []).reduce((sum, c) => sum + (parseFloat(c.sale_value) || 0), 0);
+    
+    const filteredCredits = (credits || []).filter(c => {
+        let term = c.payment_term;
+        if (Array.isArray(term)) return term.some(t => t.toUpperCase() === targetTerm);
+        if (typeof term === 'string') return term.toUpperCase() === targetTerm;
+        return false;
+    });
+    const totalCredits = filteredCredits.reduce((sum, c) => sum + (parseFloat(c.sale_value) || 0), 0);
 
     // Cobros (requiere cruce o filtro aproximado)
     // Para precisión, sumamos pagos cuyos deudores son de este asesor
@@ -5986,8 +6085,17 @@ async function recalculateParentReport(userName, dateStr) {
     
     // Filtrar pagos del asesor
     const debtorIds = [...new Set(payments.map(p => p.debtor_id))];
-    const { data: debtors } = await sbClient.from('debtors').select('id, asesor_name').in('id', debtorIds);
-    const validDebtorIds = new Set(debtors.filter(d => d.asesor_name === userName).map(d => d.id));
+    const { data: debtors } = await sbClient.from('debtors').select('id, asesor_name, payment_term').in('id', debtorIds);
+    
+    const validDebtorIds = new Set(debtors.filter(d => {
+        if (d.asesor_name !== userName) return false;
+        
+        let term = d.payment_term;
+        let isTermValid = false;
+        if (Array.isArray(term)) isTermValid = term.some(t => t.toUpperCase() === targetTerm);
+        else if (typeof term === 'string') isTermValid = term.toUpperCase() === targetTerm;
+        return isTermValid;
+    }).map(d => d.id));
     
     const totalPayments = (payments || []).filter(p => validDebtorIds.has(p.debtor_id))
         .reduce((sum, p) => sum + (parseFloat(p.payment_amount) || 0), 0);
