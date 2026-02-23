@@ -1025,6 +1025,16 @@
         </div>
     </div>
 
+    <!-- Modal Cerrar Crédito (Manual) -->
+    <div id="close-credit-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 5100;">
+        <div style="background:white; margin:15% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:15px; border-radius: 8px;">
+            <h3>Cerrar Crédito</h3>
+            <p>¿Desea cerrar el crédito de este cliente? Esto impedirá nuevas operaciones hasta que se reactive.</p>
+            <button id="btn-confirm-close-credit" class="btn-primary">Cerrar Crédito</button>
+            <button onclick="document.getElementById('close-credit-modal').style.display='none'" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
     <!-- Modal Aprobar Segundo Pago -->
     <div id="approveSecondPaymentModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 5100;">
         <div style="background:white; margin:15% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:15px; border-radius: 8px;">

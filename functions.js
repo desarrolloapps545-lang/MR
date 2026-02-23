@@ -324,6 +324,8 @@ const btnConfirmReprest = document.getElementById('btn-confirm-represt');
 const btnRejectReprest = document.getElementById('btn-reject-represt');
 const reactivateCreditModal = document.getElementById('reactivate-credit-modal');
 const btnConfirmReactivate = document.getElementById('btn-confirm-reactivate');
+const closeCreditModal = document.getElementById('close-credit-modal');
+const btnConfirmCloseCredit = document.getElementById('btn-confirm-close-credit');
 
 // Referencias Modal Segundo Pago
 const approveSecondPaymentModal = document.getElementById('approveSecondPaymentModal');
@@ -385,6 +387,7 @@ let currentExpEditData = null; // Datos temporales para edición de gastos
 let currentAlertsData = []; // Almacena alertas activas
 let currentAlertActionId = null; // ID de la alerta a aprobar/rechazar
 let currentReactivateClientId = null; // ID del cliente a reactivar
+let currentCloseClientId = null; // ID del cliente a cerrar crédito
 let currentSecondPaymentAlerts = []; // Almacena alertas de segundo pago
 let currentSecondPaymentActionId = null; // ID de la alerta de segundo pago
 // Estado Exportación
@@ -980,7 +983,7 @@ async function renderClientsTable(clients) {
         else if (client.hasActiveCredit) {
             statusHtml = '<div class="status-capsule status-open">Crédito Abierto</div>';
         } else {
-            statusHtml = '<div class="status-capsule status-free">Sin Crédito</div>';
+            statusHtml = `<div class="status-capsule status-free" data-id="${client.id}" style="cursor: pointer;" title="Click para cerrar crédito">Sin Crédito</div>`;
         }
 
         // Estado del botón Cupo Extra
@@ -1042,6 +1045,13 @@ clientsTableBody.addEventListener('click', async (e) => {
     if (target.classList.contains('status-closed')) {
         currentReactivateClientId = target.dataset.id;
         reactivateCreditModal.style.display = 'block';
+        return;
+    }
+
+    // Botón Verde: Sin Crédito (Cerrar Crédito)
+    if (target.classList.contains('status-free')) {
+        currentCloseClientId = target.dataset.id;
+        closeCreditModal.style.display = 'block';
         return;
     }
 
@@ -1293,6 +1303,21 @@ btnConfirmReactivate.addEventListener('click', async () => {
         reactivateCreditModal.style.display = 'none';
         const btn = document.querySelector(`.status-closed[data-id="${currentReactivateClientId}"]`);
         if(btn) btn.parentElement.innerHTML = '<div class="status-capsule status-open">Crédito Abierto</div>';
+    }
+});
+
+// --- Lógica Modal Cerrar Crédito ---
+btnConfirmCloseCredit.addEventListener('click', async () => {
+    if (!currentCloseClientId) return;
+
+    const { error } = await sbClient.from('clients').update({ closed: true }).eq('id', currentCloseClientId);
+    
+    if (error) alert('Error al cerrar crédito: ' + error.message);
+    else {
+        alert('Crédito cerrado exitosamente.');
+        closeCreditModal.style.display = 'none';
+        // Actualizar visualmente o recargar tabla
+        loadClientsTable(true);
     }
 });
 
@@ -2211,7 +2236,12 @@ importExcelInput.addEventListener('change', async (e) => {
 
         } catch (error) {
             console.error('Error en importación:', error);
-            alert('Error crítico al procesar el archivo: ' + error.message);
+            let userMessage = 'Error crítico al procesar el archivo: ' + error.message;
+            // Detectar error específico de constraint para dar un mensaje más útil
+            if (error.message && error.message.includes('no unique or exclusion constraint')) {
+                userMessage = 'Error de Configuración: La columna "cédula" debe ser única en la tabla de clientes. Por favor, pida al administrador que añada una restricción "UNIQUE" a la columna "cedula" en la tabla "clients" de Supabase para que la importación funcione correctamente.';
+            }
+            alert(userMessage);
         } finally {
             importExcelInput.value = ''; // Limpiar input
         }
@@ -2239,6 +2269,8 @@ function parseExcelDate(value) {
     if (typeof value === 'number') {
         // Ajuste fecha Excel (1900 epoch) a JS
         const date = new Date(Math.round((value - 25569) * 86400 * 1000));
+        // Validar validez de fecha antes de usar métodos
+        if (isNaN(date.getTime())) return new Date().toISOString();
         // Validar año
         if (date.getFullYear() < 2000) return new Date().toISOString();
         return date.toISOString();
@@ -2251,7 +2283,8 @@ function parseExcelDate(value) {
             const parts = value.split('/');
             if (parts.length === 3) {
                 // Asumimos dd/mm/yyyy
-                return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`).toISOString();
+                const d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                if (!isNaN(d.getTime())) return d.toISOString();
             }
         }
         // Intentar parseo directo
@@ -2260,6 +2293,17 @@ function parseExcelDate(value) {
     }
 
     return new Date().toISOString(); // Fallback final
+}
+
+// Función Auxiliar: Formatear fecha a DD-MM-YYYY limpio
+function formatDateToDDMMYYYY(isoDateString) {
+    if (!isoDateString) return null;
+    const date = new Date(isoDateString);
+    if (isNaN(date.getTime())) return null;
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const year = date.getUTCFullYear();
+    return `${day}-${month}-${year}`;
 }
 
 // Función Auxiliar: Buscar Municipio en BD (Fuzzy match)
@@ -2331,11 +2375,14 @@ async function processImportBatch(chunk, dbMunicipalities, usersList, isCollecto
         
         // Fechas
         const fechaPrestamo = parseExcelDate(normalizedRow['FECHA DE PRESTAMO']);
+        // Convertir a formato limpio DD-MM-YYYY para guardar en campos de texto
+        const fechaPrestamoClean = formatDateToDDMMYYYY(fechaPrestamo);
 
         // Guardar datos procesados
         const rowData = {
             cedula, nombre, telefono, direccion, municipio, asesor, tipoPago,
-            recaudoTotal, abono, saldo, valorCuota, creditoNuevo, represte, fechaPrestamo
+            recaudoTotal, abono, saldo, valorCuota, creditoNuevo, represte, fechaPrestamo,
+            fechaPrestamoClean
         };
         rowsData.push(rowData);
 
@@ -2390,8 +2437,8 @@ async function processImportBatch(chunk, dbMunicipalities, usersList, isCollecto
                 valor_cuota: r.valorCuota,
                 payment_term: [r.tipoPago],
                 imported: true,
-                created_at: r.fechaPrestamo, // Usar fecha del excel
-                sale_date: r.fechaPrestamo // Guardar también como fecha de venta
+                created_at: r.fechaPrestamo, // created_at requiere ISO Timestamp
+                sale_date: r.fechaPrestamoClean // sale_date guarda DD-MM-YYYY limpio
             });
             rowsWithNewCredit.push(index);
         }
@@ -2422,7 +2469,7 @@ async function processImportBatch(chunk, dbMunicipalities, usersList, isCollecto
                 cedula: r.cedula, // Link secundario
                 debtor_name: r.nombre,
                 payment_amount: r.abono,
-                payment_date: r.fechaPrestamo, // Usamos la fecha del registro
+                payment_date: r.fechaPrestamoClean, // payment_date guarda DD-MM-YYYY limpio
                 created_at: r.fechaPrestamo,
                 imported: true
             });
@@ -2481,16 +2528,37 @@ btnMultiDeleteMode.addEventListener('click', () => {
     const cols = document.querySelectorAll('.multi-delete-col');
     cols.forEach(col => col.style.display = isMultiDeleteMode ? 'table-cell' : 'none');
     
+    // Lógica para botón "Seleccionar Todos"
+    let btnSelectAll = document.getElementById('btn-select-all-clients');
+    if (!btnSelectAll) {
+        btnSelectAll = document.createElement('button');
+        btnSelectAll.id = 'btn-select-all-clients';
+        btnSelectAll.className = 'btn-primary';
+        btnSelectAll.innerText = 'Seleccionar Todos';
+        btnSelectAll.style.marginRight = '10px';
+        btnSelectAll.onclick = () => {
+            const checkboxes = document.querySelectorAll('.client-select-cb');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            checkboxes.forEach(cb => cb.checked = !allChecked);
+            updateSelectedCount();
+            btnSelectAll.innerText = !allChecked ? 'Deseleccionar Todos' : 'Seleccionar Todos';
+        };
+        // Insertar antes del botón de borrar
+        btnDeleteSelected.parentNode.insertBefore(btnSelectAll, btnDeleteSelected);
+    }
+
     if (isMultiDeleteMode) {
         btnMultiDeleteMode.innerText = 'Cancelar';
         btnMultiDeleteMode.className = 'btn-primary';
         btnMultiDeleteMode.style.backgroundColor = '';
         btnDeleteSelected.style.display = 'inline-block';
+        btnSelectAll.style.display = 'inline-block';
     } else {
         btnMultiDeleteMode.innerText = 'Eliminación múltiple';
         btnMultiDeleteMode.className = 'btn-primary';
         btnMultiDeleteMode.style.backgroundColor = '';
         btnDeleteSelected.style.display = 'none';
+        btnSelectAll.style.display = 'none';
         // Desmarcar todos
         document.querySelectorAll('.client-select-cb').forEach(cb => cb.checked = false);
         updateSelectedCount();
@@ -2511,20 +2579,27 @@ btnDeleteSelected.addEventListener('click', async () => {
     btnDeleteSelected.disabled = true;
     btnDeleteSelected.innerText = 'Borrando...';
 
-    for (const cb of selected) {
-        const cedula = cb.dataset.cedula;
-        const name = cb.dataset.name;
-        const id = cb.value;
+    // Optimización: Borrado por lotes (Batch Delete)
+    const allCedulas = selected.map(cb => cb.dataset.cedula).filter(c => c);
+    const allIds = selected.map(cb => cb.value);
+    // Para pagos, intentamos borrar por cédula si existe, o por nombre como fallback
+    const allNames = selected.map(cb => cb.dataset.name).filter(n => n);
 
-        // Borrar en cascada manual
-        if (cedula) {
-            await sbClient.from('extras').delete().eq('cedula', cedula);
-            await sbClient.from('debtors').delete().eq('cedula', cedula);
+    try {
+        const promises = [];
+        if (allCedulas.length > 0) {
+            promises.push(sbClient.from('extras').delete().in('cedula', allCedulas));
+            promises.push(sbClient.from('debtors').delete().in('cedula', allCedulas));
+            // Borrar pagos por cédula es más seguro
+            promises.push(sbClient.from('payments').delete().in('cedula', allCedulas));
         }
-        if (name) {
-            await sbClient.from('payments').delete().eq('debtor_name', name);
+        if (allIds.length > 0) {
+            promises.push(sbClient.from('clients').delete().in('id', allIds));
         }
-        await sbClient.from('clients').delete().eq('id', id);
+        await Promise.all(promises);
+    } catch (err) {
+        console.error("Error en eliminación múltiple:", err);
+        alert("Hubo un error eliminando algunos registros: " + err.message);
     }
 
     alert('Eliminación múltiple completada.');
@@ -2946,18 +3021,36 @@ async function loadDashboardData(mode, isBackground = false) {
     const endISO = endDate.toISOString();
 
     try {
+        // B. Estrategia de Consulta
+        // Se eliminan filtros de created_at para usar sale_date/payment_date/etc en memoria
+
+        // 1. Créditos (Debtors)
+        let debtorsQuery = sbClient.from('debtors').select('*');
+        if (pgFilterUser.value) debtorsQuery = debtorsQuery.eq('asesor_name', pgFilterUser.value);
+        if (pgFilterMuni.value) debtorsQuery = debtorsQuery.eq('municipality', pgFilterMuni.value);
+
+        const { data: debtors, error: debtError } = await debtorsQuery;
+        if (debtError) throw debtError;
+
+        // 2. Pagos (Payments)
+        let paymentsQuery = sbClient.from('payments').select('*');
+        if (pgFilterUser.value) paymentsQuery = paymentsQuery.eq('user_name', pgFilterUser.value);
+        if (pgFilterMuni.value) paymentsQuery = paymentsQuery.eq('municipality', pgFilterMuni.value);
+
+        const { data: payments, error: payError } = await paymentsQuery;
+        if (payError) throw payError;
+
         // 2. Análisis Tabla de Créditos (Izquierda)
         // Consulta Principal: Debtors creados en el rango
-        const { data: newCredits, error: creditsError } = await sbClient
-            .from('debtors')
-            .select('*')
-            .gte('created_at', startISO)
-            .lte('created_at', endISO);
-
-        if (creditsError) throw creditsError;
+        const newCredits = debtors.filter(d => {
+            // Filtro de fecha para los CREDITOS
+            const debtCreatedAt = new Date(d.created_at);
+            return debtCreatedAt >= start && debtCreatedAt <= end;
+        });
 
         // Procesamiento Créditos
-        const processedCredits = newCredits.filter(d => {
+        // Procesa créditos que pasaron el filtro inicial
+        const processedCredits = newCredits.filter(d => { // AQUI
             // Exclusión de Importados
             if (d.imported === true) return false;
             return true;
@@ -2967,33 +3060,30 @@ async function loadDashboardData(mode, isBackground = false) {
         renderCreditsTable(processedCredits);
 
         // 3. Análisis Tabla de Cobros y Recaudos (Derecha)
-        
         // A. Obtener Pagos en el rango (Recaudo Real)
-        const { data: paymentsInRange, error: payError } = await sbClient
-            .from('payments')
-            .select('*')
-            .gte('created_at', startISO)
-            .lte('created_at', endISO);
+        const paymentsInRange = payments.filter(p => {
+            // Filtro de fecha para los PAGOS
+            const paymentCreatedAt = new Date(p.created_at);
+            return paymentCreatedAt >= start && paymentCreatedAt <= end;
+        });
 
-        if (payError) throw payError;
 
         // Filtrar pagos importados si aplica (según prompt)
         const validPayments = paymentsInRange.filter(p => p.imported !== true);
 
         // B. Obtener Deudores Relevantes (Activos + Los que pagaron hoy aunque saldo sea 0)
+        //INNER JOIN
+
+
         // B1. Deudores con saldo > 0
-        const { data: activeDebtors } = await sbClient
-            .from('debtors')
-            .select('*')
-            .gt('balance', 0);
+        const activeDebtors = debtors.filter(d => d.balance > 0);
 
         // B2. Deudores que pagaron en el rango (para recuperar "Deudores Faltantes" que quedaron en 0)
         const paidCedulas = [...new Set(validPayments.map(p => p.cedula))]; // Asumiendo que payments tiene cedula o debtor_id
         let paidDebtors = [];
         if (paidCedulas.length > 0) {
-            const { data: pd } = await sbClient
-                .from('debtors')
-                .select('*')
+            const pd = debtors.filter(d => paidCedulas.includes(d.cedula))
+
                 .in('cedula', paidCedulas); // Usamos cedula como link
             paidDebtors = pd || [];
         }
@@ -5097,15 +5187,18 @@ async function generatePmReport() {
 
             // Filtros de Entidad (UI)
             if (pmFilterUser.value && debtor.asesor_name !== pmFilterUser.value) return;
+            if (pmFilterUser.value && (!debtor.asesor_name || !debtor.asesor_name.includes(pmFilterUser.value))) return;
             if (pmFilterMuni.value && debtor.municipality !== pmFilterMuni.value) return;
 
             // Validación de Modo (PaymentTerm)
+            // ELIMINADO: Se comenta la validación de modo para mostrar TODOS los cobros reales
+            /*
             let term = debtor.payment_term;
             let isTermValid = false;
             if (Array.isArray(term)) isTermValid = term.some(t => t.toUpperCase() === targetTerm);
             else if (typeof term === 'string') isTermValid = term.toUpperCase() === targetTerm;
-            
             if (!isTermValid) return;
+            */
 
             // Mapeo
             const paymentVal = parseFloat(p.payment_amount) || 0;
@@ -5538,7 +5631,6 @@ gnTableBody.addEventListener('click', async (e) => {
 
         btn.innerHTML = '<div class="small-spinner"></div>';
         btn.disabled = true;
-
         try {
             const { data: record } = await sbClient.from(collection).select('*').eq('id', id).single();
             if (!record) return;
@@ -5734,8 +5826,14 @@ function getReportDateRange(dateStr) {
         start.setHours(0,0,0,0);
         end.setHours(23,59,59,999);
     } else {
-        // Modo semanal: Usamos el mismo día como referencia o lógica de semana
+        // Modo semanal: Calcular semana completa (Lunes a Domingo)
+        const day = start.getDay(); // 0 (Dom) - 6 (Sab)
+        const diff = start.getDate() - day + (day === 0 ? -6 : 1); // Ajustar al lunes
+        start.setDate(diff);
         start.setHours(0,0,0,0);
+        
+        end = new Date(start);
+        end.setDate(start.getDate() + 6); // Domingo
         end.setHours(23,59,59,999);
     }
     return { start, end };
@@ -5743,7 +5841,8 @@ function getReportDateRange(dateStr) {
 
 // Helper para ajustar fecha a mediodía local para exportación
 function adjustDateForExport(dateInput) {
-    if (!dateInput) return null;
+     if (!dateInput) return null;
+   if (!dateInput) return null;
     
     // Si es string YYYY-MM-DD, parsear manualmente para evitar desfase UTC
     if (typeof dateInput === 'string') {
@@ -5910,6 +6009,7 @@ reportCreditsDetailBody.addEventListener('click', async (e) => {
 async function loadReportPaymentsDetails(userName, dateStr) {
     reportPaymentsDetailBody.innerHTML = '<tr><td colspan="3">Cargando...</td></tr>';
     reportPaymentsTotal.innerText = '$ 0';
+
     reportPaymentsCash.innerText = '$ 0';
     reportPaymentsTransfer.innerText = '$ 0';
     
@@ -5953,6 +6053,8 @@ async function loadReportPaymentsDetails(userName, dateStr) {
         if (debtor && debtor.asesor_name !== userName) return;
 
         // Filtrar por modo (Diario/Semanal)
+        // ELIMINADO: Se comenta el filtro para mostrar todos los pagos reales en el detalle
+        /*
         if (debtor) {
             let term = debtor.payment_term;
             let isTermValid = false;
@@ -5960,9 +6062,12 @@ async function loadReportPaymentsDetails(userName, dateStr) {
             else if (typeof term === 'string') isTermValid = term.toUpperCase() === targetTerm;
             if (!isTermValid) return;
         }
+        */
 
         const val = parseFloat(p.payment_amount) || 0;
         const method = (p.payment_method || 'Efectivo').toLowerCase();
+        const paymentDate = p.payment_date || getLocalDateKey(new Date(p.created_at));
+
         
         total += val;
         if (method.includes('efectivo')) cash += val;
@@ -5971,6 +6076,7 @@ async function loadReportPaymentsDetails(userName, dateStr) {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${p.payment_date || new Date(p.created_at).toLocaleDateString()}</td>
+           <td>${paymentDate}</td>
             <td>${p.debtor_name || 'Cliente'} <small>(${debtor ? debtor.municipality : ''})</small></td>
             <td class="pay-val-cell" data-id="${p.id}" data-val="${val}">$ ${val.toLocaleString()}</td>
             <td>${p.payment_method || 'Efectivo'}</td>
@@ -6090,11 +6196,15 @@ async function recalculateParentReport(userName, dateStr) {
     const validDebtorIds = new Set(debtors.filter(d => {
         if (d.asesor_name !== userName) return false;
         
+        // ELIMINADO: Incluir todos los deudores que hayan pagado, sin importar su término
+        /*
         let term = d.payment_term;
         let isTermValid = false;
         if (Array.isArray(term)) isTermValid = term.some(t => t.toUpperCase() === targetTerm);
         else if (typeof term === 'string') isTermValid = term.toUpperCase() === targetTerm;
         return isTermValid;
+        */
+       return true;
     }).map(d => d.id));
     
     const totalPayments = (payments || []).filter(p => validDebtorIds.has(p.debtor_id))
