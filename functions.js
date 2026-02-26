@@ -360,6 +360,7 @@ let currentQuotaClientData = null; // Datos del cliente para el proceso de cupo 
 let clientToDeleteData = null; // Datos del cliente a eliminar
 let isMultiDeleteMode = false; // Modo eliminación múltiple
 let allClientsData = []; // Almacenar clientes cargados para búsqueda
+let allDebtorsData = []; // Almacenar todos los deudores para cálculo de estado rápido
 let isRecoveryMode = false; // Bandera para saber si estamos en modo recuperación
 let recoveryData = null; // Datos temporales para recuperación
 // Variables globales para el reporte
@@ -889,13 +890,25 @@ async function loadUsersTable() {
 async function loadClientsTable(isRefresh = false) {
     console.log('Iniciando carga de clientes...');
     
-    // 2. Cargar Alertas Activas
-    const { data: alerts } = await sbClient.from('alerts_represt').select('*');
-    currentAlertsData = alerts || [];
+    // Cargar datos en paralelo (Clientes, Deudores, Alertas) para tener el panorama completo
+    // Se elimina el límite y se ordena por nombre para coincidir con la lógica de guia.html
+    const [clientsResult, debtorsResult, alertsResult, secondPaymentResult] = await Promise.all([
+        sbClient.from('clients').select('*').order('name', { ascending: true }),
+        sbClient.from('debtors').select('*'),
+        sbClient.from('alerts_represt').select('*'),
+        sbClient.from('payments_alerts').select('*').is('pay', null)
+    ]);
 
-    // Cargar Alertas de Segundo Pago
-    const { data: secondPaymentAlerts } = await sbClient.from('payments_alerts').select('*').is('pay', null);
-    currentSecondPaymentAlerts = secondPaymentAlerts || [];
+    if (clientsResult.error) {
+        console.error('Error al cargar clientes:', clientsResult.error);
+        clientsTableBody.innerHTML = `<tr><td colspan="6" style="color: red; text-align: center;">Error: ${clientsResult.error.message}</td></tr>`;
+        return;
+    }
+
+    allClientsData = clientsResult.data || [];
+    allDebtorsData = debtorsResult.data || []; // Guardar deudores para cálculo en memoria
+    currentAlertsData = alertsResult.data || [];
+    currentSecondPaymentAlerts = secondPaymentResult.data || [];
 
     // Notificación Masiva si hay alertas pendientes (represt === false)
     const pendingAlerts = currentAlertsData.filter(a => a.represt === false);
@@ -903,20 +916,6 @@ async function loadClientsTable(isRefresh = false) {
         alertReprestNotificationModal.style.display = 'block';
     }
 
-    const { data: clients, error } = await sbClient
-        .from('clients')
-        .select('id, name, cedula, phone, municipality, asesor_name, closed') // Incluimos 'closed'
-        .order('created_at', { ascending: false }) // Ordenar por fecha de creación descendente
-        .limit(1000);
-
-    if (error) {
-        console.error('Error al cargar clientes:', error);
-        clientsTableBody.innerHTML = `<tr><td colspan="6" style="color: red; text-align: center;">Error: ${error.message}</td></tr>`;
-        return;
-    }
-
-    allClientsData = clients || []; // Guardar para búsqueda
-    
     if (!isRefresh) {
         clientsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Realice una búsqueda de clientes por favor</td></tr>';
     }
@@ -938,34 +937,28 @@ async function renderClientsTable(clients) {
     const secondPaymentMap = new Map();
     currentSecondPaymentAlerts.forEach(a => secondPaymentMap.set(a.cedula, a));
 
+    // Calcular créditos abiertos en memoria usando allDebtorsData (Optimización masiva)
+    const openCreditsMap = new Map();
+    allDebtorsData.forEach(d => {
+        if (d.cedula && (parseFloat(d.balance) || 0) > 0) {
+            const current = openCreditsMap.get(d.cedula) || 0;
+            openCreditsMap.set(d.cedula, current + 1);
+        }
+    });
+
     // Obtener todos los cupos extras válidos para verificar
     const { data: validExtras } = await sbClient.from('extras').select('cedula').eq('valid', true);
     const validExtrasCedulas = new Set(validExtras ? validExtras.map(e => e.cedula) : []);
 
-    // Consultar estado de crédito en la tabla debtors para cada cliente
-    const clientsWithStatus = await Promise.all(clients.map(async (client) => {
-        let hasActiveCredit = false;
-        if (client.cedula) {
-            const { data: debts, error: debtError } = await sbClient
-                .from('debtors')
-                .select('balance')
-                .eq('cedula', client.cedula);
-            
-            if (debtError) {
-                console.warn('Error verificando crédito para:', client.cedula, debtError.message);
-            } else if (debts && debts.length > 0) {
-                hasActiveCredit = debts.some(d => (parseFloat(d.balance) || 0) > 0);
-            }
-        }
-        return { ...client, hasActiveCredit, hasValidExtra: validExtrasCedulas.has(client.cedula) };
-    }));
-
-    clientsWithStatus.forEach(client => {
+    clients.forEach(client => {
         let statusHtml = '';
         
         // Lógica de Semáforo de Estados (Prioridad Visual)
         const alertInfo = alertsMap.get(client.cedula);
         const secondPaymentInfo = secondPaymentMap.get(client.cedula);
+        const openCreditsCount = openCreditsMap.get(client.cedula) || 0;
+        const hasActiveCredit = openCreditsCount > 0;
+        const hasValidExtra = validExtrasCedulas.has(client.cedula);
 
         // 1. Prioridad Absoluta: Alerta de Represte
         if (alertInfo && alertInfo.represt === false) {
@@ -980,8 +973,12 @@ async function renderClientsTable(clients) {
             statusHtml = `<div class="status-capsule status-closed" data-id="${client.id}">Crédito cerrado</div>`;
         }
         // 3. Estado Normal: Rojo (Deuda) / Verde (Libre)
-        else if (client.hasActiveCredit) {
-            statusHtml = '<div class="status-capsule status-open">Crédito Abierto</div>';
+        else if (hasActiveCredit) {
+            if (openCreditsCount >= 2) {
+                statusHtml = `<div class="status-capsule status-open">${openCreditsCount} Créditos Abiertos</div>`;
+            } else {
+                statusHtml = '<div class="status-capsule status-open">Crédito Abierto</div>';
+            }
         } else {
             statusHtml = `<div class="status-capsule status-free" data-id="${client.id}" style="cursor: pointer;" title="Click para cerrar crédito">Sin Crédito</div>`;
         }
@@ -989,7 +986,7 @@ async function renderClientsTable(clients) {
         // Estado del botón Cupo Extra
         let cupoExtraDisabled = '';
         let cupoExtraStyle = '';
-        if (client.hasValidExtra) {
+        if (hasValidExtra) {
             cupoExtraDisabled = 'disabled';
             cupoExtraStyle = 'background-color: #ccc; cursor: not-allowed;';
         }
@@ -2552,23 +2549,28 @@ searchAdvisorSelect.addEventListener('change', () => {
     }
 });
 
-btnDoSearchAdvisor.addEventListener('click', () => {
+btnDoSearchAdvisor.addEventListener('click', async () => {
     const advisorName = searchAdvisorSelect.value;
     const muni = searchAdvisorMuniSelect.value;
 
     if (!advisorName) return alert('Seleccione un asesor');
 
-    const filtered = allClientsData.filter(c => {
-        const matchAdvisor = c.asesor_name === advisorName;
-        if (!matchAdvisor) return false;
+    showLoading('transparent');
+    let query = sbClient.from('clients').select('*').eq('asesor_name', advisorName);
+    if (muni && muni !== 'all') {
+        query = query.eq('municipality', muni);
+    }
+    
+    const { data: filtered, error } = await query;
+    hideLoading();
 
-        if (muni === 'all' || !muni) return true;
-        return c.municipality === muni;
-    });
-
-    renderClientsTable(filtered);
-    searchByAdvisorModal.style.display = 'none';
-    searchClientModal.style.display = 'none';
+    if (error) {
+        alert('Error al buscar: ' + error.message);
+    } else {
+        renderClientsTable(filtered || []);
+        searchByAdvisorModal.style.display = 'none';
+        searchClientModal.style.display = 'none';
+    }
 });
 
 btnCloseSearchAdvisor.addEventListener('click', () => {
@@ -2621,16 +2623,22 @@ btnSearchMuni.addEventListener('click', async () => {
     searchByMuniModal.style.display = 'block';
 });
 
-btnDoSearchMuni.addEventListener('click', () => {
+btnDoSearchMuni.addEventListener('click', async () => {
     const muni = searchMuniMuniSelect.value;
 
     if (!muni) return alert('Seleccione un municipio');
 
-    const filtered = allClientsData.filter(c => c.municipality === muni);
+    showLoading('transparent');
+    const { data: filtered, error } = await sbClient.from('clients').select('*').eq('municipality', muni);
+    hideLoading();
 
-    renderClientsTable(filtered);
-    searchByMuniModal.style.display = 'none';
-    searchClientModal.style.display = 'none';
+    if (error) {
+        alert('Error al buscar: ' + error.message);
+    } else {
+        renderClientsTable(filtered || []);
+        searchByMuniModal.style.display = 'none';
+        searchClientModal.style.display = 'none';
+    }
 });
 
 btnCloseSearchMuni.addEventListener('click', () => {
@@ -4153,10 +4161,10 @@ async function generatePgReport() {
 
     if (!currentPgMode) return alert('Seleccione un modo (Diario/Semanal)');
     // Validación de Filtros Estricta
-    if (pgFilterDept.value === "" && pgFilterUser.value === "") {
-        pgTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; color: #dc3545; font-weight: bold;">Por favor configure su consulta en el espacio de filtros (Seleccione al menos un Departamento o Asesor).</td></tr>';
-        return;
-    }
+    // if (pgFilterDept.value === "" && pgFilterUser.value === "") {
+    //     pgTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; color: #dc3545; font-weight: bold;">Por favor configure su consulta en el espacio de filtros (Seleccione al menos un Departamento o Asesor).</td></tr>';
+    //     return;
+    // }
 
     // A. Usar fechas del estado global
     const start = pgDateState.start;
@@ -4167,134 +4175,217 @@ async function generatePgReport() {
     const endISO = end.toISOString();
 
     try {
-        // B. Estrategia de Consulta
-        // Se eliminan filtros de created_at para usar sale_date/payment_date/etc en memoria
+        // 1. Calcular fecha de retroceso (Lookback)
+        const isWeekly = currentPgMode === 'weekly';
+        const lookbackDate = new Date(start);
+        lookbackDate.setDate(lookbackDate.getDate() - (isWeekly ? 365 : 180));
         
-        // 1. Créditos (Debtors)
-        const { data: debtors, error: debtError } = await sbClient.from('debtors').select('*');
+        // 2. Consultas sin límite
+        const { data: debtors, error: debtError } = await sbClient
+            .from('debtors')
+            .select('*')
+            .gte('created_at', lookbackDate.toISOString())
+            .lte('created_at', end.toISOString());
 
         if (debtError) throw debtError;
 
-        // 2. Pagos (Payments)
-        const { data: payments, error: payError } = await sbClient.from('payments').select('*');
+        const { data: payments, error: payError } = await sbClient
+            .from('payments')
+            .select('*')
+            .gte('created_at', start.toISOString())
+            .lte('created_at', end.toISOString());
 
         if (payError) throw payError;
 
-        // 3. Gastos (Reports/Wreports)
-        const expenseTable = currentPgMode === 'daily' ? 'reports' : 'wreports'; // Asumiendo nombres de tablas
-        // Nota: Si las tablas no existen, esto fallará. Asumimos que existen según prompt.
-        // Si no existen, comentar esta parte.
-        let expenses = [];
-        try {
-            const { data: exp } = await sbClient
-                .from(expenseTable)
-                .select('*');
-            expenses = exp || [];
-        } catch (e) { console.warn("Tabla de gastos no encontrada o error", e); }
-
-        // C. Lógica de Negocio y Procesamiento (El Cruce)
+        const expenseTable = isWeekly ? 'wreports' : 'reports';
+        let reportsQuery = sbClient.from(expenseTable).select('*');
         
-        const dataMap = {}; // Key: "YYYY-MM-DD|Asesor|Muni"
+        // Filtro de usuario para reportes de gastos si aplica
+        if (pgFilterUser.value) {
+             reportsQuery = reportsQuery.eq('user_name', pgFilterUser.value);
+        }
+        
+        const { data: reportsSnap, error: reportsError } = await reportsQuery;
+        if (reportsError) throw reportsError;
 
-        // Helper para generar claves
-        const getKey = (dateObj, asesor, muni) => {
-            const d = getLocalDateKey(dateObj);
-            return `${d}|${asesor || 'Sin Asesor'}|${muni || 'Sin Muni'}`;
+        // Procesamiento (Lógica de guia.html adaptada)
+        const dataMap = {}; 
+        const getKey = (dateStr, userName, muniName) => `${dateStr}|${userName}|${muniName}`;
+        
+        const initRow = (key, dateStr, userName, muniName, sortTime) => {
+            if (!dataMap[key]) {
+                dataMap[key] = { 
+                    date: dateStr, 
+                    user: userName, 
+                    muni: muniName, 
+                    cobro: 0, 
+                    creditos: 0, 
+                    ganancia: 0, 
+                    cobroReal: 0, 
+                    gastos: 0, 
+                    sortDate: sortTime 
+                };
+            }
         };
 
-        // Iterar día por día en el rango para calcular "Cobro Esperado"
-        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            const currentDayTime = d.getTime();
-            const currentDayISO = getLocalDateKey(d);
+        const isDiario = (term) => {
+            if (!term) return false;
+            if (Array.isArray(term)) return term.some(t => String(t).toUpperCase() === 'DIARIO');
+            return String(term).toUpperCase() === 'DIARIO';
+        };
+        
+        const isSemanal = (term) => {
+            if (!term) return false;
+            if (Array.isArray(term)) return term.some(t => String(t).toUpperCase() === 'SEMANAL');
+            return String(term).toUpperCase() === 'SEMANAL';
+        };
 
-            debtors.forEach(debt => {
-                // Filtros de Entidad (Dept, Muni, User)
-                if (pgFilterUser.value && debt.asesor_name !== pgFilterUser.value) return;
-                if (pgFilterMuni.value && debt.municipality !== pgFilterMuni.value) return;
-                // Filtro Dept es más complejo si no está en debtor, asumimos muni filtra suficiente o debtor tiene dept
+        const getWeekInfo = (dateObj) => {
+            const d = dateObj.getDate();
+            const m = dateObj.getMonth();
+            const y = dateObj.getFullYear();
+            const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            let w = 4;
+            if (d <= 7) w = 1;
+            else if (d <= 14) w = 2;
+            else if (d <= 21) w = 3;
+            const label = `Semana ${w} - ${months[m]} ${y}`;
+            const sortTime = new Date(y, m, (w - 1) * 7 + 1).getTime();
+            return { label, sortTime };
+        };
 
-                // Validar Modo (Diario/Semanal)
-                let term = debt.payment_term;
-                let isTermValid = false;
-                const targetTerm = currentPgMode === 'daily' ? 'DIARIO' : 'SEMANAL';
-                if (Array.isArray(term)) isTermValid = term.some(t => t.toUpperCase() === targetTerm);
-                else if (typeof term === 'string') isTermValid = term.toUpperCase() === targetTerm;
-                if (!isTermValid) return;
+        const debtorsMap = new Map();
+        const datesInRange = [];
+        let currentDateIter = new Date(start);
+        while (currentDateIter <= end) {
+            datesInRange.push(new Date(currentDateIter));
+            currentDateIter.setDate(currentDateIter.getDate() + 1);
+        }
 
-                const key = getKey(d, debt.asesor_name, debt.municipality);
-                if (!dataMap[key]) dataMap[key] = { date: currentDayISO, user: debt.asesor_name, muni: debt.municipality, cobro: 0, gastos: 0, creditos: 0, ganancia: 0, cobroReal: 0 };
+        // Procesar Créditos
+        debtors.forEach(d => {
+            if (pgFilterUser.value && d.asesor_name !== pgFilterUser.value) return;
+            if (pgFilterMuni.value && d.municipality !== pgFilterMuni.value) return;
+            
+            debtorsMap.set(d.id, d);
 
-                // Cálculo "Cobro" (Expectativa)
-                // Si el crédito fue creado ANTES o DURANTE este día, y no está terminado (o terminó después)
-                // Simplificación robusta: Si created_at <= hoy.
-                // Y manejo de importados: usar sale_date si existe. Usamos parseDateValue para robustez.
-                const debtDateObj = parseDateValue(debt.sale_date) || parseDateValue(debt.created_at);
-                const creationTime = debtDateObj ? debtDateObj.getTime() : 0;
-                
-                if (creationTime <= currentDayTime) {
-                    // Sumar cuota (asumiendo que debe pagar todos los días/semanas)
-                    // En un sistema real verificaríamos si el saldo era > 0 en esa fecha.
-                    // Aquí sumamos la expectativa basada en que el crédito existe.
-                    dataMap[key].cobro += (parseFloat(debt.valor_cuota) || 0);
+            if (isWeekly) { if (!isSemanal(d.payment_term)) return; } 
+            else { if (!isDiario(d.payment_term)) return; }
+
+            const createdAt = new Date(d.created_at);
+
+            // Nuevos Créditos y Ganancia
+            if (d.imported !== true && createdAt >= start && createdAt <= end) {
+                let dateStr, sortTime;
+                if (isWeekly) {
+                    const info = getWeekInfo(createdAt);
+                    dateStr = info.label;
+                    sortTime = info.sortTime;
+                } else {
+                    dateStr = getLocalDateKey(createdAt); // YYYY-MM-DD
+                    sortTime = createdAt.getTime();
                 }
+                const key = getKey(dateStr, d.asesor_name, d.municipality);
+                initRow(key, dateStr, d.asesor_name, d.municipality, sortTime);
+                dataMap[key].creditos += (Number(d.sale_value) || 0);
+                dataMap[key].ganancia += (Number(d.interests) || 0);
+            }
 
-                // Cálculo "Créditos" (Ventas Nuevas) y "Ganancia"
-                // Solo si fue creado EXACTAMENTE este día
-                const debtCreatedDay = getLocalDateKey(debtDateObj);
-                if (debtCreatedDay === currentDayISO) {
-                    if (debt.imported !== true) {
-                        dataMap[key].creditos += (parseFloat(debt.sale_value) || 0);
-                    }
-                    // Ganancia se suma siempre o solo no importados? Prompt dice: "Exclusión de Importados: Confirma..."
-                    // Asumiremos exclusión también para consistencia, o según regla negocio.
-                    // Prompt: "¿Qué condición... Exclusión de Importados..." -> Aplica a Creditos.
-                    // Ganancia: "Mapeado de d.interests". Asumiremos misma regla.
-                    if (debt.imported !== true) {
-                        dataMap[key].ganancia += (parseFloat(debt.interests) || 0);
+            // Cobro Esperado
+            let effectiveDate = createdAt;
+            if (d.sale_date) {
+                const parsed = parseDateValue(d.sale_date);
+                if (parsed) effectiveDate = parsed;
+            }
+
+            const numDays = Number(d.number_of_payments) || 0;
+            const expirationDate = new Date(effectiveDate);
+            if (isWeekly) expirationDate.setDate(expirationDate.getDate() + (numDays * 7));
+            else expirationDate.setDate(expirationDate.getDate() + numDays);
+
+            const activeStart = new Date(effectiveDate);
+            activeStart.setDate(activeStart.getDate() + 1);
+            activeStart.setHours(0,0,0,0);
+            const activeEnd = new Date(expirationDate);
+            activeEnd.setHours(23,59,59,999);
+
+            datesInRange.forEach(dayDate => {
+                const dayStart = new Date(dayDate);
+                dayStart.setHours(0,0,0,0);
+                const hasBalance = (Number(d.balance) || 0) > 0;
+
+                if (dayStart >= activeStart && (dayStart <= activeEnd || hasBalance)) {
+                    if (!isWeekly || (isWeekly && dayStart.getDay() === effectiveDate.getDay())) {
+                        let dateStr, sortTime;
+                        if (isWeekly) {
+                            const info = getWeekInfo(dayStart);
+                            dateStr = info.label;
+                            sortTime = info.sortTime;
+                        } else {
+                            dateStr = getLocalDateKey(dayStart);
+                            sortTime = dayStart.getTime();
+                        }
+                        const key = getKey(dateStr, d.asesor_name, d.municipality);
+                        initRow(key, dateStr, d.asesor_name, d.municipality, sortTime);
+                        dataMap[key].cobro += (Number(d.valor_cuota) || 0);
                     }
                 }
             });
-        }
+        });
 
-        // Cálculo "Recaudo" (Dinero Real) - Iterar Pagos
+        // Procesar Pagos
         payments.forEach(p => {
-            if (p.imported === true) return; // Exclusión explícita
+            if (pgFilterUser.value && p.user_name !== pgFilterUser.value) return;
+            if (pgFilterMuni.value && p.municipality !== pgFilterMuni.value) return;
+            if (isWeekly && p.imported === true) return;
+            if (p.imported === true) return;
 
-            // Buscar deudor para validar modo y obtener asesor/muni
-            const debtor = debtors.find(d => d.cedula === p.cedula || d.name === p.debtor_name);
-            if (!debtor) return; // Pago huérfano o fuera de lookback
-
-            // Validar modo del deudor
-            let term = debtor.payment_term;
-            let isTermValid = false;
-            const targetTerm = currentPgMode === 'daily' ? 'DIARIO' : 'SEMANAL';
-            if (Array.isArray(term)) isTermValid = term.some(t => t.toUpperCase() === targetTerm);
-            else if (typeof term === 'string') isTermValid = term.toUpperCase() === targetTerm;
-            if (!isTermValid) return;
-
-            // Filtros UI
-            if (pgFilterUser.value && debtor.asesor_name !== pgFilterUser.value) return;
-            if (pgFilterMuni.value && debtor.municipality !== pgFilterMuni.value) return;
-
-            // Usar payment_date si existe, sino created_at
-            const pDate = parseDateValue(p.payment_date) || parseDateValue(p.created_at);
+            const debtor = debtorsMap.get(p.debtor_id);
+            if (!debtor) return;
             
-            // Validar si el pago cae en el rango del reporte (ya que trajimos todos los pagos)
-            if (pDate < start || pDate > end) return;
+            if (isWeekly) { if (!isSemanal(debtor.payment_term)) return; }
+            else { if (!isDiario(debtor.payment_term)) return; }
 
-            const key = getKey(pDate, debtor.asesor_name, debtor.municipality);
-            
-            if (!dataMap[key]) dataMap[key] = { date: getLocalDateKey(pDate), user: debtor.asesor_name, muni: debtor.municipality, cobro: 0, gastos: 0, creditos: 0, ganancia: 0, cobroReal: 0 };
-
+            const date = new Date(p.created_at);
+            let dateStr, sortTime;
+            if (isWeekly) {
+                const info = getWeekInfo(date);
+                dateStr = info.label;
+                sortTime = info.sortTime;
+            } else {
+                dateStr = getLocalDateKey(date);
+                sortTime = date.getTime();
+            }
+            const key = getKey(dateStr, p.user_name, p.municipality);
+            initRow(key, dateStr, p.user_name, p.municipality, sortTime);
             dataMap[key].cobroReal += (parseFloat(p.payment_amount) || 0);
         });
 
-        // Integración de Gastos
-        expenses.forEach(exp => {
-            // Asumiendo estructura de expenses: created_at, total_expenses, user_id/name?
-            // Si no tiene user, es difícil asignar. Asumiremos que tiene campo 'user' o similar.
-            // Si no, se asigna a una fila general.
-            // Para este ejemplo, mapeamos si coincide fecha y usuario.
+        // Gastos
+        const expensesMap = {};
+        reportsSnap.forEach(r => {
+            let rDate, dateStr;
+            if (isWeekly) {
+                rDate = new Date(r.created_at);
+                const info = getWeekInfo(rDate);
+                dateStr = info.label;
+            } else {
+                const parsed = parseDateValue(r.report_date);
+                rDate = parsed || new Date(r.created_at);
+                dateStr = r.report_date || getLocalDateKey(rDate);
+            }
+            if (rDate >= start && rDate <= end) {
+                expensesMap[`${dateStr}|${r.user_name}`] = (Number(r.expense_report) || Number(r.expenses_report) || 0);
+            }
+        });
+
+        const expensesApplied = new Set();
+        Object.values(dataMap).forEach(row => {
+            const expKey = `${row.date}|${row.user}`;
+            if (expensesMap[expKey] && !expensesApplied.has(expKey)) {
+                row.gastos = expensesMap[expKey];
+                expensesApplied.add(expKey);
+            }
         });
 
         // Renderizar
@@ -4409,10 +4500,10 @@ async function generatePaymentBehaviorReport() {
 
     if (!currentPbMode) return alert('Seleccione un modo (Diario/Semanal)');
     // Validación de Filtros Estricta
-    if (pbFilterDept.value === "" && pbFilterUser.value === "") {
-        pbTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; color: #dc3545; font-weight: bold;">Por favor configure su consulta en el espacio de filtros (Seleccione al menos un Departamento o Asesor).</td></tr>';
-        return;
-    }
+    // if (pbFilterDept.value === "" && pbFilterUser.value === "") {
+    //     pbTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; color: #dc3545; font-weight: bold;">Por favor configure su consulta en el espacio de filtros (Seleccione al menos un Departamento o Asesor).</td></tr>';
+    //     return;
+    // }
 
     const start = pgDateState.start;
     const end = pgDateState.end;
@@ -4421,119 +4512,141 @@ async function generatePaymentBehaviorReport() {
     const endISO = end.toISOString();
 
     try {
-        // Paso 1: Obtención del Universo de Deudores (Activos)
+        // 1. Consultar Deudores (Activos)
         // Filtramos por saldo > 0
         let query = sbClient.from('debtors').select('*').gt('balance', 0);
         
-        // Filtros de UI
         if (pbFilterUser.value) query = query.eq('asesor_name', pbFilterUser.value);
         if (pbFilterMuni.value) query = query.eq('municipality', pbFilterMuni.value);
         
         const { data: debtors, error: debtError } = await query;
         if (debtError) throw debtError;
 
-        // Filtrar por frecuencia (Diario/Semanal) en memoria (polimorfismo)
-        const targetTerm = currentPbMode === 'daily' ? 'DIARIO' : 'SEMANAL';
+        // Filtrar por frecuencia (Diario/Semanal)
+        const isWeekly = currentPbMode === 'weekly';
+        const targetTerm = isWeekly ? 'SEMANAL' : 'DIARIO';
+        
         const activeDebtors = debtors.filter(d => {
             let term = d.payment_term;
             if (Array.isArray(term)) return term.some(t => t.toUpperCase() === targetTerm);
-            if (typeof term === 'string') return term.toUpperCase() === targetTerm;
-            return false;
+            return String(term).toUpperCase() === targetTerm;
         });
 
-        // Paso 2: Mapa de Pagos Realizados
-        // Traemos todos los pagos para filtrar en memoria por payment_date
-        const { data: payments, error: payError } = await sbClient
-            .from('payments')
-            .select('debtor_id, created_at, payment_date');
+        // 2. Consultar Pagos
+        // Helper for DD-MM-YYYY
+        const getDDMMYYYY = (dateObj) => {
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const y = dateObj.getFullYear();
+            return `${d}-${m}-${y}`;
+        };
 
-        if (payError) throw payError;
+        const queryDateStrings = [];
+        let currentDate = new Date(start);
+        while (currentDate <= end) {
+            queryDateStrings.push(getDDMMYYYY(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        // Fetch payments in chunks (by payment_date string)
+        const chunks = [];
+        for (let i = 0; i < queryDateStrings.length; i += 20) {
+            chunks.push(queryDateStrings.slice(i, i + 20));
+        }
+
+        // Also fetch by created_at range to catch those without payment_date string or different format
+        const paymentsByCreatedPromise = sbClient
+            .from('payments')
+            .select('debtor_id, created_at, payment_date, payment_amount')
+            .gte('created_at', startISO)
+            .lte('created_at', endISO);
+
+        const chunkPromises = chunks.map(chunk => 
+            sbClient.from('payments').select('debtor_id, created_at, payment_date, payment_amount').in('payment_date', chunk)
+        );
+
+        const [createdResult, ...chunkResults] = await Promise.all([paymentsByCreatedPromise, ...chunkPromises]);
+
+        // Helper for Week Info
+        const getWeekInfo = (dateObj) => {
+            const d = dateObj.getDate();
+            const m = dateObj.getMonth();
+            const y = dateObj.getFullYear();
+            const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            let w = 4;
+            if (d <= 7) w = 1;
+            else if (d <= 14) w = 2;
+            else if (d <= 21) w = 3;
+            const label = `Semana ${w} - ${months[m]} ${y}`;
+            return { label };
+        };
 
         const paymentsMap = new Set();
-        payments.forEach(p => {
-            // Usamos payment_date si existe (fecha real del pago), sino created_at
-            const pDate = parseDateValue(p.payment_date) || parseDateValue(p.created_at);
-            
-            // Solo considerar pagos dentro del rango seleccionado
-            if (pDate >= start && pDate <= end) {
-                const dateStr = getLocalDateKey(pDate);
-                // Clave compuesta: ID_FECHA
-                paymentsMap.add(`${p.debtor_id}|${dateStr}`);
+        const processPayment = (p) => {
+            let pDate = parseDateValue(p.payment_date) || parseDateValue(p.created_at);
+            if (pDate) {
+                if (isWeekly) {
+                    const label = getWeekInfo(pDate).label;
+                    paymentsMap.add(`${p.debtor_id}|${label}`);
+                } else {
+                    paymentsMap.add(`${p.debtor_id}|${getDDMMYYYY(pDate)}`);
+                }
             }
+        };
+
+        if (createdResult.data) createdResult.data.forEach(processPayment);
+        chunkResults.forEach(res => {
+            if (res.data) res.data.forEach(processPayment);
         });
 
-        // Paso 3: El Cruce (Detección de "Misses")
+        // 3. Detect Misses
         const misses = [];
 
-        // Iterar sobre el rango de fechas
-        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            const checkDateStr = getLocalDateKey(d);
-            const checkDateTs = d.getTime();
-
-            // En modo semanal, podríamos simplificar verificando solo un día de la semana o agrupando
-            // Pero el prompt sugiere iterar. Si es semanal, ¿qué define "cumplimiento"?
-            // Asumiremos: Si es modo semanal, verificamos si pagó en la semana correspondiente a 'd'.
-            // Para simplificar visualización diaria: Si es semanal, reportamos el día que revisamos si no pagó en esa semana.
-            // O mejor: El reporte lista DÍAS. Si es semanal, el cliente debe pagar una vez a la semana.
-            // Si el rango es una semana, verificamos si pagó.
-            
-            activeDebtors.forEach(debtor => {
-                // Excepción de Fecha de Creación
-                const createdTs = new Date(debtor.sale_date || debtor.created_at).getTime();
-                if (createdTs > checkDateTs) return; // El crédito no existía aún
-
-                let paid = false;
-
-                if (currentPbMode === 'daily') {
-                    // Verificar si pagó este día exacto
-                    if (paymentsMap.has(`${debtor.id}|${checkDateStr}`)) paid = true;
-                } else {
-                    // Lógica Semanal: Verificar si pagó en la semana de 'd'
-                    // Esto es complejo si iteramos día a día.
-                    // Simplificación: Si el modo es semanal, solo revisamos los Domingos (o fin de periodo)
-                    // O revisamos si existe ALGÚN pago en el rango +/- 3 días.
-                    // Para cumplir estrictamente el prompt "Iteración sobre Deudor y Semana":
-                    // Asumiremos que si el usuario selecciona un rango, verificamos cumplimiento en ese rango.
-                    // Si pagó cualquier día del rango seleccionado, cuenta como pagado (si el rango es 1 semana).
-                    // Si iteramos días, un cliente semanal aparecería como moroso 6 días a la semana.
-                    // AJUSTE: Si es semanal, solo reportamos si NO pagó en toda la semana.
-                    // Para efectos de este código y UI diaria:
-                    // Si es semanal, verificamos si existe pago en paymentsMap para ese deudor en CUALQUIER fecha del rango actual?
-                    // No, debe ser por semana específica.
-                    // Implementación robusta: Verificar si hay pago en la semana ISO de la fecha 'd'.
-                    // Por ahora, usaremos lógica diaria estricta para modo diario.
-                    // Y para semanal: Si 'd' es Domingo (o fin de rango), verificamos si hubo pago en los últimos 7 días.
+        if (isWeekly) {
+            // Iterate Weeks
+            const weeksProcessed = new Set();
+            currentDate = new Date(start);
+            while (currentDate <= end) {
+                const info = getWeekInfo(currentDate);
+                if (!weeksProcessed.has(info.label)) {
+                    weeksProcessed.add(info.label);
                     
-                    // Si es semanal, solo procesamos si es Domingo o el último día del reporte
-                    const isSunday = d.getDay() === 0;
-                    const isLastDay = d.getTime() === end.getTime();
-                    
-                    if (isSunday || isLastDay) {
-                        // Buscar pagos en los últimos 7 días
-                        const weekStart = new Date(d);
-                        weekStart.setDate(d.getDate() - 6);
-                        const weekStartTs = weekStart.getTime();
-                        
-                        // Buscar en payments array crudo
-                        const hasPaymentInWeek = payments.some(p => {
-                            const pObj = parseDateValue(p.payment_date) || parseDateValue(p.created_at);
-                            const pTs = pObj.getTime();
-                            return p.debtor_id === debtor.id && pTs >= weekStartTs && pTs <= checkDateTs;
-                        });
-                        
-                        if (hasPaymentInWeek) paid = true;
-                    } else {
-                        return; // No reportamos días intermedios en modo semanal
-                    }
-                }
+                    activeDebtors.forEach(debtor => {
+                        const created = parseDateValue(debtor.sale_date) || parseDateValue(debtor.created_at);
+                        // If created > currentDate (approx start of week check), skip
+                        if (created && created > currentDate) return;
 
-                if (!paid) {
-                    misses.push({
-                        date: checkDateStr,
-                        debtor: debtor
+                        if (!paymentsMap.has(`${debtor.id}|${info.label}`)) {
+                            misses.push({
+                                dateStr: info.label,
+                                debtor: debtor
+                            });
+                        }
                     });
                 }
-            });
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+        } else {
+            // Iterate Days
+            currentDate = new Date(start);
+            while (currentDate <= end) {
+                const dateStr = getDDMMYYYY(currentDate);
+                const checkTs = currentDate.getTime();
+
+                activeDebtors.forEach(debtor => {
+                    const created = parseDateValue(debtor.sale_date) || parseDateValue(debtor.created_at);
+                    // If created today or later, skip (assuming payment starts next day)
+                    if (created && created.getTime() >= checkTs) return;
+
+                    if (!paymentsMap.has(`${debtor.id}|${dateStr}`)) {
+                        misses.push({
+                            dateStr: dateStr,
+                            debtor: debtor
+                        });
+                    }
+                });
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
         }
 
         currentPbReportData = misses;
@@ -4561,7 +4674,7 @@ function renderPbTable(data) {
             <td>${d.name || ''}</td>
             <td>${d.municipality || ''}</td>
             <td>${d.asesor_name || ''}</td>
-            <td>${d.sale_date || ''}</td>
+            <td>${item.dateStr}</td>
             <td>${isNew ? '$' + parseFloat(d.sale_value).toLocaleString() : '-'}</td>
             <td>${!isNew ? '$' + parseFloat(d.sale_value).toLocaleString() : '-'}</td>
             <td>$${(parseFloat(d.valor_cuota) || 0).toLocaleString()}</td>
@@ -4786,10 +4899,10 @@ async function generateCreditsReport() {
 
     if (!currentCrMode) return alert('Seleccione un modo (Diario/Semanal)');
     // Validación de Filtros Estricta
-    if (crFilterDept.value === "" && crFilterUser.value === "") {
-        crTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: #dc3545; font-weight: bold;">Por favor configure su consulta en el espacio de filtros (Seleccione al menos un Departamento o Asesor).</td></tr>';
-        return;
-    }
+    // if (crFilterDept.value === "" && crFilterUser.value === "") {
+    //     crTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: #dc3545; font-weight: bold;">Por favor configure su consulta en el espacio de filtros (Seleccione al menos un Departamento o Asesor).</td></tr>';
+    //     return;
+    // }
 
     const start = pgDateState.start;
     const end = pgDateState.end;
@@ -4798,53 +4911,49 @@ async function generateCreditsReport() {
     const endTs = end.getTime();
 
     try {
-        // 1. Consulta a Firestore (Supabase)
-        // Aplicamos filtros directos en la consulta para optimizar
+        // 1. Consulta sin límite de fecha (Filtrado en memoria)
         let query = sbClient.from('debtors').select('*');
 
         if (crFilterUser.value) query = query.eq('asesor_name', crFilterUser.value);
         if (crFilterMuni.value) query = query.eq('municipality', crFilterMuni.value);
         
-        // Nota: No filtramos por fecha en la query SQL porque sale_date puede ser texto dd-MM-yyyy
-        // y created_at es timestamp. Haremos el filtrado de fecha en memoria para mayor precisión
-        // con el formato mixto que maneja el sistema.
-
-        const { data: debtors, error } = await query;
+        const { data: snapshot, error } = await query;
         if (error) throw error;
 
-        // 2. Filtrado en Memoria (Post-Procesamiento)
-        const targetTerm = currentCrMode === 'daily' ? 'DIARIO' : 'SEMANAL';
+        // 2. Filtrado en Memoria
+        const records = [];
+        const isWeekly = currentCrMode === 'weekly';
+        const targetTerm = isWeekly ? 'SEMANAL' : 'DIARIO';
         
-        const filteredData = debtors.filter(d => {
-            // A. Validación de paymentTerm (Polimorfismo)
-            let term = d.payment_term;
-            let isTermValid = false;
-            if (Array.isArray(term)) isTermValid = term.some(t => t.toUpperCase() === targetTerm);
-            else if (typeof term === 'string') isTermValid = term.toUpperCase() === targetTerm;
-            
-            if (!isTermValid) return false;
-
-            // B. Filtro de Fecha
-            // Usamos el helper robusto que maneja zonas horarias correctamente.
+        snapshot.forEach(d => {
+            // Filtro de Fecha
             const recordDate = parseDateValue(d.sale_date) || parseDateValue(d.created_at);
+            if (!recordDate || recordDate < start || recordDate > end) return;
 
-            if (!recordDate) return false; // Si no se puede parsear la fecha, se excluye.
+            // Filtro de Modo
+            let term = d.payment_term;
+            let match = false;
+            
+            if (Array.isArray(term)) {
+                match = term.some(t => String(t).toUpperCase() === targetTerm);
+            } else {
+                match = String(term).toUpperCase() === targetTerm;
+            }
+            
+            if (!match) return;
 
-            const recordDateTs = recordDate.getTime();
-
-            // Comparar rango (start y end ya tienen horas ajustadas 00:00 a 23:59)
-            return recordDateTs >= startTs && recordDateTs <= endTs;
+            records.push(d);
         });
 
         // Ordenamiento Descendente por fecha
-        filteredData.sort((a, b) => {
-            const dateA = new Date(a.sale_date || a.created_at).getTime();
-            const dateB = new Date(b.sale_date || b.created_at).getTime();
+        records.sort((a, b) => {
+            const dateA = parseDateValue(a.sale_date) || parseDateValue(a.created_at) || new Date(0);
+            const dateB = parseDateValue(b.sale_date) || parseDateValue(b.created_at) || new Date(0);
             return dateB - dateA;
         });
 
-        currentCrReportData = filteredData;
-        renderCrTable(filteredData);
+        currentCrReportData = records;
+        renderCrTable(records);
 
     } catch (e) {
         console.error(e);
@@ -4857,28 +4966,35 @@ function renderCrTable(data) {
     let totalSales = 0;
 
     if (data.length === 0) {
-        crTableBody.innerHTML = '<tr><td colspan="6">No se encontraron créditos en este periodo.</td></tr>';
+        crTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No se encontraron registros.</td></tr>';
         return;
     }
 
+    let html = '';
     data.forEach(r => {
         const isNew = (r.credit_type || '').toUpperCase() === 'NUEVO';
         const saleVal = parseFloat(r.sale_value) || 0;
         totalSales += saleVal;
 
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${r.name || ''}</td>
-            <td>${r.sale_date || new Date(r.created_at).toLocaleDateString()}</td>
-            <td>${r.asesor_name || ''}</td>
-            <td>${r.municipality || ''}</td>
-            <td>${isNew ? '$' + saleVal.toLocaleString() : '$0'}</td>
-            <td>${!isNew ? '$' + saleVal.toLocaleString() : '$0'}</td>
-        `;
-        crTableBody.appendChild(row);
+        const nuevo = isNew ? saleVal : 0;
+        const represte = !isNew ? saleVal : 0;
+
+        let dateStr = 'N/A';
+        if (r.sale_date) dateStr = r.sale_date;
+        else if (r.created_at) dateStr = new Date(r.created_at).toLocaleDateString();
+
+        html += `<tr>
+            <td>${r.name || 'N/A'}</td>
+            <td>${dateStr}</td>
+            <td>${r.asesor_name || 'N/A'}</td>
+            <td>${r.municipality || 'N/A'}</td>
+            <td>$${nuevo.toLocaleString('es-CO')}</td>
+            <td>$${represte.toLocaleString('es-CO')}</td>
+        </tr>`;
     });
 
-    crTotalDisplay.innerText = '$' + totalSales.toLocaleString();
+    crTableBody.innerHTML = html;
+    crTotalDisplay.innerText = '$' + totalSales.toLocaleString('es-CO');
 }
 
 btnDownloadCr.addEventListener('click', () => {
@@ -4972,10 +5088,10 @@ async function generatePmReport() {
 
     if (!currentPmMode) return alert('Seleccione un modo (Diario/Semanal)');
     // Validación de Filtros Estricta
-    if (pmFilterDept.value === "" && pmFilterUser.value === "") {
-        pmTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: #dc3545; font-weight: bold;">Por favor configure su consulta en el espacio de filtros (Seleccione al menos un Departamento o Asesor).</td></tr>';
-        return;
-    }
+    // if (pmFilterDept.value === "" && pmFilterUser.value === "") {
+    //     pmTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: #dc3545; font-weight: bold;">Por favor configure su consulta en el espacio de filtros (Seleccione al menos un Departamento o Asesor).</td></tr>';
+    //     return;
+    // }
 
     const start = pgDateState.start;
     const end = pgDateState.end;
@@ -4984,101 +5100,92 @@ async function generatePmReport() {
     const endISO = end.toISOString();
 
     try {
-        // 1. Consulta de Pagos (Dual Strategy)
-        // En Supabase, payment_date puede ser texto dd-MM-yyyy o created_at es timestamp.
-        // La estrategia "híbrida" de Firebase (chunks de strings) se simplifica en SQL si usamos created_at para rango.
-        // Sin embargo, para ser fieles al prompt y soportar pagos importados con fecha texto:
-        // Traeremos pagos por created_at en rango Y TAMBIÉN pagos donde payment_date (texto) esté en el rango.
-        // Dado que payment_date es texto dd-MM-yyyy, no podemos usar >= <= directamente en SQL de forma eficiente sin casting.
-        // Estrategia: Traer pagos por created_at (nativos) y filtrar en memoria los importados si es necesario,
-        // O traer un volumen razonable.
-        // Para este caso, usaremos created_at como filtro principal para la consulta a BD.
-        
+        // 1. Consulta de Pagos
         let query = sbClient.from('payments').select('*')
             .gte('created_at', startISO)
-            .lte('created_at', endISO)
-            .limit(10000);
+            .lte('created_at', endISO);
 
-        // Filtros directos si es posible (debtor_name no siempre es fiable para filtrar por asesor, mejor cruzar)
-        // Pero payments no tiene asesor_name ni municipality directamente, solo debtor_id o debtor_name.
-        // Por tanto, el filtrado por asesor/muni se hace post-cruce.
+        if (pmFilterUser.value) query = query.eq('user_name', pmFilterUser.value);
+        if (pmFilterMuni.value) query = query.eq('municipality', pmFilterMuni.value);
 
         const { data: payments, error: payError } = await query;
         if (payError) throw payError;
 
-        // 2. Enriquecimiento de Datos (Join Manual)
-        // Extraer debtorIds únicos
-        const debtorIds = [...new Set(payments.map(p => p.debtor_id))];
-        
-        if (debtorIds.length === 0) {
-            pmTableBody.innerHTML = '<tr><td colspan="6">No se encontraron pagos en este periodo.</td></tr>';
+        if (!payments || payments.length === 0) {
+            pmTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No se encontraron pagos en este periodo.</td></tr>';
             return;
         }
 
-        // Consultar deudores en lotes (Supabase soporta 'in' con arrays grandes mejor que Firebase, pero cuidamos el límite URL)
-        // Haremos lotes de 100 por seguridad.
+        // 2. Enriquecimiento de Datos (Debtors)
+        const debtorIds = [...new Set(payments.map(p => p.debtor_id))];
         let debtorsMap = new Map();
-        const chunkSize = 100;
-        for (let i = 0; i < debtorIds.length; i += chunkSize) {
-            const chunk = debtorIds.slice(i, i + chunkSize);
-            const { data: debtorsChunk, error: debtError } = await sbClient
-                .from('debtors')
-                .select('id, name, municipality, asesor_name, payment_term, valor_cuota')
-                .in('id', chunk);
-            
-            if (debtError) throw debtError;
-            
-            debtorsChunk.forEach(d => debtorsMap.set(d.id, d));
+        
+        if (debtorIds.length > 0) {
+            const chunkSize = 200;
+            for (let i = 0; i < debtorIds.length; i += chunkSize) {
+                const chunk = debtorIds.slice(i, i + chunkSize);
+                const { data: debtorsChunk, error: debtError } = await sbClient
+                    .from('debtors')
+                    .select('id, name, municipality, asesor_name, payment_term, valor_cuota')
+                    .in('id', chunk);
+                
+                if (debtError) throw debtError;
+                debtorsChunk.forEach(d => debtorsMap.set(d.id, d));
+            }
         }
 
-        // 3. Procesamiento y Filtrado en Memoria
-        const targetTerm = currentPmMode === 'daily' ? 'DIARIO' : 'SEMANAL';
-        const processedData = [];
+        // 3. Procesamiento
+        const records = [];
+        const isWeekly = currentPmMode === 'weekly';
+        const targetTerm = isWeekly ? 'SEMANAL' : 'DIARIO';
+        
         let totalCobro = 0;
         let totalRecaudo = 0;
 
         payments.forEach(p => {
             const debtor = debtorsMap.get(p.debtor_id);
-            if (!debtor) return; // Pago huérfano
-
-            // Filtro de Fecha (payment_date)
-            const pDate = parseDateValue(p.payment_date) || parseDateValue(p.created_at);
-            if (pDate < start || pDate > end) return;
-
-            // Filtros de Entidad (UI)
-            if (pmFilterUser.value && debtor.asesor_name !== pmFilterUser.value) return;
-            if (pmFilterUser.value && (!debtor.asesor_name || !debtor.asesor_name.includes(pmFilterUser.value))) return;
-            if (pmFilterMuni.value && debtor.municipality !== pmFilterMuni.value) return;
-
-            // Validación de Modo (PaymentTerm)
-            // ELIMINADO: Se comenta la validación de modo para mostrar TODOS los cobros reales
-            /*
-            let term = debtor.payment_term;
-            let isTermValid = false;
-            if (Array.isArray(term)) isTermValid = term.some(t => t.toUpperCase() === targetTerm);
-            else if (typeof term === 'string') isTermValid = term.toUpperCase() === targetTerm;
-            if (!isTermValid) return;
-            */
-
-            // Mapeo
-            const paymentVal = parseFloat(p.payment_amount) || 0;
-            const quotaVal = parseFloat(debtor.valor_cuota) || 0;
             
-            totalRecaudo += paymentVal;
-            totalCobro += quotaVal;
+            // Determinar modo (Default Diario si no hay deudor)
+            let term = debtor ? debtor.payment_term : 'Diario';
+            let match = false;
+            
+            if (Array.isArray(term)) {
+                match = term.some(t => String(t).toUpperCase() === targetTerm);
+            } else {
+                match = String(term).toUpperCase() === targetTerm;
+            }
+            
+            if (!match) return;
 
-            processedData.push({
-                debtorName: debtor.name,
-                paymentDate: getLocalDateKey(pDate),
-                userName: debtor.asesor_name,
-                municipality: debtor.municipality,
-                valorCuota: quotaVal,
-                paymentAmount: paymentVal
+            const valorCuota = debtor ? (Number(debtor.valor_cuota) || 0) : (Number(p.valor_cuota) || 0);
+            const paymentAmount = Number(p.payment_amount) || 0;
+
+            totalCobro += valorCuota;
+            totalRecaudo += paymentAmount;
+
+            const pDate = parseDateValue(p.payment_date) || parseDateValue(p.created_at);
+            const dateStr = getLocalDateKey(pDate);
+
+            records.push({
+                debtorName: p.debtor_name || (debtor ? debtor.name : 'Desconocido'),
+                paymentDate: dateStr,
+                created_at: p.created_at,
+                userName: p.user_name,
+                municipality: p.municipality,
+                valorCuota: valorCuota,
+                paymentAmount: paymentAmount
             });
         });
 
-        currentPmReportData = processedData;
-        renderPmTable(processedData, totalCobro, totalRecaudo);
+        // Sort
+        records.sort((a, b) => {
+            const dateA = parseDateValue(a.paymentDate) || parseDateValue(a.created_at) || new Date(0);
+            const dateB = parseDateValue(b.paymentDate) || parseDateValue(b.created_at) || new Date(0);
+            return dateB - dateA;
+        });
+
+        currentPmReportData = records;
+        renderPmTable(records, totalCobro, totalRecaudo);
 
     } catch (e) {
         console.error(e);
@@ -5090,25 +5197,25 @@ function renderPmTable(data, totalCobro, totalRecaudo) {
     pmTableBody.innerHTML = '';
     
     if (data.length === 0) {
-        pmTableBody.innerHTML = '<tr><td colspan="6">No se encontraron pagos que coincidan con los filtros.</td></tr>';
+        pmTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No se encontraron pagos que coincidan con los filtros.</td></tr>';
         return;
     }
 
+    let html = '';
     data.forEach(r => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${r.debtorName || ''}</td>
+        html += `<tr>
+            <td>${r.debtorName || 'N/A'}</td>
             <td>${r.paymentDate}</td>
-            <td>${r.userName || ''}</td>
-            <td>${r.municipality || ''}</td>
-            <td>$${r.valorCuota.toLocaleString()}</td>
-            <td>$${r.paymentAmount.toLocaleString()}</td>
-        `;
-        pmTableBody.appendChild(row);
+            <td>${r.userName || 'N/A'}</td>
+            <td>${r.municipality || 'N/A'}</td>
+            <td>$${r.valorCuota.toLocaleString('es-CO')}</td>
+            <td>$${r.paymentAmount.toLocaleString('es-CO')}</td>
+        </tr>`;
     });
 
-    pmTotalCobroDisplay.innerText = '$' + totalCobro.toLocaleString();
-    pmTotalRecaudoDisplay.innerText = '$' + totalRecaudo.toLocaleString();
+    pmTableBody.innerHTML = html;
+    pmTotalCobroDisplay.innerText = '$' + totalCobro.toLocaleString('es-CO');
+    pmTotalRecaudoDisplay.innerText = '$' + totalRecaudo.toLocaleString('es-CO');
 }
 
 btnDownloadPm.addEventListener('click', () => {
@@ -5174,7 +5281,7 @@ async function generateExReport() {
     try {
         // 1. Selección Dinámica de Colección
         // Diario -> expenses, Semanal -> wexpenses (Tablas de detalle de gastos)
-        const collectionName = currentExMode === 'daily' ? 'expenses' : 'wexpenses';
+        const collectionName = currentExMode === 'weekly' ? 'wexpenses' : 'expenses';
 
         // 2. Consulta a Firestore
         let query = sbClient.from(collectionName)
@@ -5309,7 +5416,7 @@ async function generateGnReport() {
 
     try {
         // 1. Selección de Fuente de Datos
-        const collectionName = currentGnMode === 'daily' ? 'reports' : 'wreports';
+        const collectionName = currentGnMode === 'weekly' ? 'wreports' : 'reports';
 
         // 2. Consulta a Firestore
         let query = sbClient.from(collectionName)
