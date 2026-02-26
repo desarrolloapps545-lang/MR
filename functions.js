@@ -1657,7 +1657,11 @@ document.getElementById('saveEditBtn').addEventListener('click', async () => {
         is_admin: ['Administrador', 'Administrador maestro', 'Desarrollador'].includes(selectedRole)
     };
 
-    const { error } = await sbClient.from('users').update(updates).eq('id', currentEditId);
+    const { data: { session } } = await sbClient.auth.getSession();
+    const { error } = await sbClient.functions.invoke('update-user', {
+        body: { user_id: currentEditId, updates: updates },
+        headers: { Authorization: `Bearer ${session?.access_token}` }
+    });
 
     if (error) {
         alert('Error al actualizar: ' + error.message);
@@ -1898,19 +1902,6 @@ saveEditClientBtn.addEventListener('click', async () => {
     const newAdvisor = editClientAdvisor.value;
     const newFreq = editClientFrequency.value;
 
-    // 2. Captura de Datos Anteriores (Cédula original)
-    const { data: oldClientData, error: fetchError } = await sbClient
-        .from('clients')
-        .select('cedula')
-        .eq('id', currentClientEditId)
-        .single();
-
-    if (fetchError || !oldClientData) {
-        return alert('Error al obtener datos originales del cliente: ' + (fetchError?.message || 'No encontrado'));
-    }
-    const oldCedula = oldClientData.cedula;
-
-    // Fase 1: Actualización del Maestro (clients)
     const clientUpdates = {
         name: newName,
         cedula: newCedula,
@@ -1921,62 +1912,20 @@ saveEditClientBtn.addEventListener('click', async () => {
         payment_term: [newFreq]
     };
 
-    const { error: updateClientError } = await sbClient
-        .from('clients')
-        .update(clientUpdates)
-        .eq('id', currentClientEditId);
+    const { data: { session } } = await sbClient.auth.getSession();
+    const { error } = await sbClient.functions.invoke('update-client', {
+        body: { client_id: currentClientEditId, updates: clientUpdates },
+        headers: { Authorization: `Bearer ${session?.access_token}` }
+    });
 
-    if (updateClientError) {
-        return alert('Error al actualizar cliente: ' + updateClientError.message);
-    }
-
-    // Fase 2 y 3: Propagación en Cascada
-    const promises = [];
-
-    // Fase 2: Propagación a Créditos (debtors)
-    const debtorUpdates = {
-        name: newName,
-        cedula: newCedula,
-        phone: newPhone,
-        address: newAddress,
-        municipality: newMuni,
-        asesor_name: newAdvisor
-    };
-    // Buscar por Cédula Antigua
-    promises.push(
-        sbClient.from('debtors').update(debtorUpdates).eq('cedula', oldCedula)
-    );
-
-    // Fase 3: Propagación a Pagos (payments)
-    const paymentUpdates = {
-        debtor_name: newName,
-        cedula: newCedula,
-        phone: newPhone,
-        address: newAddress,
-        municipality: newMuni,
-        user_name: newAdvisor // Mapeo asesorName -> userName
-    };
-    // Buscar por Cédula Antigua
-    promises.push(
-        sbClient.from('payments').update(paymentUpdates).eq('cedula', oldCedula)
-    );
-    
-    // Actualizar también tabla 'extras' si existe (por consistencia con cedula)
-    promises.push(
-        sbClient.from('extras').update({ cedula: newCedula }).eq('cedula', oldCedula)
-    );
-
-    try {
-        await Promise.all(promises);
+    if (error) {
+        console.error('Error en actualización:', error);
+        alert('Error al actualizar cliente: ' + error.message);
+    } else {
         alert('Cliente y registros asociados actualizados correctamente.');
         editClientModal.style.display = 'none';
         loadClientsTable(true);
         clientsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Cliente actualizado. Realice una búsqueda para ver los cambios.</td></tr>';
-    } catch (err) {
-        console.error('Error en actualización en cascada:', err);
-        alert('Cliente actualizado, pero hubo errores actualizando registros históricos: ' + err.message);
-        editClientModal.style.display = 'none';
-        loadClientsTable(true);
     }
 });
 
@@ -2308,14 +2257,9 @@ function formatDateToDDMMYYYY(isoDateString) {
 
 // Función Auxiliar: Buscar Municipio en BD (Fuzzy match)
 function findDbMunicipality(rawMuni, dbSet) {
-    const normalized = normalizeText(rawMuni);
-    // En este caso simple, verificamos si existe en el Set. 
-    // Si quisiéramos retornar el nombre "bonito", necesitaríamos un Map en lugar de Set.
-    // Por ahora, si existe, retornamos el valor original TitleCase, si no, 'Sin Asignar'.
-    // Mejoramos: Iterar el Set no es eficiente para recuperar el valor original si solo guardamos normalizado.
-    // Asumiremos que si está en el set, usamos el valor del Excel formateado.
-    if (dbSet.has(normalized)) return toTitleCase(rawMuni);
-    return 'Sin Asignar';
+    if (!rawMuni) return 'Sin Asignar';
+    // Si existe en BD o no, guardamos el valor del Excel formateado para no perder datos
+    return toTitleCase(rawMuni);
 }
 
 // Función Auxiliar: Buscar Asesor Exacto
@@ -2328,7 +2272,6 @@ function findExactMatchUser(rawUser, usersList) {
 
 // Función Principal de Procesamiento de Lote
 async function processImportBatch(chunk, dbMunicipalities, usersList, isCollectorVerified, verifiedAsesorName) {
-    const clientsToUpsert = new Map(); // Map para unicidad por cédula en el lote
     const rowsData = []; // Datos procesados listos para lógica de negocio
 
     // 1. Normalización y Preparación de Datos
@@ -2369,7 +2312,8 @@ async function processImportBatch(chunk, dbMunicipalities, usersList, isCollecto
         const recaudoTotal = Number(normalizedRow['RECAUDO TOTAL']) || 0; // Si existe en Excel para actualizar histórico
         const abono = Number(normalizedRow['ABONO']) || 0;
         const saldo = Number(normalizedRow['SALDO']) || 0;
-        const valorCuota = Number(normalizedRow['VALOR CUOTA']) || Number(normalizedRow['CUOTA']) || 0;
+        const valorCuota = Number(normalizedRow['VALOR CUOTA']) || 0;
+        const nroCuotas = Number(normalizedRow['CUOTA']) || Number(normalizedRow['NRO CUOTAS']) || 0;
         const creditoNuevo = Number(normalizedRow['CREDITO NUEVO']) || 0;
         const represte = Number(normalizedRow['REPRESTE']) || 0;
         
@@ -2381,104 +2325,21 @@ async function processImportBatch(chunk, dbMunicipalities, usersList, isCollecto
         // Guardar datos procesados
         const rowData = {
             cedula, nombre, telefono, direccion, municipio, asesor, tipoPago,
-            recaudoTotal, abono, saldo, valorCuota, creditoNuevo, represte, fechaPrestamo,
+            recaudoTotal, abono, saldo, valorCuota, nroCuotas, creditoNuevo, represte, fechaPrestamo,
             fechaPrestamoClean
         };
         rowsData.push(rowData);
+    });
 
-        // Preparar Cliente para Upsert (Solo la última versión de la cédula en el lote cuenta)
-        clientsToUpsert.set(cedula, {
-            cedula: cedula,
-            name: nombre,
-            phone: telefono,
-            address: direccion,
-            municipality: municipio,
-            asesor_name: asesor,
-            payment_term: [tipoPago], // Array en Supabase
-            total_recaudo: recaudoTotal // Se actualizará si viene en el excel, cuidado con sobrescribir acumulados reales si el excel solo trae parciales. 
-            // Nota: El prompt dice "Se actualizan campos de contacto... y totalRecaudo". Asumimos que el Excel trae el total histórico o se desea resetear.
-            // Si se desea sumar, la lógica de upsert simple no sirve, se requeriría leer antes.
-            // Para este ETL masivo, upsert reemplaza.
+    // Enviar lote a Edge Function para procesamiento eficiente
+    if (rowsData.length > 0) {
+        const { data: { session } } = await sbClient.auth.getSession();
+        const { error } = await sbClient.functions.invoke('import-data', {
+            body: { rows: rowsData },
+            headers: { Authorization: `Bearer ${session?.access_token}` }
         });
-    });
-
-    // 2. Fase 1: Clientes (Upsert)
-    const clientsArray = Array.from(clientsToUpsert.values());
-    if (clientsArray.length > 0) {
-        // Upsert en Supabase
-        const { error } = await sbClient.from('clients').upsert(clientsArray, { onConflict: 'cedula' });
-        if (error) throw new Error('Error al guardar clientes: ' + error.message);
-    }
-
-    // 3. Fase 2: Créditos (Creación Condicional)
-    // Necesitamos procesar fila por fila para mantener la relación "Crédito creado en esta fila -> Pago de esta fila"
-    // Supabase no devuelve los IDs generados en un insert masivo de forma que podamos mapearlos fácilmente 1:1 a las filas originales si hay condiciones.
-    // Estrategia: Insertar créditos necesarios y guardar referencia.
-    
-    const creditsToInsert = [];
-    const rowsWithNewCredit = []; // Índices de filas que generarán crédito
-
-    rowsData.forEach((r, index) => {
-        // Disparador: Crédito Nuevo o Represte > 0
-        if (r.creditoNuevo > 0 || r.represte > 0) {
-            const isNew = r.creditoNuevo > 0;
-            const saleValue = isNew ? r.creditoNuevo : r.represte;
-            
-            creditsToInsert.push({
-                cedula: r.cedula, // Link por cédula
-                name: r.nombre,
-                phone: r.telefono,
-                address: r.direccion,
-                municipality: r.municipality,
-                asesor_name: r.asesor,
-                credit_type: isNew ? 'Nuevo' : 'Represte',
-                balance: r.saldo,
-                sale_value: saleValue,
-                valor_cuota: r.valorCuota,
-                payment_term: [r.tipoPago],
-                imported: true,
-                created_at: r.fechaPrestamo, // created_at requiere ISO Timestamp
-                sale_date: r.fechaPrestamoClean // sale_date guarda DD-MM-YYYY limpio
-            });
-            rowsWithNewCredit.push(index);
-        }
-    });
-
-    let createdCredits = [];
-    if (creditsToInsert.length > 0) {
-        const { data, error } = await sbClient.from('debtors').insert(creditsToInsert).select('id');
-        if (error) throw new Error('Error al crear créditos: ' + error.message);
-        createdCredits = data;
-    }
-
-    // 4. Fase 3: Pagos (Vinculación)
-    const paymentsToInsert = [];
-    
-    rowsData.forEach((r, index) => {
-        if (r.abono > 0) {
-            // Verificar si esta fila creó un crédito
-            const creditIndex = rowsWithNewCredit.indexOf(index);
-            let newDebtorId = null;
-            
-            if (creditIndex !== -1 && createdCredits[creditIndex]) {
-                newDebtorId = createdCredits[creditIndex].id;
-            }
-
-            paymentsToInsert.push({
-                debtor_id: newDebtorId, // Link ID si se creó, o null (huérfano)
-                cedula: r.cedula, // Link secundario
-                debtor_name: r.nombre,
-                payment_amount: r.abono,
-                payment_date: r.fechaPrestamoClean, // payment_date guarda DD-MM-YYYY limpio
-                created_at: r.fechaPrestamo,
-                imported: true
-            });
-        }
-    });
-
-    if (paymentsToInsert.length > 0) {
-        const { error } = await sbClient.from('payments').insert(paymentsToInsert);
-        if (error) throw new Error('Error al crear pagos: ' + error.message);
+        
+        if (error) throw new Error('Error en importación (Edge Function): ' + error.message);
     }
 }
 
@@ -2884,9 +2745,11 @@ function renderMunisList(munis, deptId) {
 }
 
 async function updateMunisInDb(deptId, newMunisArray) {
-    const { error } = await sbClient
-        .from('municipalities')
-        .upsert({ id: deptId, municipalities: newMunisArray }); // Upsert crea o actualiza
+    const { data: { session } } = await sbClient.auth.getSession();
+    const { error } = await sbClient.functions.invoke('update-municipality', {
+        body: { dept_id: deptId, municipalities: newMunisArray },
+        headers: { Authorization: `Bearer ${session?.access_token}` }
+    });
 
     if (error) {
         alert('Error al actualizar: ' + error.message);
@@ -3547,7 +3410,11 @@ btnSaveEditCredit.addEventListener('click', async () => {
         asesor_name: editCreditAdvisor.value
     };
 
-    const { error } = await sbClient.from('debtors').update(updates).eq('id', currentCreditEditId);
+    const { data: { session } } = await sbClient.auth.getSession();
+    const { error } = await sbClient.functions.invoke('update-credit', {
+        body: { credit_id: currentCreditEditId, updates: updates },
+        headers: { Authorization: `Bearer ${session?.access_token}` }
+    });
 
     if (error) {
         alert('Error al actualizar crédito: ' + error.message);
@@ -3673,27 +3540,20 @@ creditPaymentsBody.addEventListener('click', async (e) => {
             newDateText = `${parts[2]}-${parts[1]}-${parts[0]}`;
         }
 
-        // 1. Actualizar pago
-        const { error: payError } = await sbClient.from('payments').update({ 
+        const updates = { 
             payment_amount: newAmount,
             payment_date: newDateText,
             payment_day: newDayName,
             payment_method: newMethod
-        }).eq('id', paymentId);
-        
-        if (payError) return alert('Error al actualizar pago');
+        };
 
-        // 2. Actualizar Saldo (Lógica de Diferencia)
-        // Si old=100, new=80. Diff=20. El cliente "recupera" 20 de deuda (debe pagar 20 más).
-        // Balance = Balance + (Old - New).
-        const diff = oldAmount - newAmount; 
+        const { data: { session } } = await sbClient.auth.getSession();
+        const { error } = await sbClient.functions.invoke('update-payment', {
+            body: { payment_id: paymentId, updates: updates, old_amount: oldAmount, debtor_id: currentCreditPaymentsId },
+            headers: { Authorization: `Bearer ${session?.access_token}` }
+        });
         
-        // Leer saldo actual
-        const { data: debtor } = await sbClient.from('debtors').select('balance').eq('id', currentCreditPaymentsId).single();
-        if (debtor) {
-            const newBalance = (parseFloat(debtor.balance) || 0) + diff;
-            await sbClient.from('debtors').update({ balance: newBalance }).eq('id', currentCreditPaymentsId);
-        }
+        if (error) return alert('Error al actualizar pago: ' + error.message);
 
         loadCreditPayments(currentCreditPaymentsId); // Recargar tabla
     }
@@ -5582,14 +5442,18 @@ gnTableBody.addEventListener('click', async (e) => {
         const baseVal = parseFloat(inputVal);
         
         if (confirm(`¿Confirmar inyección de base $${baseVal.toLocaleString()} para el siguiente periodo?`)) {
-            // Actualizar final_base del registro anterior (aunque ya sea ese valor, confirma la operación)
-            // En realidad, la inyección visual es solo eso. Si se quiere crear un NUEVO registro, sería un insert.
-            // Pero el prompt dice: "el sistema actualiza el documento del registro anterior... modificando su campo finalBase".
-            // Esto implica que la inyección es una herramienta para ajustar el cierre del día anterior para que cuadre con el inicio del siguiente.
+            const collection = currentGnMode === 'daily' ? 'reports' : 'wreports';
             
-            const { error } = await sbClient.from(currentGnMode === 'daily' ? 'reports' : 'wreports')
-                .update({ final_base: baseVal, og_final_base: baseVal })
-                .eq('id', id);
+            const { data: { session } } = await sbClient.auth.getSession();
+            const { error } = await sbClient.functions.invoke('update-report-base', {
+                body: { 
+                    report_id: id, 
+                    collection: collection, 
+                    type: 'final', 
+                    new_value: baseVal 
+                },
+                headers: { Authorization: `Bearer ${session?.access_token}` }
+            });
             
             if (error) alert('Error al guardar inyección: ' + error.message);
             else {
@@ -5631,25 +5495,15 @@ gnTableBody.addEventListener('click', async (e) => {
 
         btn.innerHTML = '<div class="small-spinner"></div>';
         btn.disabled = true;
-        try {
-            const { data: record } = await sbClient.from(collection).select('*').eq('id', id).single();
-            if (!record) return;
-            const updates = {};
-            if (type === 'initial') {
-                const cobros = parseFloat(record.payments_report) || 0;
-                const creditos = parseFloat(record.credits_report) || 0;
-                const gastos = parseFloat(record.expense_report) || parseFloat(record.expenses_report) || 0;
-                const newFinal = (newVal + cobros) - (creditos + gastos);
-                updates.initial_base = newVal;
-                updates.final_base = newFinal;
-                updates.og_final_base = newFinal;
-            } else {
-                updates.final_base = newVal;
-            }
-            const { error } = await sbClient.from(collection).update(updates).eq('id', id);
-            if (error) alert('Error: ' + error.message);
-            else generateGnReport();
-        } catch (e) { console.error(e); }
+        
+        const { data: { session } } = await sbClient.auth.getSession();
+        const { error } = await sbClient.functions.invoke('update-report-base', {
+            body: { report_id: id, collection: collection, type: type, new_value: newVal },
+            headers: { Authorization: `Bearer ${session?.access_token}` }
+        });
+
+        if (error) alert('Error: ' + error.message);
+        else generateGnReport();
     }
 
     // 5. Edición de Gastos (Abre Modal)
@@ -5774,44 +5628,30 @@ btnSaveExpChanges.addEventListener('click', async () => {
     
     const newTotal = newGas + newLunch + newOtherVal;
 
-    // 1. Actualizar colección hija (expenses/wexpenses)
-    const { error: childError } = await sbClient.from(currentExpEditData.collection)
-        .update({
-            fuel: newGas,
-            lunch: newLunch,
-            others: [newOtherVal, newOtherDesc],
-            total_expenses: newTotal
-        })
-        .eq('id', currentExpEditData.id);
+    const updates = {
+        fuel: newGas,
+        lunch: newLunch,
+        others: [newOtherVal, newOtherDesc],
+        total_expenses: newTotal
+    };
 
-    if (childError) return alert('Error actualizando detalle: ' + childError.message);
+    const { data: { session } } = await sbClient.auth.getSession();
+    const { error } = await sbClient.functions.invoke('update-expense', {
+        body: { 
+            expense_id: currentExpEditData.id, 
+            collection: currentExpEditData.collection, 
+            updates: updates, 
+            parent_id: currentExpEditData.parentId, 
+            parent_collection: currentGnMode === 'daily' ? 'reports' : 'wreports'
+        },
+        headers: { Authorization: `Bearer ${session?.access_token}` }
+    });
 
-    // 2. Recalcular y actualizar padre (reports/wreports)
-    const parentCollection = currentGnMode === 'daily' ? 'reports' : 'wreports';
-    const { data: parent } = await sbClient.from(parentCollection).select('*').eq('id', currentExpEditData.parentId).single();
-    
-    if (parent) {
-        const initial = parseFloat(parent.initial_base) || 0;
-        const cobros = parseFloat(parent.payments_report) || 0;
-        const creditos = parseFloat(parent.credits_report) || 0;
-        
-        // Fórmula Balanceo
-        const newFinal = (initial + cobros) - (creditos + newTotal);
-
-        const { error: parentError } = await sbClient.from(parentCollection)
-            .update({
-                expense_report: newTotal, // o expenses_report según esquema
-                final_base: newFinal,
-                og_final_base: newFinal
-            })
-            .eq('id', parent.id);
-            
-        if (parentError) alert('Error actualizando reporte general: ' + parentError.message);
-        else {
-            alert('Gastos actualizados y reporte balanceado.');
-            editExpensesModal.style.display = 'none';
-            generateGnReport();
-        }
+    if (error) alert('Error actualizando gastos: ' + error.message);
+    else {
+        alert('Gastos actualizados y reporte balanceado.');
+        editExpensesModal.style.display = 'none';
+        generateGnReport();
     }
 });
 
@@ -5997,7 +5837,12 @@ reportCreditsDetailBody.addEventListener('click', async (e) => {
             municipality: row.querySelector('.edit-c-muni').value
         };
 
-        const { error } = await sbClient.from('debtors').update(updates).eq('id', id);
+        const { data: { session } } = await sbClient.auth.getSession();
+        const { error } = await sbClient.functions.invoke('update-credit', {
+            body: { credit_id: id, updates: updates },
+            headers: { Authorization: `Bearer ${session?.access_token}` }
+        });
+
         if (error) return alert('Error: ' + error.message);
 
         await recalculateParentReport(currentDownloadUser, currentDownloadDate);
@@ -6154,9 +5999,27 @@ reportPaymentsDetailBody.addEventListener('click', async (e) => {
             payment_method: row.querySelector('.edit-p-method').value
         };
         const newMuni = row.querySelector('.edit-p-muni').value;
+        
+        // Obtener datos originales para old_amount
+        const originalData = JSON.parse(row.dataset.fullData || '{}');
+        const oldAmount = parseFloat(originalData.payment_amount) || 0;
 
-        await sbClient.from('payments').update(updatesPayment).eq('id', id);
-        await sbClient.from('debtors').update({ municipality: newMuni }).eq('id', debtorId);
+        const { data: { session } } = await sbClient.auth.getSession();
+
+        // 1. Actualizar Pago (Edge Function)
+        const { error: payError } = await sbClient.functions.invoke('update-payment', {
+            body: { payment_id: id, updates: updatesPayment, old_amount: oldAmount, debtor_id: debtorId },
+            headers: { Authorization: `Bearer ${session?.access_token}` }
+        });
+        if (payError) return alert('Error actualizando pago: ' + payError.message);
+
+        // 2. Actualizar Municipio Deudor (Edge Function)
+        if (originalData.municipality !== newMuni) {
+            await sbClient.functions.invoke('update-credit', {
+                body: { credit_id: debtorId, updates: { municipality: newMuni } },
+                headers: { Authorization: `Bearer ${session?.access_token}` }
+            });
+        }
 
         await recalculateParentReport(currentDownloadUser, currentDownloadDate);
         loadReportPaymentsDetails(currentDownloadUser, currentDownloadDate);
