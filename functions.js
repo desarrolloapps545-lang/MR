@@ -204,46 +204,6 @@ const btnCancelEditCredit = document.getElementById('btn-cancel-edit-credit');
 const creditPaymentsModal = document.getElementById('creditPaymentsModal');
 const creditPaymentsBody = document.getElementById('credit-payments-body');
 const closeCreditPaymentsX = document.getElementById('closeCreditPaymentsX');
-// Referencias Informes P&G
-const btnReportPg = document.getElementById('btn-report-pg');
-const btnPgDaily = document.getElementById('btn-pg-daily');
-const btnPgWeekly = document.getElementById('btn-pg-weekly');
-const btnPgFilterDate = document.getElementById('btn-pg-filter-date');
-const pgFilterDateText = document.getElementById('pg-filter-date-text');
-const pgFilterDept = document.getElementById('pg-filter-dept');
-const pgFilterMuni = document.getElementById('pg-filter-muni');
-const pgFilterUser = document.getElementById('pg-filter-user');
-const btnGeneratePg = document.getElementById('btn-generate-pg');
-const btnDownloadPg = document.getElementById('btn-download-pg');
-const pgTableBody = document.getElementById('pg-table-body');
-const pgReportBox = document.getElementById('pg-report-box');
-// Referencias Informes PB (Payment Behavior)
-const btnReportPb = document.getElementById('btn-report-pb');
-const pbReportBox = document.getElementById('pb-report-box');
-const btnPbDaily = document.getElementById('btn-pb-daily');
-const btnPbWeekly = document.getElementById('btn-pb-weekly');
-const btnPbFilterDate = document.getElementById('btn-pb-filter-date');
-const pbFilterDateText = document.getElementById('pb-filter-date-text');
-const pbFilterDept = document.getElementById('pb-filter-dept');
-const pbFilterMuni = document.getElementById('pb-filter-muni');
-const pbFilterUser = document.getElementById('pb-filter-user');
-const btnGeneratePb = document.getElementById('btn-generate-pb');
-const btnDownloadPb = document.getElementById('btn-download-pb');
-const pbTableBody = document.getElementById('pb-table-body');
-// Referencias Informes CR (Credits Report)
-const btnReportCr = document.getElementById('btn-report-cr');
-const crReportBox = document.getElementById('cr-report-box');
-const btnCrDaily = document.getElementById('btn-cr-daily');
-const btnCrWeekly = document.getElementById('btn-cr-weekly');
-const btnCrFilterDate = document.getElementById('btn-cr-filter-date');
-const crFilterDateText = document.getElementById('cr-filter-date-text');
-const crFilterDept = document.getElementById('cr-filter-dept');
-const crFilterMuni = document.getElementById('cr-filter-muni');
-const crFilterUser = document.getElementById('cr-filter-user');
-const btnGenerateCr = document.getElementById('btn-generate-cr');
-const btnDownloadCr = document.getElementById('btn-download-cr');
-const crTableBody = document.getElementById('cr-table-body');
-const crTotalDisplay = document.getElementById('cr-total-display');
 // Referencias Informes PM (Payments Report)
 const btnReportPm = document.getElementById('btn-report-pm');
 const pmReportBox = document.getElementById('pm-report-box');
@@ -258,44 +218,6 @@ const btnGeneratePm = document.getElementById('btn-generate-pm');
 const btnDownloadPm = document.getElementById('btn-download-pm');
 const pmTableBody = document.getElementById('pm-table-body');
 const pmTotalCobroDisplay = document.getElementById('pm-total-cobro-display');
-const pmTotalRecaudoDisplay = document.getElementById('pm-total-recaudo-display');
-// Referencias Informes EX (Expenses Report)
-const btnReportEx = document.getElementById('btn-report-ex');
-const exReportBox = document.getElementById('ex-report-box');
-const btnExDaily = document.getElementById('btn-ex-daily');
-const btnExWeekly = document.getElementById('btn-ex-weekly');
-const btnExFilterDate = document.getElementById('btn-ex-filter-date');
-const exFilterDateText = document.getElementById('ex-filter-date-text');
-const exFilterUser = document.getElementById('ex-filter-user');
-const btnGenerateEx = document.getElementById('btn-generate-ex');
-const btnDownloadEx = document.getElementById('btn-download-ex');
-const exTableBody = document.getElementById('ex-table-body');
-// Referencias Informes GN (General Report)
-const btnReportGn = document.getElementById('btn-report-gn');
-const gnReportBox = document.getElementById('gn-report-box');
-const btnGnDaily = document.getElementById('btn-gn-daily');
-const btnGnWeekly = document.getElementById('btn-gn-weekly');
-const btnGnFilterDate = document.getElementById('btn-gn-filter-date');
-const gnFilterDateText = document.getElementById('gn-filter-date-text');
-const gnFilterUser = document.getElementById('gn-filter-user');
-const btnGenerateGn = document.getElementById('btn-generate-gn');
-const btnDownloadGn = document.getElementById('btn-download-gn');
-const gnTableBody = document.getElementById('gn-table-body');
-// Referencias Modales GN
-const editExpensesModal = document.getElementById('editExpensesModal');
-const editExpGas = document.getElementById('edit-exp-gas');
-const editExpLunch = document.getElementById('edit-exp-lunch');
-const editExpOtherVal = document.getElementById('edit-exp-other-val');
-const editExpOtherDesc = document.getElementById('edit-exp-other-desc');
-const btnSaveExpChanges = document.getElementById('btn-save-exp-changes');
-const reportCreditsDetailBody = document.getElementById('report-credits-detail-body');
-const reportCreditsTotal = document.getElementById('report-credits-total');
-const reportPaymentsDetailBody = document.getElementById('report-payments-detail-body');
-const reportPaymentsTotal = document.getElementById('report-payments-total');
-const reportPaymentsCash = document.getElementById('report-payments-cash');
-const reportPaymentsTransfer = document.getElementById('report-payments-transfer');
-const btnDownloadReportPaymentsDetails = document.getElementById('download-report-payments-details-btn');
-const btnDownloadReportCreditsDetails = document.getElementById('download-report-credits-details-btn');
 // Referencias Modal Ver Gastos
 const viewExpensesModal = document.getElementById('viewExpensesModal');
 const viewExpGas = document.getElementById('view-exp-gas');
@@ -320,6 +242,11 @@ const btnApplyExportDate = document.getElementById('btn-apply-export-date');
 // Referencias Modales Alertas y Estados
 const alertReprestNotificationModal = document.getElementById('alert-represt-notification-modal');
 const approveReprestModal = document.getElementById('approve-represt-modal');
+const represtAlertsList = document.getElementById('represt-alerts-list');
+const btnFilterReprestClients = document.getElementById('btn-filter-represt-clients');
+const alertSecondPaymentNotificationModal = document.getElementById('alert-second-payment-notification-modal');
+const secondPaymentAlertsList = document.getElementById('second-payment-alerts-list');
+const btnFilterSecondPaymentClients = document.getElementById('btn-filter-second-payment-clients');
 const btnConfirmReprest = document.getElementById('btn-confirm-represt');
 const btnRejectReprest = document.getElementById('btn-reject-represt');
 const reactivateCreditModal = document.getElementById('reactivate-credit-modal');
@@ -354,8 +281,8 @@ let muniSelectionMode = 'edit'; // 'edit' o 'create' para saber quién abrió el
 let currentUserRole = null; // Variable para guardar el rol del administrador actual
 let currentUserIsDeveloper = false; // Bandera para saber si es desarrollador
 let currentUserId = null; // ID del usuario en sesión
-let currentClientEditId = null; // ID del cliente que se está editando
-let currentViewingClientId = null; // ID del cliente cuyo detalle se está viendo
+let currentClientEditCedula = null; // Cédula del cliente que se está editando
+let currentViewingClientCedula = null; // Cédula del cliente cuyo detalle se está viendo
 let currentQuotaClientData = null; // Datos del cliente para el proceso de cupo extra
 let clientToDeleteData = null; // Datos del cliente a eliminar
 let isMultiDeleteMode = false; // Modo eliminación múltiple
@@ -364,31 +291,14 @@ let allDebtorsData = []; // Almacenar todos los deudores para cálculo de estado
 let isRecoveryMode = false; // Bandera para saber si estamos en modo recuperación
 let recoveryData = null; // Datos temporales para recuperación
 // Variables globales para el reporte
-let currentCreditEditId = null; // ID del crédito (debtor) que se está editando
-let currentCreditPaymentsId = null; // ID del crédito cuyos pagos se están viendo
+let currentCreditEditNumber = null; // Numero del crédito (debtor) que se está editando
+let currentCreditPaymentsNumber = null; // Numero del crédito cuyos pagos se están viendo
 let currentDashboardCobrosData = [];
 let currentDashboardCreditosData = [];
-let currentPgReportData = []; // Datos para exportar P&G
-let currentPgMode = null; // daily | weekly
-let currentPbReportData = []; // Datos para exportar PB
-let currentPbMode = null; // daily | weekly
-let currentCrReportData = []; // Datos para exportar CR
-let currentCrMode = null; // daily | weekly
-let currentPmReportData = []; // Datos para exportar PM
-let currentPmMode = null; // daily | weekly
-let currentExReportData = []; // Datos para exportar EX
-let currentExMode = null; // daily | weekly
-let currentGnReportData = []; // Datos para exportar GN
-let currentGnMode = null; // null | 'daily' | 'weekly'
-let currentReportDateTarget = 'pg'; // 'pg' | 'pb' | 'cr' | 'pm' | 'ex' | 'gn'
-let currentDownloadContext = null; // Contexto para descargas de detalles
-let currentDownloadUser = null;
-let currentDownloadDate = null;
-let currentExpEditData = null; // Datos temporales para edición de gastos
 let currentAlertsData = []; // Almacena alertas activas
 let currentAlertActionId = null; // ID de la alerta a aprobar/rechazar
-let currentReactivateClientId = null; // ID del cliente a reactivar
-let currentCloseClientId = null; // ID del cliente a cerrar crédito
+let currentReactivateClientCedula = null; // Cédula del cliente a reactivar
+let currentCloseClientCedula = null; // Cédula del cliente a cerrar crédito
 let currentSecondPaymentAlerts = []; // Almacena alertas de segundo pago
 let currentSecondPaymentActionId = null; // ID de la alerta de segundo pago
 // Estado Exportación
@@ -413,13 +323,6 @@ let exportFilters = {
     day: 'all',
     month: 'all',
     year: 'all'
-};
-// Estado de fechas P&G
-let pgDateState = {
-    type: 'specific',
-    start: null,
-    end: null,
-    label: ''
 };
 
 // Lista interna de departamentos
@@ -528,100 +431,125 @@ window.addEventListener('load', async () => {
     }
 
     // Verificar si hay sesión activa en Supabase
-    const { data: { session } } = await sbClient.auth.getSession();
-    if (session) {
-        initializeSession(session.user.id);
+    try {
+        const { data: { session }, error } = await sbClient.auth.getSession();
+        if (error) console.warn("Error recuperando sesión:", error);
+        if (session) {
+            initializeSession(session.user.id);
+        }
+    } catch (err) {
+        console.error("Error de red al verificar sesión:", err);
     }
 });
 
 // Función de Inicio de Sesión
-loginBtn.addEventListener('click', async () => {
+loginBtn?.addEventListener('click', async () => {
     const email = emailInput.value;
     const password = passwordInput.value;
 
     showLoading('solid');
 
-    const { data, error } = await sbClient.auth.signInWithPassword({
-        email: email,
-        password: password
-    });
+    try {
+        // Intentar cerrar sesión previa para limpiar tokens corruptos o conexiones colgadas
+        await sbClient.auth.signOut();
 
-    if (error) {
-        let msg = 'Error: ' + error.message;
-        // Detectar errores de base de datos (Triggers rotos)
-        if (error.status === 500 || error.message.includes('Database error')) {
-            msg += '. (Posible error interno en Triggers de Base de Datos. Revise la consola de Supabase).';
+        const { data, error } = await sbClient.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
+
+        if (error) {
+            let msg = 'Error: ' + error.message;
+            // Detectar errores de base de datos
+            if (error.status === 500 || error.message.includes('Database error')) {
+                msg += '. (Posible error interno en BD).';
+            }
+            // Detectar errores de conexión
+            if (error.message === 'Failed to fetch' || error.name === 'AuthRetryableFetchError') {
+                msg = 'Error de conexión: No se pudo contactar al servidor. Verifique su internet.';
+            }
+            statusMessage.innerText = msg;
+            hideLoading();
+            console.error('Error de login:', error);
+        } else {
+            statusMessage.innerText = 'Verificando permisos...';
+            // Llamar a la función de inicialización
+            await initializeSession(data.user.id, email, password);
         }
-        statusMessage.innerText = msg;
+    } catch (err) {
+        console.error("Excepción crítica en login:", err);
+        statusMessage.innerText = 'Error de red o inesperado: ' + (err.message || err);
         hideLoading();
-        console.error('Error de login:', error);
-    } else {
-        statusMessage.innerText = 'Verificando permisos...';
-        // Llamar a la función de inicialización
-        initializeSession(data.user.id, email, password);
     }
 });
 
 // Función para inicializar la sesión (usada en login y recarga)
 async function initializeSession(userId, email = null, password = null) {
-    // 1. Buscar el usuario en la tabla 'users' por su ID
-    const { data: userData, error: userError } = await sbClient
-        .from('users')
-        .select('role, is_admin, name')
-        .eq('id', userId)
-        .single();
+    try {
+        // 1. Buscar el usuario en la tabla 'users' por su ID
+        const { data: userData, error: userError } = await sbClient
+            .from('users')
+            .select('role, is_admin, name')
+            .eq('id', userId)
+            .single();
 
-    if (userError) {
-        if (statusMessage) statusMessage.innerText = 'Error al verificar permisos: ' + userError.message;
-        await sbClient.auth.signOut(); // Cerrar sesión por seguridad
-    } else {
-        // 2. Verificar condiciones: Rol permitido Y is_admin TRUE
-        const rolesPermitidos = ['Administrador', 'Administrador maestro', 'Desarrollador'];
-        const accesoPermitido = rolesPermitidos.includes(userData.role) && userData.is_admin === true;
-        
-        if (accesoPermitido) {
-            currentUserRole = userData.role;
-            currentUserIsDeveloper = userData.role === 'Desarrollador';
-            currentUserId = userId;
-
-            // Manejo de "Recordar datos" si venimos del login
-            if (email && password) {
-                if (rememberMeCheckbox.checked) {
-                    localStorage.setItem('savedEmail', email);
-                    localStorage.setItem('savedPass', password);
-                } else {
-                    localStorage.removeItem('savedEmail');
-                    localStorage.removeItem('savedPass');
-                }
-            }
-
-            if (statusMessage) statusMessage.innerText = '¡Inicio de sesión exitoso!';
-            console.log('Usuario autorizado:', userId);
-            
-            // Mostrar menú principal
-            loginContainer.style.display = 'none';
-            mainMenuContainer.style.display = 'block';
-            if (mainMenuWelcome) mainMenuWelcome.innerText = `Bienvenido ${userData.role || ''}, ${userData.name || ''}`;
-            if (userNameDisplay) userNameDisplay.innerText = userData.name || 'Usuario';
-
-            const sidebarWelcome = document.getElementById('sidebar-welcome-msg');
-            if (sidebarWelcome) sidebarWelcome.innerText = `Bienvenido ${userData.role || ''}, ${userData.name || ''}`;
-            
-            // Mostrar botón especial si es desarrollador
-            if (currentUserIsDeveloper) {
-                devChangePassBtn.style.display = 'inline-block';
-                devUpdateDataBtn.style.display = 'inline-block';
-            }
-
+        if (userError) {
+            if (statusMessage) statusMessage.innerText = 'Error al verificar permisos: ' + userError.message;
+            await sbClient.auth.signOut(); // Cerrar sesión por seguridad
             hideLoading();
-
-            // Configurar listeners de tiempo real
-            setupRealtimeListeners();
         } else {
-            if (statusMessage) statusMessage.innerText = 'Acceso denegado: No tienes permisos de administrador.';
-            await sbClient.auth.signOut(); // Expulsar si no cumple requisitos
-            hideLoading();
+            // 2. Verificar condiciones: Rol permitido Y is_admin TRUE
+            const rolesPermitidos = ['Administrador', 'Administrador maestro', 'Desarrollador'];
+            const accesoPermitido = rolesPermitidos.includes(userData.role) && userData.is_admin === true;
+            
+            if (accesoPermitido) {
+                currentUserRole = userData.role;
+                currentUserIsDeveloper = userData.role === 'Desarrollador';
+                currentUserId = userId;
+
+                // Manejo de "Recordar datos" si venimos del login
+                if (email && password) {
+                    if (rememberMeCheckbox.checked) {
+                        localStorage.setItem('savedEmail', email);
+                        localStorage.setItem('savedPass', password);
+                    } else {
+                        localStorage.removeItem('savedEmail');
+                        localStorage.removeItem('savedPass');
+                    }
+                }
+
+                if (statusMessage) statusMessage.innerText = '¡Inicio de sesión exitoso!';
+                console.log('Usuario autorizado:', userId);
+                
+                // Mostrar menú principal
+                loginContainer.style.display = 'none';
+                mainMenuContainer.style.display = 'block';
+                if (mainMenuWelcome) mainMenuWelcome.innerText = `Bienvenido ${userData.role || ''}, ${userData.name || ''}`;
+                if (userNameDisplay) userNameDisplay.innerText = userData.name || 'Usuario';
+
+                const sidebarWelcome = document.getElementById('sidebar-welcome-msg');
+                if (sidebarWelcome) sidebarWelcome.innerText = `Bienvenido ${userData.role || ''}, ${userData.name || ''}`;
+                
+                // Mostrar botón especial si es desarrollador
+                if (currentUserIsDeveloper) {
+                    devChangePassBtn.style.display = 'inline-block';
+                    devUpdateDataBtn.style.display = 'inline-block';
+                }
+
+                hideLoading();
+
+                // Configurar listeners de tiempo real
+                setupRealtimeListeners();
+            } else {
+                if (statusMessage) statusMessage.innerText = 'Acceso denegado: No tienes permisos de administrador.';
+                await sbClient.auth.signOut(); // Expulsar si no cumple requisitos
+                hideLoading();
+            }
         }
+    } catch (err) {
+        console.error("Error crítico en initializeSession:", err);
+        if (statusMessage) statusMessage.innerText = 'Error de conexión al cargar perfil: ' + err.message;
+        hideLoading();
     }
 }
 
@@ -645,11 +573,11 @@ function setupRealtimeListeners() {
             sbBtnRefresh.click(); // El botón de refrescar ya tiene la lógica para cada vista
         }
         // Refrescar modales abiertos
-        if (clientDetailsModal.style.display === 'block' && currentViewingClientId) {
-            openClientDetails(currentViewingClientId);
+        if (clientDetailsModal.style.display === 'block' && currentViewingClientCedula) {
+            openClientDetails(currentViewingClientCedula);
         }
-        if (creditPaymentsModal.style.display === 'flex' && currentCreditPaymentsId) {
-            loadCreditPayments(currentCreditPaymentsId);
+        if (creditPaymentsModal.style.display === 'flex' && currentCreditPaymentsNumber) {
+            loadCreditPayments(currentCreditPaymentsNumber);
         }
     }, 2000);
 
@@ -669,41 +597,45 @@ async function openWorkspace(containerToShow) {
     showLoading('solid');
     if (dashboardInterval) clearInterval(dashboardInterval); // Detener polling del tablero si se cambia de vista
     // Ocultar menú principal y login
-    mainMenuContainer.style.display = 'none';
-    loginContainer.style.display = 'none';
+    if (mainMenuContainer) mainMenuContainer.style.display = 'none';
+    if (loginContainer) loginContainer.style.display = 'none';
 
     // Mostrar barra lateral
-    sidebarContainer.style.display = 'flex';
+    if (sidebarContainer) sidebarContainer.style.display = 'flex';
 
     // Ocultar todos los espacios de trabajo primero
     [dashboardContainer, clientsContainer, municipalitiesContainer, dashboardControlContainer, reportsContainer, adminReportsContainer].forEach(el => {
-        el.style.display = 'none';
-        el.classList.add('workspace-with-sidebar'); // Agregar margen izquierdo
+        if (el) {
+            el.style.display = 'none';
+            el.classList.add('workspace-with-sidebar'); // Agregar margen izquierdo
+        }
     });
 
     // Mostrar el contenedor deseado
-    containerToShow.style.display = 'block';
+    if (containerToShow) containerToShow.style.display = 'block';
     setTimeout(hideLoading, 500); // Pequeño delay para transición suave
 }
 
 // Función auxiliar para volver al menú principal (cerrar barra lateral)
 function closeWorkspace() {
-    sidebarContainer.style.display = 'none';
+    if (sidebarContainer) sidebarContainer.style.display = 'none';
     [dashboardContainer, clientsContainer, municipalitiesContainer, dashboardControlContainer, reportsContainer, adminReportsContainer].forEach(el => {
-        el.style.display = 'none';
-        el.classList.remove('workspace-with-sidebar');
+        if (el) {
+            el.style.display = 'none';
+            el.classList.remove('workspace-with-sidebar');
+        }
     });
-    mainMenuContainer.style.display = 'block';
+    if (mainMenuContainer) mainMenuContainer.style.display = 'block';
 }
 
 // Listeners del Menú Principal (Actualizados)
-btnUsersMgmt.addEventListener('click', () => {
+btnUsersMgmt?.addEventListener('click', () => {
     setActiveSidebar(sbBtnUsers);
     openWorkspace(dashboardContainer);
     loadUsersTable(); // Cargar datos al entrar
 });
 
-btnClientsMgmt.addEventListener('click', () => {
+btnClientsMgmt?.addEventListener('click', () => {
     setActiveSidebar(sbBtnClients);
     openWorkspace(clientsContainer);
     // No recargar si ya hay datos, para persistencia
@@ -714,31 +646,31 @@ btnClientsMgmt.addEventListener('click', () => {
     }
 });
 
-btnMunicipalitiesMgmt.addEventListener('click', () => {
+btnMunicipalitiesMgmt?.addEventListener('click', () => {
     setActiveSidebar(sbBtnMunis);
     openWorkspace(municipalitiesContainer);
     populateDeptSelects(); // Asegurar carga de departamentos
 });
 
-btnDashboardControl.addEventListener('click', () => {
+btnDashboardControl?.addEventListener('click', () => {
     setActiveSidebar(sbBtnDashboard);
     openWorkspace(dashboardControlContainer);
 });
 
-btnReportsSection.addEventListener('click', () => {
+btnReportsSection?.addEventListener('click', () => {
     setActiveSidebar(sbBtnReports);
-    openWorkspace(reportsContainer);
+    window.open('informes/informes.html', 'Informes', 'width=1200,height=800,resizable=yes,scrollbars=yes');
 });
 
-btnInversionesMenu.addEventListener('click', () => {
+btnInversionesMenu?.addEventListener('click', () => {
     handleLinkNavigation('INVERSIONES M&R');
 });
 
-btnDatabaseMenu.addEventListener('click', () => {
+btnDatabaseMenu?.addEventListener('click', () => {
     handleLinkNavigation('Base de datos');
 });
 
-btnAdminReportsMenu.addEventListener('click', () => {
+btnAdminReportsMenu?.addEventListener('click', () => {
     setActiveSidebar(sbBtnAdminReports);
     openReportsWorkspace();
 });
@@ -749,8 +681,8 @@ function setActiveSidebar(btn) {
     if(btn) btn.classList.add('active');
 }
 
-if(sbBtnUsers) sbBtnUsers.addEventListener('click', () => { setActiveSidebar(sbBtnUsers); openWorkspace(dashboardContainer); if(usersTableBody.children.length === 0) loadUsersTable(); });
-if(sbBtnClients) sbBtnClients.addEventListener('click', () => { 
+if(sbBtnUsers) sbBtnUsers?.addEventListener('click', () => { setActiveSidebar(sbBtnUsers); openWorkspace(dashboardContainer); if(usersTableBody.children.length === 0) loadUsersTable(); });
+if(sbBtnClients) sbBtnClients?.addEventListener('click', () => { 
     setActiveSidebar(sbBtnClients); 
     openWorkspace(clientsContainer); 
     // Persistencia: Solo cargar si está vacío
@@ -758,8 +690,8 @@ if(sbBtnClients) sbBtnClients.addEventListener('click', () => {
         loadClientsTable();
     }
 });
-if(sbBtnMunis) sbBtnMunis.addEventListener('click', () => { setActiveSidebar(sbBtnMunis); openWorkspace(municipalitiesContainer); populateDeptSelects(); });
-if(sbBtnDashboard) sbBtnDashboard.addEventListener('click', () => { 
+if(sbBtnMunis) sbBtnMunis?.addEventListener('click', () => { setActiveSidebar(sbBtnMunis); openWorkspace(municipalitiesContainer); populateDeptSelects(); });
+if(sbBtnDashboard) sbBtnDashboard?.addEventListener('click', () => { 
     setActiveSidebar(sbBtnDashboard);
     openWorkspace(dashboardControlContainer); 
     btnDashboardDaily.className = 'btn-secondary';
@@ -776,13 +708,16 @@ if(sbBtnDashboard) sbBtnDashboard.addEventListener('click', () => {
         }
     }, 5000);
 });
-if(sbBtnReports) sbBtnReports.addEventListener('click', () => { setActiveSidebar(sbBtnReports); openWorkspace(reportsContainer); hideAllReportBoxes(); });
-if(sbBtnImport) sbBtnImport.addEventListener('click', () => { /* No active state */ importExcelInput.click(); });
-if(sbBtnExport) sbBtnExport.addEventListener('click', () => { /* No active state */ btnOpenExportModal.click(); });
-if(sbBtnInversiones) sbBtnInversiones.addEventListener('click', () => { handleLinkNavigation('INVERSIONES M&R'); });
-if(sbBtnDatabase) sbBtnDatabase.addEventListener('click', () => { handleLinkNavigation('Base de datos'); });
-if(sbBtnAdminReports) sbBtnAdminReports.addEventListener('click', () => { setActiveSidebar(sbBtnAdminReports); openReportsWorkspace(); });
-if(sbBtnRefresh) sbBtnRefresh.addEventListener('click', async () => {
+if(sbBtnReports) sbBtnReports?.addEventListener('click', () => { 
+    setActiveSidebar(sbBtnReports); 
+    window.open('informes/informes.html', 'Informes', 'width=1200,height=800,resizable=yes,scrollbars=yes'); 
+});
+if(sbBtnImport) sbBtnImport?.addEventListener('click', () => { /* No active state */ importExcelInput.click(); });
+if(sbBtnExport) sbBtnExport?.addEventListener('click', () => { /* No active state */ btnOpenExportModal.click(); });
+if(sbBtnInversiones) sbBtnInversiones?.addEventListener('click', () => { handleLinkNavigation('INVERSIONES M&R'); });
+if(sbBtnDatabase) sbBtnDatabase?.addEventListener('click', () => { handleLinkNavigation('Base de datos'); });
+if(sbBtnAdminReports) sbBtnAdminReports?.addEventListener('click', () => { setActiveSidebar(sbBtnAdminReports); openReportsWorkspace(); });
+if(sbBtnRefresh) sbBtnRefresh?.addEventListener('click', async () => {
     showLoading('transparent');
     // Actualizar según la vista activa
     if (dashboardContainer.style.display === 'block') await loadUsersTable();
@@ -801,23 +736,15 @@ if(sbBtnRefresh) sbBtnRefresh.addEventListener('click', async () => {
     }
     if (municipalitiesContainer.style.display === 'block') await populateDeptSelects();
     if (dashboardControlContainer.style.display === 'block') await loadDashboardData(currentDashboardMode);
-    if (reportsContainer.style.display === 'block') {
-        if (pgReportBox.style.display === 'block') await generatePgReport();
-        if (pbReportBox.style.display === 'block') await generatePaymentBehaviorReport();
-        if (crReportBox.style.display === 'block') await generateCreditsReport();
-        if (pmReportBox.style.display === 'block') await generatePmReport();
-        if (exReportBox.style.display === 'block') await generateExReport();
-        if (gnReportBox.style.display === 'block') await generateGnReport();
-    }
     if (adminReportsContainer.style.display === 'block' && currentUserIsDeveloper) await loadDevReportsTable();
     hideLoading();
 });
-if(sbBtnLogout) sbBtnLogout.addEventListener('click', async () => {
+if(sbBtnLogout) sbBtnLogout?.addEventListener('click', async () => {
     await sbClient.auth.signOut();
     location.reload();
 });
 
-logoutBtn.addEventListener('click', async () => {
+logoutBtn?.addEventListener('click', async () => {
     await sbClient.auth.signOut();
     location.reload(); // Recargar para volver al login
 });
@@ -910,10 +837,79 @@ async function loadClientsTable(isRefresh = false) {
     currentAlertsData = alertsResult.data || [];
     currentSecondPaymentAlerts = secondPaymentResult.data || [];
 
+    // Mapa auxiliar para encontrar cédula por debtor_number (si la alerta no tiene cédula)
+    const debtorNumberToCedula = new Map();
+    const debtorInfoMap = new Map(); // Mapa para enriquecer datos (Asesor, Municipio)
+    allDebtorsData.forEach(d => {
+        if (d.debtor_number && d.cedula) {
+            debtorNumberToCedula.set(String(d.debtor_number), d.cedula);
+        }
+        if (d.debtor_number) debtorInfoMap.set(String(d.debtor_number), d);
+    });
+
+    // Mapa auxiliar para nombres de clientes
+    const cedulaToName = new Map();
+    allClientsData.forEach(c => cedulaToName.set(c.cedula, c.name));
+
     // Notificación Masiva si hay alertas pendientes (represt === false)
     const pendingAlerts = currentAlertsData.filter(a => a.represt === false);
     if (pendingAlerts.length > 0) {
+        represtAlertsList.innerHTML = '';
+        pendingAlerts.forEach(a => {
+            // Asegurar cédula
+            const dNum = a.debtor_number ? String(a.debtor_number) : null;
+            if (!a.cedula && dNum) a.cedula = debtorNumberToCedula.get(dNum);
+            
+            // Enriquecer datos faltantes (Asesor, Municipio, Nombre)
+            const debtor = dNum ? debtorInfoMap.get(dNum) : null;
+            const client = a.cedula ? allClientsData.find(c => c.cedula === a.cedula) : null;
+
+            const clientName = client ? client.name : (debtor ? debtor.name : (cedulaToName.get(a.cedula) || 'Cliente Desconocido'));
+            const advisorName = a.user_name || a.asesor_name || (debtor ? debtor.asesor_name : (client ? client.asesor_name : 'N/A'));
+            const muniName = a.municipality || (debtor ? debtor.municipality : (client ? client.municipality : 'N/A'));
+
+            const div = document.createElement('div');
+            div.style.marginBottom = '8px';
+            div.style.paddingBottom = '8px';
+            div.style.borderBottom = '1px solid #eee';
+            div.innerHTML = `
+                <strong>Asesor:</strong> ${advisorName}<br>
+                <strong>Cliente:</strong> ${clientName}<br>
+                <strong>Municipio:</strong> ${muniName}
+            `;
+            represtAlertsList.appendChild(div);
+        });
         alertReprestNotificationModal.style.display = 'block';
+    }
+
+    // Notificación Masiva Segundo Pago
+    if (currentSecondPaymentAlerts.length > 0) {
+        secondPaymentAlertsList.innerHTML = '';
+        currentSecondPaymentAlerts.forEach(a => {
+            // Asegurar cédula
+            const dNum = a.debtor_number ? String(a.debtor_number) : null;
+            if (!a.cedula && dNum) a.cedula = debtorNumberToCedula.get(dNum);
+
+            // Enriquecer datos faltantes
+            const debtor = dNum ? debtorInfoMap.get(dNum) : null;
+            const client = a.cedula ? allClientsData.find(c => c.cedula === a.cedula) : null;
+
+            const clientName = client ? client.name : (debtor ? debtor.name : (cedulaToName.get(a.cedula) || 'Cliente Desconocido'));
+            const advisorName = a.user_name || a.asesor_name || (debtor ? debtor.asesor_name : (client ? client.asesor_name : 'N/A'));
+            const muniName = a.municipality || (debtor ? debtor.municipality : (client ? client.municipality : 'N/A'));
+
+            const div = document.createElement('div');
+            div.style.marginBottom = '8px';
+            div.style.paddingBottom = '8px';
+            div.style.borderBottom = '1px solid #eee';
+            div.innerHTML = `
+                <strong>Asesor:</strong> ${advisorName}<br>
+                <strong>Cliente:</strong> ${clientName}<br>
+                <strong>Municipio:</strong> ${muniName}
+            `;
+            secondPaymentAlertsList.appendChild(div);
+        });
+        alertSecondPaymentNotificationModal.style.display = 'block';
     }
 
     if (!isRefresh) {
@@ -931,11 +927,27 @@ async function renderClientsTable(clients) {
 
     // Mapa de Alertas para acceso rápido por cédula
     const alertsMap = new Map();
-    currentAlertsData.forEach(a => alertsMap.set(a.cedula, a));
+    // Usar debtor_number para mapear si es necesario, pero renderizamos por cliente (cédula)
+    // Si una alerta tiene debtor_number, buscamos su cédula en los deudores cargados
+    currentAlertsData.forEach(a => {
+        let cedula = a.cedula;
+        if (!cedula && a.debtor_number) {
+            const debtor = allDebtorsData.find(d => String(d.debtor_number) === String(a.debtor_number));
+            if (debtor) cedula = debtor.cedula;
+        }
+        if (cedula) alertsMap.set(cedula, a);
+    });
 
     // Mapa de Alertas Segundo Pago
     const secondPaymentMap = new Map();
-    currentSecondPaymentAlerts.forEach(a => secondPaymentMap.set(a.cedula, a));
+    currentSecondPaymentAlerts.forEach(a => {
+        let cedula = a.cedula;
+        if (!cedula && a.debtor_number) {
+            const debtor = allDebtorsData.find(d => String(d.debtor_number) === String(a.debtor_number));
+            if (debtor) cedula = debtor.cedula;
+        }
+        if (cedula) secondPaymentMap.set(cedula, a);
+    });
 
     // Calcular créditos abiertos en memoria usando allDebtorsData (Optimización masiva)
     const openCreditsMap = new Map();
@@ -962,7 +974,7 @@ async function renderClientsTable(clients) {
 
         // 1. Prioridad Absoluta: Alerta de Represte
         if (alertInfo && alertInfo.represt === false) {
-            statusHtml = `<div class="status-capsule status-alert" data-id="${alertInfo.id}">Intento de pago represte</div>`;
+            statusHtml = `<div class="status-capsule status-alert" data-cedula="${client.cedula}">Intento de pago represte</div>`;
         } 
         // 1.1 Prioridad Alta: Alerta Segundo Pago
         else if (secondPaymentInfo) {
@@ -970,7 +982,7 @@ async function renderClientsTable(clients) {
         }
         // 2. Prioridad Alta: Crédito Cerrado
         else if (client.closed === true) {
-            statusHtml = `<div class="status-capsule status-closed" data-id="${client.id}">Crédito cerrado</div>`;
+            statusHtml = `<div class="status-capsule status-closed" data-cedula="${client.cedula}">Crédito cerrado</div>`;
         }
         // 3. Estado Normal: Rojo (Deuda) / Verde (Libre)
         else if (hasActiveCredit) {
@@ -980,7 +992,7 @@ async function renderClientsTable(clients) {
                 statusHtml = '<div class="status-capsule status-open">Crédito Abierto</div>';
             }
         } else {
-            statusHtml = `<div class="status-capsule status-free" data-id="${client.id}" style="cursor: pointer;" title="Click para cerrar crédito">Sin Crédito</div>`;
+            statusHtml = `<div class="status-capsule status-free" data-cedula="${client.cedula}" style="cursor: pointer;" title="Click para cerrar crédito">Sin Crédito</div>`;
         }
 
         // Estado del botón Cupo Extra
@@ -995,17 +1007,17 @@ async function renderClientsTable(clients) {
 
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td class="multi-delete-col" style="display: ${multiDeleteDisplay}; text-align: center;"><input type="checkbox" class="client-select-cb" value="${client.id}" data-cedula="${client.cedula}" data-name="${client.name}"></td>
+            <td class="multi-delete-col" style="display: ${multiDeleteDisplay}; text-align: center;"><input type="checkbox" class="client-select-cb" value="${client.cedula}" data-cedula="${client.cedula}" data-name="${client.name}"></td>
             <td>${client.name || ''}</td>
             <td>${client.cedula || ''}</td>
             <td>${client.phone || ''}</td>
             <td>${client.municipality || ''}</td>
             <td>${statusHtml}</td>
             <td>
-                <button class="btn-ver-cliente" data-id="${client.id}" title="Ver">👁️</button>
-                <button class="btn-editar-cliente" data-id="${client.id}" title="Editar">✏️</button>
-                <button class="btn-cupo-extra" data-id="${client.id}" ${cupoExtraDisabled} style="${cupoExtraStyle}" title="Cupo extra">➕</button>
-                <button class="btn-eliminar-cliente" data-id="${client.id}" title="Eliminar">🗑️</button>
+                <button class="btn-ver-cliente" data-cedula="${client.cedula}" title="Ver">👁️</button>
+                <button class="btn-editar-cliente" data-cedula="${client.cedula}" title="Editar">✏️</button>
+                <button class="btn-cupo-extra" data-cedula="${client.cedula}" ${cupoExtraDisabled} style="${cupoExtraStyle}" title="Cupo extra">➕</button>
+                <button class="btn-eliminar-cliente" data-cedula="${client.cedula}" title="Eliminar">🗑️</button>
             </td>
         `;
         clientsTableBody.appendChild(row);
@@ -1017,57 +1029,93 @@ async function renderClientsTable(clients) {
     });
 }
 
+// Listeners para botones de filtro en notificaciones
+btnFilterReprestClients.addEventListener('click', () => {
+    alertReprestNotificationModal.style.display = 'none';
+    // Filtrar clientes que tengan alerta de represte
+    const alertsMap = new Map();
+    currentAlertsData.forEach(a => {
+        if (a.represt === false) {
+             // Asegurar cédula
+             let cedula = a.cedula;
+             if (!cedula && a.debtor_number) {
+                 const debtor = allDebtorsData.find(d => String(d.debtor_number) === String(a.debtor_number));
+                 if (debtor) cedula = debtor.cedula;
+             }
+             if (cedula) alertsMap.set(cedula, true);
+        }
+    });
+    const filtered = allClientsData.filter(c => alertsMap.has(c.cedula));
+    renderClientsTable(filtered);
+});
+
+btnFilterSecondPaymentClients.addEventListener('click', () => {
+    alertSecondPaymentNotificationModal.style.display = 'none';
+    const alertsMap = new Map();
+    currentSecondPaymentAlerts.forEach(a => {
+        let cedula = a.cedula;
+        if (!cedula && a.debtor_number) {
+            const debtor = allDebtorsData.find(d => String(d.debtor_number) === String(a.debtor_number));
+            if (debtor) cedula = debtor.cedula;
+        }
+        if (cedula) alertsMap.set(cedula, true);
+    });
+    const filtered = allClientsData.filter(c => alertsMap.has(c.cedula));
+    renderClientsTable(filtered);
+});
+
 // Manejo de eventos en la tabla (Delegación de eventos)
 clientsTableBody.addEventListener('click', async (e) => {
     const target = e.target;
-    const clientId = target.dataset.id;
+    const alertId = target.dataset.id; // Para alertas (usan ID propio)
+    const clientCedula = target.dataset.cedula; // Para clientes (usan Cédula)
 
     // --- Lógica Botones de Estado ---
     
     // Botón Azul: Alerta Represte
     if (target.classList.contains('status-alert')) {
-        currentAlertActionId = target.dataset.id;
+        currentAlertActionId = clientCedula;
         approveReprestModal.style.display = 'block';
         return;
     }
 
     // Botón Naranja: Alerta Segundo Pago
     if (target.classList.contains('status-second-payment')) {
-        currentSecondPaymentActionId = target.dataset.id;
+        currentSecondPaymentActionId = alertId;
         approveSecondPaymentModal.style.display = 'block';
         return;
     }
 
     // Botón Gris: Crédito Cerrado
     if (target.classList.contains('status-closed')) {
-        currentReactivateClientId = target.dataset.id;
+        currentReactivateClientCedula = clientCedula;
         reactivateCreditModal.style.display = 'block';
         return;
     }
 
     // Botón Verde: Sin Crédito (Cerrar Crédito)
     if (target.classList.contains('status-free')) {
-        currentCloseClientId = target.dataset.id;
+        currentCloseClientCedula = clientCedula;
         closeCreditModal.style.display = 'block';
         return;
     }
 
     if (target.classList.contains('btn-ver-cliente')) {
-        openClientDetails(clientId);
+        openClientDetails(clientCedula);
     }
     if (target.classList.contains('btn-editar-cliente')) {
         // 1. Obtener datos del cliente
         const { data: client, error } = await sbClient
             .from('clients')
             .select('*') // Seleccionamos todo para obtener dirección, asesor, etc.
-            .eq('id', clientId)
+            .eq('cedula', clientCedula)
             .single();
 
         // 2. Obtener departamentos
         const { data: deptsData } = await sbClient.from('municipalities').select('id, municipalities');
 
         if (client && !error && deptsData) {
-            currentClientEditId = clientId;
+            currentClientEditCedula = clientCedula;
             
             // Llenar campos
             editClientName.value = client.name || '';
@@ -1174,17 +1222,20 @@ clientsTableBody.addEventListener('click', async (e) => {
     }
     if (target.classList.contains('btn-cupo-extra')) {
         // 1. Obtener datos del cliente
-        const { data: client, error } = await sbClient.from('clients').select('id, name, cedula').eq('id', clientId).single();
+        const { data: clients, error } = await sbClient.from('clients').select('*').eq('cedula', clientCedula).limit(1);
         
-        if (error || !client) return alert('Error al cargar datos del cliente');
+        if (error || !clients || clients.length === 0) {
+            console.error('Error cargando cliente para cupo:', error);
+            return alert('Error al cargar datos del cliente.');
+        }
         
-        currentQuotaClientData = client;
+        currentQuotaClientData = clients[0];
 
         // 2. Verificar si tiene créditos activos en 'debtors'
         const { data: debts } = await sbClient
             .from('debtors')
             .select('balance, remaining_payments')
-            .eq('cedula', client.cedula);
+            .eq('cedula', currentQuotaClientData.cedula);
 
         let activeDebts = [];
         if (debts) {
@@ -1207,7 +1258,8 @@ clientsTableBody.addEventListener('click', async (e) => {
         }
     }
     if (target.classList.contains('btn-eliminar-cliente')) {
-        const { data: client } = await sbClient.from('clients').select('id, name, cedula').eq('id', clientId).single();
+        const { data: clients } = await sbClient.from('clients').select('*').eq('cedula', clientCedula).limit(1);
+        const client = clients && clients.length > 0 ? clients[0] : null;
         if (client) {
             clientToDeleteData = client;
             deleteClientNameDisplay.innerText = client.name;
@@ -1217,46 +1269,43 @@ clientsTableBody.addEventListener('click', async (e) => {
 });
 
 // --- Lógica Modal Aprobar Represte ---
-btnConfirmReprest.addEventListener('click', async () => {
+btnConfirmReprest?.addEventListener('click', async () => {
     if (!currentAlertActionId) return;
     
     // Actualizar estado del cliente a abierto (closed = false)
-    const alertObj = currentAlertsData.find(a => a.id == currentAlertActionId);
-    if (alertObj && alertObj.cedula) {
-        await sbClient.from('clients').update({ closed: false }).eq('cedula', alertObj.cedula);
-    }
+    await sbClient.from('clients').update({ closed: false }).eq('cedula', currentAlertActionId);
 
     // Actualizar alerta a TRUE (Autorizado)
-    const { error } = await sbClient.from('alerts_represt').update({ represt: true }).eq('id', currentAlertActionId);
+    const { error } = await sbClient.from('alerts_represt').update({ represt: true }).eq('cedula', currentAlertActionId);
     
     if (error) alert('Error al autorizar: ' + error.message);
     else {
         alert('Pago represte autorizado.');
         approveReprestModal.style.display = 'none';
         // Actualizar estado visual sin recargar todo si es posible, o recargar silenciosamente
-        const btn = document.querySelector(`.status-alert[data-id="${currentAlertActionId}"]`);
+        const btn = document.querySelector(`.status-alert[data-cedula="${currentAlertActionId}"]`);
         if(btn) btn.parentElement.innerHTML = '<div class="status-capsule status-open">Crédito Abierto</div>';
         loadClientsTable(true); // Recargar para sincronizar estado
     }
 });
 
-btnRejectReprest.addEventListener('click', async () => {
+btnRejectReprest?.addEventListener('click', async () => {
     if (!currentAlertActionId) return;
     
     // Eliminar alerta (Rechazado)
-    const { error } = await sbClient.from('alerts_represt').delete().eq('id', currentAlertActionId);
+    const { error } = await sbClient.from('alerts_represt').delete().eq('cedula', currentAlertActionId);
     
     if (error) alert('Error al rechazar: ' + error.message);
     else {
         alert('Solicitud rechazada y eliminada.');
         approveReprestModal.style.display = 'none';
-        const btn = document.querySelector(`.status-alert[data-id="${currentAlertActionId}"]`);
+        const btn = document.querySelector(`.status-alert[data-cedula="${currentAlertActionId}"]`);
         if(btn) btn.remove();
     }
 });
 
 // --- Lógica Modal Aprobar Segundo Pago ---
-btnConfirmSecondPayment.addEventListener('click', async () => {
+btnConfirmSecondPayment?.addEventListener('click', async () => {
     if (!currentSecondPaymentActionId) return;
     
     // Actualizar estado del cliente a abierto (closed = false)
@@ -1275,7 +1324,7 @@ btnConfirmSecondPayment.addEventListener('click', async () => {
     }
 });
 
-btnRejectSecondPayment.addEventListener('click', async () => {
+btnRejectSecondPayment?.addEventListener('click', async () => {
     if (!currentSecondPaymentActionId) return;
     
     const { error } = await sbClient.from('payments_alerts').update({ pay: false }).eq('id', currentSecondPaymentActionId);
@@ -1289,25 +1338,25 @@ btnRejectSecondPayment.addEventListener('click', async () => {
 });
 
 // --- Lógica Modal Reactivar Crédito ---
-btnConfirmReactivate.addEventListener('click', async () => {
-    if (!currentReactivateClientId) return;
+btnConfirmReactivate?.addEventListener('click', async () => {
+    if (!currentReactivateClientCedula) return;
 
-    const { error } = await sbClient.from('clients').update({ closed: false }).eq('id', currentReactivateClientId);
+    const { error } = await sbClient.from('clients').update({ closed: false }).eq('cedula', currentReactivateClientCedula);
     
     if (error) alert('Error al reactivar: ' + error.message);
     else {
         alert('Crédito reactivado exitosamente.');
         reactivateCreditModal.style.display = 'none';
-        const btn = document.querySelector(`.status-closed[data-id="${currentReactivateClientId}"]`);
+        const btn = document.querySelector(`.status-closed[data-cedula="${currentReactivateClientCedula}"]`);
         if(btn) btn.parentElement.innerHTML = '<div class="status-capsule status-open">Crédito Abierto</div>';
     }
 });
 
 // --- Lógica Modal Cerrar Crédito ---
-btnConfirmCloseCredit.addEventListener('click', async () => {
-    if (!currentCloseClientId) return;
+btnConfirmCloseCredit?.addEventListener('click', async () => {
+    if (!currentCloseClientCedula) return;
 
-    const { error } = await sbClient.from('clients').update({ closed: true }).eq('id', currentCloseClientId);
+    const { error } = await sbClient.from('clients').update({ closed: true }).eq('cedula', currentCloseClientCedula);
     
     if (error) alert('Error al cerrar crédito: ' + error.message);
     else {
@@ -1486,7 +1535,7 @@ usersTableBody.addEventListener('click', async (e) => {
     }
 });
 
-btnCloseAssignedMunis.addEventListener('click', () => {
+btnCloseAssignedMunis?.addEventListener('click', () => {
     viewAssignedMunisModal.style.display = 'none';
 });
 
@@ -1582,12 +1631,12 @@ createUserBtn.addEventListener('click', async () => {
     createModal.style.display = 'block';
 });
 
-createRole.addEventListener('change', (e) => {
+createRole?.addEventListener('change', (e) => {
     toggleLocationFields(e.target.value, 'create-location-container');
 });
 
 // Abrir modal de municipios desde Creación
-createMuniCount.addEventListener('click', () => {
+createMuniCount?.addEventListener('click', () => {
     openMuniModal();
 });
 
@@ -1617,13 +1666,13 @@ function openMuniModal() {
 }
 
 // Evento para abrir el modal de municipios
-editMuniCount.addEventListener('click', () => {
+editMuniCount?.addEventListener('click', () => {
     muniSelectionMode = 'edit';
     openMuniModal();
 });
 
 // Botón "Listo" en el modal de municipios
-confirmMuniBtn.addEventListener('click', () => {
+confirmMuniBtn?.addEventListener('click', () => {
     // Actualizar la variable temporal con lo seleccionado
     tempSelectedMunis = Array.from(muniContainer.querySelectorAll('input[type="checkbox"]:checked'))
         .map(cb => cb.value);
@@ -1640,7 +1689,7 @@ confirmMuniBtn.addEventListener('click', () => {
 });
 
 // Botón Guardar en el Modal
-document.getElementById('saveEditBtn').addEventListener('click', async () => {
+document.getElementById('saveEditBtn')?.addEventListener('click', async () => {
     if (!currentEditId) return;
 
     const selectedRole = editRole.value;
@@ -1670,13 +1719,13 @@ document.getElementById('saveEditBtn').addEventListener('click', async () => {
 });
 
 // Botón Cancelar en el Modal
-document.getElementById('cancelEditBtn').addEventListener('click', () => {
+document.getElementById('cancelEditBtn')?.addEventListener('click', () => {
     editModal.style.display = 'none';
     currentEditId = null;
 });
 
 // Botón Guardar NUEVO Usuario
-document.getElementById('saveCreateBtn').addEventListener('click', async () => {
+document.getElementById('saveCreateBtn')?.addEventListener('click', async () => {
     if (!createEmail.value || !createPassword.value || !createName.value || !createCedula.value) {
         return alert('Por favor complete todos los campos obligatorios.');
     }
@@ -1712,17 +1761,17 @@ document.getElementById('saveCreateBtn').addEventListener('click', async () => {
     }
 });
 
-document.getElementById('cancelCreateBtn').addEventListener('click', () => {
+document.getElementById('cancelCreateBtn')?.addEventListener('click', () => {
     createModal.style.display = 'none';
 });
 
-editRole.addEventListener('change', (e) => {
+editRole?.addEventListener('change', (e) => {
     toggleLocationFields(e.target.value, 'edit-location-container');
 });
 
 // --- Lógica Modal Contraseña ---
 
-savePassBtn.addEventListener('click', async () => {
+savePassBtn?.addEventListener('click', async () => {
     if (!newPasswordInput.value) return alert('Escribe una nueva contraseña.');
     if (newPasswordInput.value.length < 6) return alert('La contraseña debe tener al menos 6 caracteres.');
 
@@ -1767,13 +1816,13 @@ savePassBtn.addEventListener('click', async () => {
     }
 });
 
-cancelPassBtn.addEventListener('click', () => {
+cancelPassBtn?.addEventListener('click', () => {
     passwordModal.style.display = 'none';
     currentPassId = null;
 });
 
 // --- Lógica Botón Desarrollador (Cambiar mi contraseña) ---
-devChangePassBtn.addEventListener('click', () => {
+devChangePassBtn?.addEventListener('click', () => {
     // Reutilizamos el modal de contraseña pero configurado para sí mismo
     currentPassId = currentUserId;
     isRecoveryMode = false;
@@ -1783,13 +1832,13 @@ devChangePassBtn.addEventListener('click', () => {
 });
 
 // --- Lógica Olvidé mi Contraseña ---
-forgotPassBtn.addEventListener('click', () => {
+forgotPassBtn?.addEventListener('click', () => {
     forgotName.value = '';
     forgotEmail.value = '';
     forgotPassModal.style.display = 'block';
 });
 
-confirmForgotBtn.addEventListener('click', async () => {
+confirmForgotBtn?.addEventListener('click', async () => {
     const name = forgotName.value;
     const email = forgotEmail.value;
     const role = forgotRole.value;
@@ -1833,12 +1882,12 @@ confirmForgotBtn.addEventListener('click', async () => {
     }
 });
 
-cancelForgotBtn.addEventListener('click', () => {
+cancelForgotBtn?.addEventListener('click', () => {
     forgotPassModal.style.display = 'none';
 });
 
 // --- Lógica Botón Desarrollador (Actualizar mis datos) ---
-devUpdateDataBtn.addEventListener('click', async () => {
+devUpdateDataBtn?.addEventListener('click', async () => {
     // Cargar datos actuales del usuario logueado
     const { data: user, error } = await sbClient
         .from('users')
@@ -1856,7 +1905,7 @@ devUpdateDataBtn.addEventListener('click', async () => {
     }
 });
 
-saveDevUpdateBtn.addEventListener('click', async () => {
+saveDevUpdateBtn?.addEventListener('click', async () => {
     if (!devEditEmail.value || !devEditName.value || !devEditCedula.value) {
         return alert('Todos los campos son obligatorios');
     }
@@ -1878,17 +1927,17 @@ saveDevUpdateBtn.addEventListener('click', async () => {
     }
 });
 
-cancelDevUpdateBtn.addEventListener('click', () => {
+cancelDevUpdateBtn?.addEventListener('click', () => {
     devUpdateModal.style.display = 'none';
 });
 
-closeClientDetailsX.addEventListener('click', () => {
+closeClientDetailsX?.addEventListener('click', () => {
     clientDetailsModal.style.display = 'none';
 });
 
 // --- Lógica Guardar Edición Cliente (Cascada) ---
-saveEditClientBtn.addEventListener('click', async () => {
-    if (!currentClientEditId) return;
+saveEditClientBtn?.addEventListener('click', async () => {
+    if (!currentClientEditCedula) return;
 
     // 1. Captura de Datos Nuevos
     const newName = editClientName.value;
@@ -1911,7 +1960,7 @@ saveEditClientBtn.addEventListener('click', async () => {
 
     const { data: { session } } = await sbClient.auth.getSession();
     const { error } = await sbClient.functions.invoke('update-client', {
-        body: { client_id: currentClientEditId, updates: clientUpdates },
+        body: { client_id: currentClientEditCedula, updates: clientUpdates },
         headers: { Authorization: `Bearer ${session?.access_token}` }
     });
 
@@ -1926,14 +1975,14 @@ saveEditClientBtn.addEventListener('click', async () => {
     }
 });
 
-cancelEditClientBtn.addEventListener('click', () => {
+cancelEditClientBtn?.addEventListener('click', () => {
     editClientModal.style.display = 'none';
 });
 
 // --- Lógica Cupo Extra ---
 
 // Validar input de autorización
-moraAuthInput.addEventListener('input', () => {
+moraAuthInput?.addEventListener('input', () => {
     if (moraAuthInput.value === 'AUTORIZAR') {
         btnMoraAccept.disabled = false;
         btnMoraAccept.className = 'btn-primary';
@@ -1948,12 +1997,12 @@ moraAuthInput.addEventListener('input', () => {
     }
 });
 
-btnMoraAccept.addEventListener('click', () => {
+btnMoraAccept?.addEventListener('click', () => {
     warningMoraModal.style.display = 'none';
     openEnableQuotaModal();
 });
 
-btnMoraCancel.addEventListener('click', () => {
+btnMoraCancel?.addEventListener('click', () => {
     warningMoraModal.style.display = 'none';
     currentQuotaClientData = null;
 });
@@ -1976,7 +2025,7 @@ document.querySelectorAll('.quota-check').forEach(checkbox => {
     });
 });
 
-btnQuotaConfirm.addEventListener('click', async () => {
+btnQuotaConfirm?.addEventListener('click', async () => {
     const selectedCheck = document.querySelector('.quota-check:checked');
     if (!selectedCheck) {
         return alert('Por favor seleccione un Tipo de Pago.');
@@ -2002,13 +2051,13 @@ btnQuotaConfirm.addEventListener('click', async () => {
     }
 });
 
-document.getElementById('btn-quota-cancel').addEventListener('click', () => {
+document.getElementById('btn-quota-cancel')?.addEventListener('click', () => {
     enableQuotaModal.style.display = 'none';
     currentQuotaClientData = null;
 });
 
 // --- Lógica Nuevo Cliente ---
-btnNewClient.addEventListener('click', async () => {
+btnNewClient?.addEventListener('click', async () => {
     // Limpiar campos
     createClientName.value = '';
     createClientCedula.value = '';
@@ -2078,7 +2127,7 @@ btnNewClient.addEventListener('click', async () => {
     createClientModal.style.display = 'block';
 });
 
-saveCreateClientBtn.addEventListener('click', async () => {
+saveCreateClientBtn?.addEventListener('click', async () => {
     if (!createClientName.value || !createClientCedula.value || !createClientMuni.value) {
         return alert('Nombre, Cédula y Municipio son obligatorios');
     }
@@ -2102,25 +2151,385 @@ saveCreateClientBtn.addEventListener('click', async () => {
     }
 });
 
-cancelCreateClientBtn.addEventListener('click', () => {
+cancelCreateClientBtn?.addEventListener('click', () => {
     createClientModal.style.display = 'none';
 });
 
 // --- Botón Exportar (Menú Principal) ---
-btnExportMenu.addEventListener('click', () => {
-    // Reutilizar la lógica de apertura del modal de exportación
-    btnOpenExportModal.click();
-});
+if (btnExportMenu) {
+    btnExportMenu.addEventListener('click', async () => {
+        // Lógica para abrir el modal de exportación
+        populateDateSelectors();
+        updateExportPeriodText();
+        
+        // Cargar Departamentos
+        if (exportDepartment) {
+            exportDepartment.innerHTML = '<option value="">Cargando...</option>';
+            try {
+                const { data: deptsData } = await sbClient.from('municipalities').select('id, municipalities');
+                exportDepartment.innerHTML = '<option value="">Seleccione Departamento</option>';
+                if (deptsData) {
+                    deptsData.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.id;
+                        exportDepartment.appendChild(option);
+                    });
+                    
+                    // Evento cambio departamento
+                    exportDepartment.onchange = () => {
+                        if (exportMunicipality) {
+                            exportMunicipality.innerHTML = '<option value="all">Todos los Municipios</option>';
+                            const selected = deptsData.find(d => d.id === exportDepartment.value);
+                            if (selected && selected.municipalities) {
+                                selected.municipalities.forEach(m => {
+                                    const opt = document.createElement('option');
+                                    opt.value = m;
+                                    opt.textContent = m;
+                                    exportMunicipality.appendChild(opt);
+                                });
+                            }
+                        }
+                    };
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // Cargar Usuarios
+        if (exportUser) {
+            exportUser.innerHTML = '<option value="all">Todos los usuarios</option>';
+            try {
+                const { data: users } = await sbClient.from('users').select('name').order('name');
+                if (users) {
+                    users.forEach(u => {
+                        const opt = document.createElement('option');
+                        opt.value = u.name;
+                        opt.textContent = u.name;
+                        exportUser.appendChild(opt);
+                    });
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        if (exportReportModal) exportReportModal.style.display = 'block';
+    });
+}
+
+// Cerrar modal de exportación
+const closeExportModalBtn = document.getElementById('close-export-modal-btn');
+if (closeExportModalBtn) {
+    closeExportModalBtn.addEventListener('click', () => {
+        if (exportReportModal) exportReportModal.style.display = 'none';
+    });
+}
+
+// --- Lógica Modal Filtro Fechas Exportación ---
+if (btnOpenExportDateModal) {
+    btnOpenExportDateModal.addEventListener('click', () => {
+        // Poblar selectores dinámicamente
+        populateDateSelectors();
+        exportDateFilterModal.style.display = 'block';
+    });
+}
+
+function populateDateSelectors() {
+    // Día
+    exportDay.innerHTML = '<option value="all">Todos</option>';
+    for (let i = 1; i <= 31; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = i;
+        exportDay.appendChild(opt);
+    }
+    
+    // Mes
+    exportMonth.innerHTML = '<option value="all">Todos</option>';
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    months.forEach((m, i) => {
+        const opt = document.createElement('option');
+        opt.value = i + 1;
+        opt.textContent = m;
+        exportMonth.appendChild(opt);
+    });
+
+    // Año
+    exportYear.innerHTML = '<option value="all">Todos</option>';
+    const currentYear = new Date().getFullYear();
+    for (let i = 2020; i <= currentYear + 1; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = i;
+        exportYear.appendChild(opt);
+    }
+
+    // Setear valores actuales
+    exportDay.value = exportFilters.day;
+    exportMonth.value = exportFilters.month;
+    exportYear.value = exportFilters.year;
+}
+
+if (btnApplyExportDate) {
+    btnApplyExportDate.addEventListener('click', () => {
+        exportFilters.day = exportDay.value;
+        exportFilters.month = exportMonth.value;
+        exportFilters.year = exportYear.value;
+        
+        updateExportPeriodText();
+        exportDateFilterModal.style.display = 'none';
+    });
+}
+
+function updateExportPeriodText() {
+    const d = exportFilters.day === 'all' ? 'Todos los días' : `Día ${exportFilters.day}`;
+    const m = exportFilters.month === 'all' ? 'todos los meses' : `Mes ${exportFilters.month}`;
+    const y = exportFilters.year === 'all' ? 'todos los años' : `Año ${exportFilters.year}`;
+    
+    if (exportFilters.day === 'all' && exportFilters.month === 'all' && exportFilters.year === 'all') {
+        exportPeriodText.innerText = "Todas las Fechas";
+    } else {
+        exportPeriodText.innerText = `${d} de ${m}, ${y}`;
+    }
+}
+
+// --- Lógica Principal de Exportación ---
+if (btnExportAction) {
+    btnExportAction.addEventListener('click', async () => {
+        btnExportAction.disabled = true;
+        btnExportAction.innerText = 'Generando...';
+
+        try {
+            // 1. Construir consulta base a Debtors
+            let query = sbClient.from('debtors').select('*');
+
+            // Filtro Asesor
+            if (exportUser.value && exportUser.value !== 'all') {
+                query = query.eq('asesor_name', exportUser.value);
+            }
+
+            // Filtro Municipio/Departamento
+            if (exportMunicipality.value && exportMunicipality.value !== 'all') {
+                query = query.eq('municipality', exportMunicipality.value);
+            } else if (exportDepartment.value) {
+                const { data: deptData } = await sbClient.from('municipalities').select('municipalities').eq('id', exportDepartment.value).single();
+                if (deptData && deptData.municipalities) {
+                    query = query.in('municipality', deptData.municipalities);
+                }
+            }
+
+            const { data: debtors, error } = await query;
+            if (error) throw error;
+
+            // 2. Filtrado por Fecha en Memoria
+            const filteredDebtors = debtors.filter(d => {
+                const dateVal = d.sale_date || d.created_at;
+                const dateObj = parseDateValue(dateVal);
+                
+                if (!dateObj) return false;
+
+                const day = exportDay.value;
+                const month = exportMonth.value;
+                const year = exportYear.value;
+
+                if (year !== 'all' && dateObj.getFullYear() !== parseInt(year)) return false;
+                if (month !== 'all' && (dateObj.getMonth() + 1) !== parseInt(month)) return false;
+                if (day !== 'all' && dateObj.getDate() !== parseInt(day)) return false;
+
+                return true;
+            });
+
+            if (filteredDebtors.length === 0) {
+                alert('No se encontraron registros con los filtros seleccionados.');
+                btnExportAction.disabled = false;
+                btnExportAction.innerText = 'Exportar Excel';
+                return;
+            }
+
+            // 3. Obtener Pagos (Vinculación por debtor_number)
+            const debtorNumbers = filteredDebtors.map(d => d.debtor_number).filter(n => n);
+            let allPayments = [];
+            
+            if (debtorNumbers.length > 0) {
+                const chunkSize = 200;
+                for (let i = 0; i < debtorNumbers.length; i += chunkSize) {
+                    const chunk = debtorNumbers.slice(i, i + chunkSize);
+                    const { data: paymentsChunk } = await sbClient
+                        .from('payments')
+                        .select('debtor_number, payment_amount, created_at, payment_date')
+                        .in('debtor_number', chunk);
+                    if (paymentsChunk) allPayments = allPayments.concat(paymentsChunk);
+                }
+            }
+
+            const paymentsMap = new Map();
+            allPayments.forEach(p => {
+                if (!paymentsMap.has(p.debtor_number)) paymentsMap.set(p.debtor_number, []);
+                paymentsMap.get(p.debtor_number).push(p);
+            });
+
+            // 4. Construir Datos para Excel
+            const exportData = filteredDebtors.map(d => {
+                const payments = paymentsMap.get(d.debtor_number) || [];
+                const totalAbono = payments.reduce((sum, p) => sum + (parseFloat(p.payment_amount) || 0), 0);
+                
+                let lastPaymentDate = null;
+                if (payments.length > 0) {
+                    payments.sort((a, b) => {
+                    const da = parseDateValue(a.created_at) || new Date(0);
+                    const db = parseDateValue(b.created_at) || new Date(0);
+                        return db - da;
+                    });
+                    const lastP = payments[0];
+                    let rawDate = lastP.created_at;
+                    const dateObj = parseDateValue(rawDate);
+                    if (dateObj) {
+                        dateObj.setHours(12, 0, 0, 0);
+                        lastPaymentDate = dateObj;
+                    } else {
+                        lastPaymentDate = rawDate || '';
+                    }
+                } else {
+                    lastPaymentDate = '';
+                }
+
+                let fechaPrestamo = d.sale_date || d.created_at;
+                const fpObj = parseDateValue(fechaPrestamo);
+                let fechaPrestamoExport = null;
+                if (fpObj) {
+                    fpObj.setHours(12, 0, 0, 0);
+                    fechaPrestamoExport = fpObj;
+                }
+
+                // Lógica de ESTADO
+                let estado = 'GRIS';
+                const pTerm = Array.isArray(d.payment_term) ? d.payment_term[0] : d.payment_term;
+                const remaining = Number(d.remaining_payments) || 0;
+                const saleDate = parseDateValue(d.sale_date);
+                const numPayments = Number(d.number_of_payments) || 0;
+                const saldo = Number(d.balance) || 0;
+
+                if (saleDate && numPayments > 0 && pTerm) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    let expirationDate = new Date(saleDate);
+
+                    if (String(pTerm).toUpperCase() === 'DIARIO') {
+                        expirationDate.setDate(expirationDate.getDate() + numPayments);
+                    } else if (String(pTerm).toUpperCase() === 'SEMANAL') {
+                        expirationDate.setDate(expirationDate.getDate() + (numPayments * 7));
+                    }
+
+                    if (expirationDate < today && saldo > 0) {
+                        estado = 'ROJO';
+                    }
+                }
+
+                if (estado !== 'ROJO') {
+                    if ((String(pTerm).toUpperCase() === 'DIARIO' && remaining === 1) || (String(pTerm).toUpperCase() === 'SEMANAL' && remaining === 5)) {
+                        estado = 'VERDE';
+                    } else if ((String(pTerm).toUpperCase() === 'DIARIO' && saldo === 20000) || (String(pTerm).toUpperCase() === 'SEMANAL' && saldo === 40000)) {
+                        estado = 'AMARILLO';
+                    }
+                }
+
+                return {
+                    "CLIENTE": d.name,
+                    "CEDULA": d.cedula,
+                    "MUNICIPIO": d.municipality,
+                    "ASESOR": d.asesor_name,
+                    "DIRECCION": d.address || '',
+                    "TELEFONO": d.phone || '',
+                    "FECHA DE PRESTAMO": fechaPrestamoExport,
+                    "VALOR CREDITO": parseFloat(d.sale_value) || 0,
+                    "INTERESES": parseFloat(d.interests) || 0,
+                    "TOTAL A PAGAR": (parseFloat(d.sale_value) || 0) + (parseFloat(d.interests) || 0),
+                    "VALOR CUOTA": parseFloat(d.valor_cuota) || 0,
+                    "SALDO": saldo,
+                    "ABONO": totalAbono,
+                    "FECHA ULTIMO ABONO": lastPaymentDate,
+                    "TIPO": d.credit_type,
+                    "FRECUENCIA": pTerm,
+                    "ESTADO": estado
+                };
+            });
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(exportData, { cellDates: true });
+            
+            // Aplicar anchos de columna
+            const wscols = Object.keys(exportData[0] || {}).map(k => ({ wch: Math.max(k.length, 15) }));
+            ws['!cols'] = wscols;
+
+            // Aplicar estilos (Color en ESTADO y formato Fecha)
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            
+            // Buscar índices de columnas
+            let dateColIdx = -1;
+            let lastPaymentColIdx = -1;
+            let estadoColIdx = -1;
+            
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell = ws[XLSX.utils.encode_cell({ r: 0, c: C })];
+                if (cell && cell.v === "FECHA DE PRESTAMO") dateColIdx = C;
+                if (cell && cell.v === "FECHA ULTIMO ABONO") lastPaymentColIdx = C;
+                if (cell && cell.v === "ESTADO") estadoColIdx = C;
+            }
+
+            for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+                // Formato Fecha Prestamo
+                if (dateColIdx !== -1) {
+                    const cell = ws[XLSX.utils.encode_cell({ r: R, c: dateColIdx })];
+                    if (cell && cell.t === 'd') {
+                        cell.z = 'dd/mm/yyyy';
+                    }
+                }
+                
+                // Formato Fecha Ultimo Abono
+                if (lastPaymentColIdx !== -1) {
+                    const cell = ws[XLSX.utils.encode_cell({ r: R, c: lastPaymentColIdx })];
+                    if (cell && cell.t === 'd') {
+                        cell.z = 'dd/mm/yyyy';
+                    }
+                }
+                
+                // Formato Estado
+                if (estadoColIdx !== -1) {
+                    const cell = ws[XLSX.utils.encode_cell({ r: R, c: estadoColIdx })];
+                    if (cell && cell.v) {
+                        let color = "BFBFBF"; // GRIS
+                        if (cell.v === 'VERDE') color = "92D050";
+                        else if (cell.v === 'AMARILLO') color = "FFFF00";
+                        else if (cell.v === 'ROJO') color = "FF0000";
+                        
+                        cell.s = { fill: { patternType: "solid", fgColor: { rgb: color } } };
+                    }
+                }
+            }
+
+            XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+            XLSX.writeFile(wb, `Reporte_Cartera_${new Date().getTime()}.xlsx`);
+
+        } catch (e) {
+            console.error(e);
+            alert('Error exportando: ' + e.message);
+        } finally {
+            btnExportAction.disabled = false;
+            btnExportAction.innerText = 'Exportar Excel';
+        }
+    });
+}
 
 // --- Lógica de Importación Masiva (ETL) ---
 
-btnImportExcel.addEventListener('click', () => {
-    importExcelInput.click();
-});
+if (btnImportExcel) {
+    btnImportExcel.addEventListener('click', () => {
+        if (importExcelInput) importExcelInput.click();
+    });
+}
 
-importExcelInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+if (importExcelInput) {
+    importExcelInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
 
     if (!confirm('¿Está seguro de importar este archivo? Asegúrese de que el formato sea correcto.')) {
         importExcelInput.value = '';
@@ -2194,6 +2603,7 @@ importExcelInput.addEventListener('change', async (e) => {
     };
     reader.readAsArrayBuffer(file);
 });
+}
 
 // Función Auxiliar: Normalizar Texto (Quitar acentos, minúsculas)
 function normalizeText(text) {
@@ -2341,12 +2751,12 @@ async function processImportBatch(chunk, dbMunicipalities, usersList, isCollecto
 }
 
 // --- Lógica Eliminación (Opciones) ---
-btnCancelDeleteOptions.addEventListener('click', () => {
+btnCancelDeleteOptions?.addEventListener('click', () => {
     deleteClientOptionsModal.style.display = 'none';
     clientToDeleteData = null;
 });
 
-btnDeleteExtraOnly.addEventListener('click', async () => {
+btnDeleteExtraOnly?.addEventListener('click', async () => {
     if (!clientToDeleteData) return;
     const { error } = await sbClient.from('extras').delete().eq('cedula', clientToDeleteData.cedula);
     if (error) alert('Error al eliminar cupo extra: ' + error.message);
@@ -2358,7 +2768,7 @@ btnDeleteExtraOnly.addEventListener('click', async () => {
     }
 });
 
-btnDeleteFullHistory.addEventListener('click', async () => {
+btnDeleteFullHistory?.addEventListener('click', async () => {
     if (!clientToDeleteData) return;
     if (!confirm('ESTA ACCIÓN ES IRREVERSIBLE. ¿Seguro que desea borrar TODO el historial de ' + clientToDeleteData.name + '?')) return;
 
@@ -2369,7 +2779,7 @@ btnDeleteFullHistory.addEventListener('click', async () => {
     // Borrar de payments (por nombre de deudor)
     await sbClient.from('payments').delete().eq('debtor_name', clientToDeleteData.name);
     // Borrar de clients
-    const { error } = await sbClient.from('clients').delete().eq('id', clientToDeleteData.id);
+    const { error } = await sbClient.from('clients').delete().eq('cedula', clientToDeleteData.cedula);
 
     if (error) alert('Error al eliminar cliente: ' + error.message);
     else {
@@ -2381,7 +2791,7 @@ btnDeleteFullHistory.addEventListener('click', async () => {
 });
 
 // --- Lógica Eliminación Múltiple ---
-btnMultiDeleteMode.addEventListener('click', () => {
+btnMultiDeleteMode?.addEventListener('click', () => {
     isMultiDeleteMode = !isMultiDeleteMode;
     const cols = document.querySelectorAll('.multi-delete-col');
     cols.forEach(col => col.style.display = isMultiDeleteMode ? 'table-cell' : 'none');
@@ -2428,7 +2838,7 @@ function updateSelectedCount() {
     selectedCountSpan.innerText = count;
 }
 
-btnDeleteSelected.addEventListener('click', async () => {
+btnDeleteSelected?.addEventListener('click', async () => {
     const selected = Array.from(document.querySelectorAll('.client-select-cb:checked'));
     if (selected.length === 0) return alert('Seleccione al menos un cliente.');
     
@@ -2439,7 +2849,7 @@ btnDeleteSelected.addEventListener('click', async () => {
 
     // Optimización: Borrado por lotes (Batch Delete)
     const allCedulas = selected.map(cb => cb.dataset.cedula).filter(c => c);
-    const allIds = selected.map(cb => cb.value);
+    // const allIds = selected.map(cb => cb.value); // Ya no se usa ID, value es cédula
     // Para pagos, intentamos borrar por cédula si existe, o por nombre como fallback
     const allNames = selected.map(cb => cb.dataset.name).filter(n => n);
 
@@ -2450,9 +2860,7 @@ btnDeleteSelected.addEventListener('click', async () => {
             promises.push(sbClient.from('debtors').delete().in('cedula', allCedulas));
             // Borrar pagos por cédula es más seguro
             promises.push(sbClient.from('payments').delete().in('cedula', allCedulas));
-        }
-        if (allIds.length > 0) {
-            promises.push(sbClient.from('clients').delete().in('id', allIds));
+            promises.push(sbClient.from('clients').delete().in('cedula', allCedulas));
         }
         await Promise.all(promises);
     } catch (err) {
@@ -2469,7 +2877,7 @@ btnDeleteSelected.addEventListener('click', async () => {
 });
 
 // --- Lógica Buscador ---
-btnSearchClient.addEventListener('click', () => {
+btnSearchClient?.addEventListener('click', () => {
     modalSearchInput.value = '';
     searchClientModal.style.display = 'block';
     modalSearchInput.focus();
@@ -2486,7 +2894,7 @@ modalSearchInput.addEventListener('keydown', async (e) => {
         // Búsqueda directa en base de datos (Server-side)
         const { data: filtered, error } = await sbClient
             .from('clients')
-            .select('id, name, cedula, phone, municipality, asesor_name, closed')
+            .select('name, cedula, phone, municipality, asesor_name, closed')
             .or(`name.ilike.%${term}%,cedula.ilike.%${term}%`)
             .limit(50);
 
@@ -2904,7 +3312,10 @@ async function loadDashboardData(mode, isBackground = false) {
         if (debtError) throw debtError;
 
         // 2. Pagos (Payments)
-        let paymentsQuery = sbClient.from('payments').select('*');
+        let paymentsQuery = sbClient.from('payments').select('*')
+            .gte('created_at', startISO)
+            .lte('created_at', endISO);
+
         if (pgFilterUser.value) paymentsQuery = paymentsQuery.eq('user_name', pgFilterUser.value);
         if (pgFilterMuni.value) paymentsQuery = paymentsQuery.eq('municipality', pgFilterMuni.value);
 
@@ -2916,7 +3327,7 @@ async function loadDashboardData(mode, isBackground = false) {
         const newCredits = debtors.filter(d => {
             // Filtro de fecha para los CREDITOS
             const debtCreatedAt = new Date(d.created_at);
-            return debtCreatedAt >= start && debtCreatedAt <= end;
+            return debtCreatedAt >= startDate && debtCreatedAt <= endDate;
         });
 
         // Procesamiento Créditos
@@ -2932,11 +3343,7 @@ async function loadDashboardData(mode, isBackground = false) {
 
         // 3. Análisis Tabla de Cobros y Recaudos (Derecha)
         // A. Obtener Pagos en el rango (Recaudo Real)
-        const paymentsInRange = payments.filter(p => {
-            // Filtro de fecha para los PAGOS
-            const paymentCreatedAt = new Date(p.created_at);
-            return paymentCreatedAt >= start && paymentCreatedAt <= end;
-        });
+        const paymentsInRange = payments;
 
 
         // Filtrar pagos importados si aplica (según prompt)
@@ -2950,19 +3357,16 @@ async function loadDashboardData(mode, isBackground = false) {
         const activeDebtors = debtors.filter(d => d.balance > 0);
 
         // B2. Deudores que pagaron en el rango (para recuperar "Deudores Faltantes" que quedaron en 0)
-        const paidCedulas = [...new Set(validPayments.map(p => p.cedula))]; // Asumiendo que payments tiene cedula o debtor_id
+        const paidDebtorNumbers = [...new Set(validPayments.map(p => p.debtor_number).filter(n => n))];
         let paidDebtors = [];
-        if (paidCedulas.length > 0) {
-            const pd = debtors.filter(d => paidCedulas.includes(d.cedula))
-
-                .in('cedula', paidCedulas); // Usamos cedula como link
-            paidDebtors = pd || [];
+        if (paidDebtorNumbers.length > 0) {
+            paidDebtors = debtors.filter(d => paidDebtorNumbers.includes(d.debtor_number));
         }
 
-        // Unir listas de deudores (Activos + Pagaron) eliminando duplicados por ID
+        // Unir listas de deudores (Activos + Pagaron) eliminando duplicados por debtor_number
         const allRelevantDebtorsMap = new Map();
-        (activeDebtors || []).forEach(d => allRelevantDebtorsMap.set(d.id, d));
-        paidDebtors.forEach(d => allRelevantDebtorsMap.set(d.id, d));
+        (activeDebtors || []).forEach(d => allRelevantDebtorsMap.set(d.debtor_number, d));
+        paidDebtors.forEach(d => allRelevantDebtorsMap.set(d.debtor_number, d));
         const allRelevantDebtors = Array.from(allRelevantDebtorsMap.values());
 
         // C. Agrupación y Cálculos
@@ -3010,14 +3414,8 @@ async function loadDashboardData(mode, isBackground = false) {
 
         // Cálculo de Recaudo Real (Cruce de Pagos)
         validPayments.forEach(p => {
-            // Necesitamos saber el asesor y municipio del deudor asociado al pago
-            // Buscamos el deudor en nuestra lista cargada
-            // Nota: En payments deberíamos tener debtor_name o cedula. Usamos cedula para linkear.
-            // Si payments no tiene cedula, usamos debtor_name, pero es menos preciso.
-            // Asumiremos que payments tiene 'cedula' o cruzamos por 'debtor_name' con la lista allRelevantDebtors.
-            
-            // Intentar encontrar el deudor en memoria
-            const debtor = allRelevantDebtors.find(d => d.cedula === p.cedula || d.name === p.debtor_name);
+            // Encontrar el deudor (crédito) específico en memoria usando debtor_number
+            const debtor = allRelevantDebtors.find(d => d.debtor_number === p.debtor_number);
 
             if (debtor) {
                 // Validar pertenencia al modo (Diario/Semanal)
@@ -3325,20 +3723,20 @@ const clientCreditsTableBody = document.getElementById('client-credits-table-bod
 
 clientCreditsTableBody.addEventListener('click', async (e) => {
     const target = e.target;
-    const debtorId = target.dataset.id;
+    const debtorNumber = target.dataset.debtorNumber;
 
     // 1. Botón Ver Pagos (Ojo)
     if (target.classList.contains('btn-view-payments')) {
-        currentCreditPaymentsId = debtorId;
-        loadCreditPayments(debtorId);
+        currentCreditPaymentsNumber = debtorNumber;
+        loadCreditPayments(currentCreditPaymentsNumber);
         creditPaymentsModal.style.display = 'flex';
     }
 
     // 2. Botón Editar Crédito (Lápiz)
     if (target.classList.contains('btn-edit-credit-history')) {
-        currentCreditEditId = debtorId;
+        currentCreditEditNumber = debtorNumber;
         // Cargar datos del crédito
-        const { data: credit } = await sbClient.from('debtors').select('*').eq('id', debtorId).single();
+        const { data: credit } = await sbClient.from('debtors').select('*').eq('debtor_number', debtorNumber).single();
         if (credit) {
             // Pre-llenar inputs
             // Convertir fecha ISO a YYYY-MM-DD para input date
@@ -3374,26 +3772,26 @@ clientCreditsTableBody.addEventListener('click', async (e) => {
     if (target.classList.contains('btn-delete-credit-history')) {
         if (confirm('¿Está seguro de eliminar este crédito y TODOS sus pagos asociados? Esta acción no se puede deshacer.')) {
             // Lógica de Eliminación en Cascada
-            // 1. Eliminar pagos asociados (debtor_id)
-            await sbClient.from('payments').delete().eq('debtor_id', debtorId);
+            // 1. Eliminar pagos asociados (debtor_number)
+            await sbClient.from('payments').delete().eq('debtor_number', debtorNumber);
             
             // 2. Eliminar el crédito (debtors)
-            const { error } = await sbClient.from('debtors').delete().eq('id', debtorId);
+            const { error } = await sbClient.from('debtors').delete().eq('debtor_number', debtorNumber);
 
             if (error) {
                 alert('Error al eliminar crédito: ' + error.message);
             } else {
                 alert('Crédito eliminado correctamente.');
                 // Recargar el modal de detalles del cliente para ver el cambio.
-                if (currentViewingClientId) openClientDetails(currentViewingClientId);
+                if (currentViewingClientCedula) openClientDetails(currentViewingClientCedula);
             }
         }
     }
 });
 
 // --- Lógica Modal Editar Crédito ---
-btnSaveEditCredit.addEventListener('click', async () => {
-    if (!currentCreditEditId) return;
+btnSaveEditCredit?.addEventListener('click', async () => {
+    if (!currentCreditEditNumber) return;
 
     // Manejo de fechas: Convertir input YYYY-MM-DD a texto dd-MM-yyyy
     let saleDateText = null;
@@ -3420,7 +3818,7 @@ btnSaveEditCredit.addEventListener('click', async () => {
 
     const { data: { session } } = await sbClient.auth.getSession();
     const { error } = await sbClient.functions.invoke('update-credit', {
-        body: { credit_id: currentCreditEditId, updates: updates },
+        body: { credit_id: currentCreditEditNumber, updates: updates },
         headers: { Authorization: `Bearer ${session?.access_token}` }
     });
 
@@ -3430,22 +3828,22 @@ btnSaveEditCredit.addEventListener('click', async () => {
         alert('Crédito actualizado.');
         editCreditModal.style.display = 'none';
         // Recargar el modal de detalles del cliente para ver el cambio.
-        if (currentViewingClientId) openClientDetails(currentViewingClientId);
+        if (currentViewingClientCedula) openClientDetails(currentViewingClientCedula);
     }
 });
 
-btnCancelEditCredit.addEventListener('click', () => {
+btnCancelEditCredit?.addEventListener('click', () => {
     editCreditModal.style.display = 'none';
 });
 
 // --- Lógica Modal Pagos del Crédito ---
-async function loadCreditPayments(debtorId, isBackground = false) {
+async function loadCreditPayments(debtorNumber, isBackground = false) {
     if (!isBackground) creditPaymentsBody.innerHTML = '<tr><td colspan="5">Cargando...</td></tr>';
     
     const { data: payments, error } = await sbClient
         .from('payments')
         .select('*')
-        .eq('debtor_id', debtorId)
+        .eq('debtor_number', debtorNumber)
         .order('created_at', { ascending: false });
 
     creditPaymentsBody.innerHTML = '';
@@ -3557,13 +3955,13 @@ creditPaymentsBody.addEventListener('click', async (e) => {
 
         const { data: { session } } = await sbClient.auth.getSession();
         const { error } = await sbClient.functions.invoke('update-payment', {
-            body: { payment_id: paymentId, updates: updates, old_amount: oldAmount, debtor_id: currentCreditPaymentsId },
+            body: { payment_id: paymentId, updates: updates, old_amount: oldAmount, debtor_number: currentCreditPaymentsNumber },
             headers: { Authorization: `Bearer ${session?.access_token}` }
         });
         
         if (error) return alert('Error al actualizar pago: ' + error.message);
 
-        loadCreditPayments(currentCreditPaymentsId); // Recargar tabla
+        loadCreditPayments(currentCreditPaymentsNumber); // Recargar tabla
     }
 
     // Eliminar Pago
@@ -3582,7 +3980,7 @@ creditPaymentsBody.addEventListener('click', async (e) => {
             const { data: debtor } = await sbClient
                 .from('debtors')
                 .select('balance, remaining_payments')
-                .eq('id', currentCreditPaymentsId)
+                .eq('debtor_number', currentCreditPaymentsNumber)
                 .single();
 
             if (debtor) {
@@ -3592,21 +3990,21 @@ creditPaymentsBody.addEventListener('click', async (e) => {
                 await sbClient.from('debtors').update({
                     balance: newBalance,
                     remaining_payments: newRemaining
-                }).eq('id', currentCreditPaymentsId);
+                }).eq('debtor_number', currentCreditPaymentsNumber);
             }
 
-            loadCreditPayments(currentCreditPaymentsId);
+            loadCreditPayments(currentCreditPaymentsNumber);
         }
     }
 });
 
-closeCreditPaymentsX.addEventListener('click', () => {
+closeCreditPaymentsX?.addEventListener('click', () => {
     creditPaymentsModal.style.display = 'none';
 });
 
 // --- Función reutilizable para abrir detalles de cliente ---
-async function openClientDetails(clientId) {
-    currentViewingClientId = clientId;
+async function openClientDetails(clientCedula) {
+    currentViewingClientCedula = clientCedula;
     clientDetailsModal.style.display = 'block';
     
     document.getElementById('detail-client-name').innerText = 'Cargando...';
@@ -3616,7 +4014,7 @@ async function openClientDetails(clientId) {
     const { data: clientData, error: clientError } = await sbClient
         .from('clients')
         .select('name, cedula, total_recaudo')
-        .eq('id', clientId)
+        .eq('cedula', clientCedula)
         .single();
 
     if (clientError) {
@@ -3634,7 +4032,7 @@ async function openClientDetails(clientId) {
 
         const { data: credits, error: creditsError } = await sbClient
             .from('debtors')
-            .select('id, credit_type, valor_cuota, interests, sale_date, sale_value, balance, remaining_payments, payment_term, asesor_name')
+        .select('debtor_number, credit_type, valor_cuota, interests, sale_date, sale_value, balance, remaining_payments, payment_term, asesor_name')
             .eq('cedula', clientData.cedula)
             .order('sale_date', { ascending: true });
 
@@ -3658,9 +4056,9 @@ async function openClientDetails(clientId) {
                     <td>${c.asesor_name || ''}</td>
                     <td style="white-space: nowrap;">
                         <div style="display: flex; gap: 5px; justify-content: center;">
-                            <button class="btn-view-payments" data-id="${c.id}" title="Ver Pagos" style="width: 25px; height: 25px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 12px;">👁️</button>
-                            <button class="btn-edit-credit-history" data-id="${c.id}" title="Editar Crédito" style="width: 25px; height: 25px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 12px;">✏️</button>
-                            <button class="btn-delete-credit-history" data-id="${c.id}" title="Eliminar Crédito" style="width: 25px; height: 25px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 12px;">🗑️</button>
+                            <button class="btn-view-payments" data-debtor-number="${c.debtor_number}" title="Ver Pagos" style="width: 25px; height: 25px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 12px;">👁️</button>
+                            <button class="btn-edit-credit-history" data-debtor-number="${c.debtor_number}" title="Editar Crédito" style="width: 25px; height: 25px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 12px;">✏️</button>
+                            <button class="btn-delete-credit-history" data-debtor-number="${c.debtor_number}" title="Eliminar Crédito" style="width: 25px; height: 25px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 12px;">🗑️</button>
                         </div>
                     </td>
                 `;
@@ -3668,2956 +4066,4 @@ async function openClientDetails(clientId) {
             });
         }
     }
-}
-
-// ==========================================
-// LÓGICA INFORMES P&G (PROFIT & LOSS)
-// ==========================================
-
-// 1. Lógica de Filtrado y Control de Tiempo
-
-btnPgDaily.addEventListener('click', () => {
-    currentPgMode = 'daily';
-    btnPgDaily.className = 'btn-primary';
-    btnPgWeekly.className = 'btn-secondary';
-    pgFilterDateText.innerText = 'Seleccionar Fecha'; // Limpiar fecha al cambiar modo
-});
-
-btnPgWeekly.addEventListener('click', () => {
-    currentPgMode = 'weekly';
-    btnPgWeekly.className = 'btn-primary';
-    btnPgDaily.className = 'btn-secondary';
-    pgFilterDateText.innerText = 'Seleccionar Fecha'; // Limpiar fecha al cambiar modo
-});
-
-// Función auxiliar para ocultar todos los reportes y resetear botones
-function hideAllReportBoxes() {
-    pgReportBox.style.display = 'none';
-    pbReportBox.style.display = 'none';
-    crReportBox.style.display = 'none';
-    pmReportBox.style.display = 'none';
-    exReportBox.style.display = 'none';
-    gnReportBox.style.display = 'none';
-    
-    [btnReportPg, btnReportPb, btnReportCr, btnReportPm, btnReportEx, btnReportGn].forEach(btn => {
-        btn.className = 'btn-secondary';
-    });
-
-    // Limpiar textos de fecha en todos los reportes
-    pgFilterDateText.innerText = '';
-    pbFilterDateText.innerText = '';
-    crFilterDateText.innerText = '';
-    pmFilterDateText.innerText = '';
-    exFilterDateText.innerText = '';
-    gnFilterDateText.innerText = '';
-}
-
-// Navegación interna de reportes
-btnReportPg.addEventListener('click', () => {
-    hideAllReportBoxes();
-    pgReportBox.style.display = 'block';
-    btnReportPg.className = 'btn-primary';
-    loadPgFilters();
-});
-
-btnReportPb.addEventListener('click', () => {
-    hideAllReportBoxes();
-    pbReportBox.style.display = 'block';
-    btnReportPb.className = 'btn-primary';
-    loadPbFilters();
-});
-
-btnReportCr.addEventListener('click', () => {
-    hideAllReportBoxes();
-    crReportBox.style.display = 'block';
-    btnReportCr.className = 'btn-primary';
-    loadCrFilters();
-});
-
-btnReportPm.addEventListener('click', () => {
-    hideAllReportBoxes();
-    pmReportBox.style.display = 'block';
-    btnReportPm.className = 'btn-primary';
-    loadPmFilters();
-});
-
-btnReportEx.addEventListener('click', () => {
-    hideAllReportBoxes();
-    exReportBox.style.display = 'block';
-    btnReportEx.className = 'btn-primary';
-    loadExFilters();
-});
-
-btnReportGn.addEventListener('click', () => {
-    hideAllReportBoxes();
-    gnReportBox.style.display = 'block';
-    btnReportGn.className = 'btn-primary';
-    loadGnFilters();
-});
-
-btnReportsSection.addEventListener('click', async () => {
-    // Ningún reporte seleccionado por defecto
-    hideAllReportBoxes();
-});
-
-async function loadPgFilters() {
-    // 1. Cargar Asesores
-    // Cargar asesores
-    const { data: users } = await sbClient.from('users').select('name')
-        .neq('role', 'Administrador')
-        .neq('role', 'Administrador maestro')
-        .neq('role', 'Desarrollador');
-    pgFilterUser.innerHTML = '<option value="">Todos los Asesores</option>';
-    if (users) {
-        users.forEach(u => pgFilterUser.innerHTML += `<option value="${u.name}">${u.name}</option>`);
-    }
-
-    // 2. Cargar Departamentos (Selector Inteligente)
-    const { data: deptsData, error } = await sbClient.from('municipalities').select('id, municipalities');
-    
-    if (error) {
-        console.error('Error cargando departamentos:', error);
-        return;
-    }
-
-    pgFilterDept.innerHTML = '<option value="">Todos los Departamentos</option>';
-    deptsData.forEach(dept => {
-        const option = document.createElement('option');
-        option.value = dept.id;
-        option.textContent = dept.id;
-        pgFilterDept.appendChild(option);
-    });
-
-    // Lógica Condicional de UI (Caso Único vs Múltiple)
-    if (deptsData.length === 1) {
-        // Caso Único: Asignar valor y deshabilitar
-        pgFilterDept.value = deptsData[0].id;
-        pgFilterDept.disabled = true;
-        // Disparar evento de cambio manualmente para cargar municipios
-        pgFilterDept.dispatchEvent(new Event('change'));
-    } else {
-        // Caso Múltiple: Habilitar y permitir elección
-        pgFilterDept.disabled = false;
-    }
-}
-
-// --- Lógica de Filtrado Dinámico de Municipios por Usuario ---
-
-pgFilterUser.addEventListener('change', () => {
-    updateUserMunicipalities(pgFilterUser.value, 'pg-filter-muni');
-});
-
-async function updateUserMunicipalities(userName, targetSelectId) {
-    const select = document.getElementById(targetSelectId);
-    if (!select) return;
-
-    // Estado de carga
-    select.innerHTML = '<option value="">Cargando...</option>';
-    select.disabled = true;
-
-    if (!userName) {
-        // Si se selecciona "Todos los Asesores", restaurar comportamiento por defecto
-        // (Disparar cambio en Dept para recargar según departamento o limpiar)
-        select.innerHTML = '<option value="">Todos los Municipios</option>';
-        select.disabled = false;
-        
-        // Si hay un departamento seleccionado, recargar sus municipios
-        if (pgFilterDept.value) {
-            pgFilterDept.dispatchEvent(new Event('change'));
-        }
-        return;
-    }
-
-    // Consultar municipios asignados al usuario
-    const { data: user, error } = await sbClient
-        .from('users')
-        .select('assigned_municipality')
-        .eq('name', userName)
-        .single();
-
-    if (error || !user) {
-        select.innerHTML = '<option value="">Error al cargar</option>';
-        select.disabled = false;
-        return;
-    }
-
-    // Procesar array o string
-    const assigned = user.assigned_municipality || [];
-    let list = [];
-    if (Array.isArray(assigned)) list = assigned;
-    else if (typeof assigned === 'string') list = assigned.split(',').map(s => s.trim());
-
-    // Actualizar DOM
-    select.innerHTML = '<option value="">Todos los Municipios</option>';
-    list.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = m;
-        select.appendChild(opt);
-    });
-    select.disabled = false;
-}
-
-// Lógica de Municipios dependiente de Dept
-pgFilterDept.addEventListener('change', async () => {
-    pgFilterMuni.innerHTML = '<option value="">Todos los Municipios</option>';
-    if (!pgFilterDept.value) return;
-    
-    const { data } = await sbClient.from('municipalities').select('municipalities').eq('id', pgFilterDept.value).single();
-    if (data) {
-        data.municipalities.forEach(m => pgFilterMuni.innerHTML += `<option value="${m}">${m}</option>`);
-    }
-});
-
-// --- Lógica Modal de Fechas ---
-
-btnPgFilterDate.addEventListener('click', () => {
-    currentReportDateTarget = 'pg'; // Contexto P&G
-    const mode = currentPgMode || 'daily';
-    // 1. Configurar opciones según el modo
-    pgModalDateType.innerHTML = '';
-    
-    if (mode === 'daily') {
-        pgModalDateType.innerHTML += '<option value="specific">Día Específico</option>';
-        pgModalDateType.innerHTML += '<option value="range">Rango de Fechas</option>';
-        pgModalDateType.innerHTML += '<option value="all">Mostrar Todo</option>';
-    } else {
-        // Modo Semanal
-        pgModalDateType.innerHTML += '<option value="month">Mes Completo</option>';
-        pgModalDateType.innerHTML += '<option value="range">Rango Personalizado</option>';
-        pgModalDateType.innerHTML += '<option value="all">Mostrar Todo</option>';
-    }
-
-    // Seleccionar el tipo actual si es compatible, sino el primero
-    pgModalDateType.value = pgDateState.type;
-    if (!pgModalDateType.value) pgModalDateType.selectedIndex = 0;
-
-    updatePgModalView();
-    pgDateSelectionModal.style.display = 'block';
-});
-
-btnPbFilterDate.addEventListener('click', () => {
-    currentReportDateTarget = 'pb'; // Contexto PB
-    const mode = currentPbMode || 'daily';
-    // 1. Configurar opciones según el modo
-    pgModalDateType.innerHTML = '';
-    
-    if (mode === 'daily') {
-        pgModalDateType.innerHTML += '<option value="specific">Día Específico</option>';
-        pgModalDateType.innerHTML += '<option value="range">Rango de Fechas</option>';
-        pgModalDateType.innerHTML += '<option value="all">Mostrar Todo</option>';
-    } else {
-        // Modo Semanal
-        pgModalDateType.innerHTML += '<option value="month">Mes Completo</option>';
-        pgModalDateType.innerHTML += '<option value="range">Rango Personalizado</option>';
-    }
-    pgModalDateType.selectedIndex = 0;
-    updatePgModalView();
-    pgDateSelectionModal.style.display = 'block';
-});
-
-btnCrFilterDate.addEventListener('click', () => {
-    currentReportDateTarget = 'cr'; // Contexto CR
-    const mode = currentCrMode || 'daily';
-    // 1. Configurar opciones según el modo
-    pgModalDateType.innerHTML = '';
-    
-    if (mode === 'daily') {
-        pgModalDateType.innerHTML += '<option value="specific">Día Específico</option>';
-        pgModalDateType.innerHTML += '<option value="range">Rango de Fechas</option>';
-        pgModalDateType.innerHTML += '<option value="all">Mostrar Todo</option>';
-    } else {
-        // Modo Semanal
-        pgModalDateType.innerHTML += '<option value="month">Mes Completo</option>';
-        pgModalDateType.innerHTML += '<option value="range">Rango Personalizado</option>';
-    }
-    pgModalDateType.selectedIndex = 0;
-    updatePgModalView();
-    pgDateSelectionModal.style.display = 'block';
-});
-
-btnPmFilterDate.addEventListener('click', () => {
-    currentReportDateTarget = 'pm'; // Contexto PM
-    const mode = currentPmMode || 'daily';
-    // 1. Configurar opciones según el modo
-    pgModalDateType.innerHTML = '';
-    
-    if (mode === 'daily') {
-        pgModalDateType.innerHTML += '<option value="specific">Día Específico</option>';
-        pgModalDateType.innerHTML += '<option value="range">Rango de Fechas</option>';
-        pgModalDateType.innerHTML += '<option value="all">Mostrar Todo</option>';
-    } else {
-        // Modo Semanal
-        pgModalDateType.innerHTML += '<option value="month">Mes Completo</option>';
-        pgModalDateType.innerHTML += '<option value="range">Rango Personalizado</option>';
-    }
-    pgModalDateType.selectedIndex = 0;
-    updatePgModalView();
-    pgDateSelectionModal.style.display = 'block';
-});
-
-btnExFilterDate.addEventListener('click', () => {
-    currentReportDateTarget = 'ex'; // Contexto EX
-    const mode = currentExMode || 'daily';
-    // 1. Configurar opciones según el modo
-    pgModalDateType.innerHTML = '';
-    
-    if (mode === 'daily') {
-        pgModalDateType.innerHTML += '<option value="specific">Día Específico</option>';
-        pgModalDateType.innerHTML += '<option value="range">Rango de Fechas</option>';
-        pgModalDateType.innerHTML += '<option value="all">Mostrar Todo</option>';
-    } else {
-        // Modo Semanal
-        pgModalDateType.innerHTML += '<option value="month">Mes Completo</option>';
-        pgModalDateType.innerHTML += '<option value="range">Rango Personalizado</option>';
-    }
-    pgModalDateType.selectedIndex = 0;
-    updatePgModalView();
-    pgDateSelectionModal.style.display = 'block';
-});
-
-btnGnFilterDate.addEventListener('click', () => {
-    currentReportDateTarget = 'gn'; // Contexto GN
-    const mode = currentGnMode || 'daily'; // Default daily si no hay selección
-    // 1. Configurar opciones según el modo
-    pgModalDateType.innerHTML = '';
-    
-    if (mode === 'daily') {
-        pgModalDateType.innerHTML += '<option value="specific">Día Específico</option>';
-        pgModalDateType.innerHTML += '<option value="range">Rango de Fechas</option>';
-        pgModalDateType.innerHTML += '<option value="all">Mostrar Todo</option>';
-    } else {
-        // Modo Semanal
-        pgModalDateType.innerHTML += '<option value="month">Mes Completo</option>';
-        pgModalDateType.innerHTML += '<option value="range">Rango Personalizado</option>';
-    }
-    pgModalDateType.selectedIndex = 0;
-    updatePgModalView();
-    pgDateSelectionModal.style.display = 'block';
-});
-
-pgModalDateType.addEventListener('change', updatePgModalView);
-
-function updatePgModalView() {
-    const type = pgModalDateType.value;
-    pgModalDateInputsContainer.innerHTML = '';
-    const now = new Date();
-    const todayISO = getLocalDateKey(now);
-    const currentMonthISO = now.toISOString().slice(0, 7); // YYYY-MM
-
-    if (type === 'specific') {
-        pgModalDateInputsContainer.innerHTML = `
-            <label>Seleccionar Día:</label>
-            <input type="date" id="pg-input-day" value="${todayISO}" class="pg-date-input">
-        `;
-    } else if (type === 'range') {
-        pgModalDateInputsContainer.innerHTML = `
-            <label>Desde:</label>
-            <input type="date" id="pg-input-start" value="${todayISO}" class="pg-date-input">
-            <label>Hasta:</label>
-            <input type="date" id="pg-input-end" value="${todayISO}" class="pg-date-input">
-        `;
-    } else if (type === 'month') {
-        pgModalDateInputsContainer.innerHTML = `
-            <label>Seleccionar Mes:</label>
-            <input type="month" id="pg-input-month" value="${currentMonthISO}" class="pg-date-input">
-        `;
-    } else if (type === 'week_of_month') {
-        pgModalDateInputsContainer.innerHTML = `
-            <label>Mes:</label>
-            <input type="month" id="pg-input-month-week" value="${currentMonthISO}" class="pg-date-input">
-            <label>Semana:</label>
-            <select id="pg-input-week-num" class="pg-date-input">
-                <option value="1">Semana 1 (1-7)</option>
-                <option value="2">Semana 2 (8-14)</option>
-                <option value="3">Semana 3 (15-21)</option>
-                <option value="4">Semana 4 (22-Fin)</option>
-            </select>
-        `;
-    } else if (type === 'all') {
-        pgModalDateInputsContainer.innerHTML = '<p>Se mostrarán todos los registros disponibles.</p>';
-    }
-
-    // Agregar listeners a los nuevos inputs para actualizar preview
-    document.querySelectorAll('.pg-date-input').forEach(input => {
-        input.addEventListener('change', updatePgDatePreview);
-        input.addEventListener('input', updatePgDatePreview);
-    });
-    updatePgDatePreview();
-}
-
-function updatePgDatePreview() {
-    const type = pgModalDateType.value;
-    let text = '';
-    
-    if (type === 'specific') {
-        const val = document.getElementById('pg-input-day').value;
-        text = val ? `Día: ${val}` : '--';
-    } else if (type === 'range') {
-        const start = document.getElementById('pg-input-start').value;
-        const end = document.getElementById('pg-input-end').value;
-        text = (start && end) ? `Del ${start} al ${end}` : '--';
-    } else if (type === 'month') {
-        const val = document.getElementById('pg-input-month').value;
-        text = val ? `Todo el mes: ${val}` : '--';
-    } else if (type === 'week_of_month') {
-        const month = document.getElementById('pg-input-month-week').value;
-        const week = document.getElementById('pg-input-week-num').value;
-        text = month ? `Semana ${week} de ${month}` : '--';
-    } else if (type === 'all') {
-        text = 'Todos los registros';
-    }
-    
-    pgDatePreview.innerText = text;
-}
-
-btnPgDateAccept.addEventListener('click', () => {
-    const type = pgModalDateType.value;
-    let start = new Date();
-    let end = new Date();
-    let label = pgDatePreview.innerText;
-
-    // Lógica de cálculo de fechas
-    if (type === 'specific') {
-        const val = document.getElementById('pg-input-day').value;
-        if (!val) return alert('Seleccione una fecha');
-        const [y, m, d] = val.split('-').map(Number);
-        start = new Date(y, m - 1, d);
-        end = new Date(y, m - 1, d);
-    } else if (type === 'range') {
-        const sVal = document.getElementById('pg-input-start').value;
-        const eVal = document.getElementById('pg-input-end').value;
-        if (!sVal || !eVal) return alert('Seleccione ambas fechas');
-        const [sy, sm, sd] = sVal.split('-').map(Number);
-        const [ey, em, ed] = eVal.split('-').map(Number);
-        start = new Date(sy, sm - 1, sd);
-        end = new Date(ey, em - 1, ed);
-    } else if (type === 'month') {
-        const val = document.getElementById('pg-input-month').value; // YYYY-MM
-        if (!val) return alert('Seleccione un mes');
-        const [year, month] = val.split('-');
-        start = new Date(year, month - 1, 1);
-        end = new Date(year, month, 0); // Último día del mes
-    } else if (type === 'week_of_month') {
-        const val = document.getElementById('pg-input-month-week').value;
-        const week = parseInt(document.getElementById('pg-input-week-num').value);
-        if (!val) return alert('Seleccione un mes');
-        const [year, month] = val.split('-');
-        
-        start = new Date(year, month - 1, 1); // Base inicio mes
-        end = new Date(year, month - 1, 1);   // Base fin mes
-
-        if (week === 1) {
-            start.setDate(1); end.setDate(7);
-        } else if (week === 2) {
-            start.setDate(8); end.setDate(14);
-        } else if (week === 3) {
-            start.setDate(15); end.setDate(21);
-        } else {
-            start.setDate(22);
-            end = new Date(year, month, 0); // Fin de mes
-        }
-    } else if (type === 'all') {
-        // Rango muy amplio
-        start = new Date(2000, 0, 1);
-        end = new Date(2100, 11, 31);
-    }
-
-    // Ajustar horas
-    start.setHours(0,0,0,0);
-    
-    end.setHours(23,59,59,999);
-
-    // Guardar estado global
-    pgDateState = { type, start, end, label };
-    
-    // Actualizar UI principal
-    if (currentReportDateTarget === 'pg') {
-        pgFilterDateText.innerText = label;
-    } else if (currentReportDateTarget === 'pb') {
-        pbFilterDateText.innerText = label;
-    } else if (currentReportDateTarget === 'cr') {
-        crFilterDateText.innerText = label;
-    } else if (currentReportDateTarget === 'pm') {
-        pmFilterDateText.innerText = label;
-    } else if (currentReportDateTarget === 'ex') {
-        exFilterDateText.innerText = label;
-    } else if (currentReportDateTarget === 'gn') {
-        gnFilterDateText.innerText = label;
-    }
-    
-    pgDateSelectionModal.style.display = 'none';
-});
-
-btnPgDateCancel.addEventListener('click', () => {
-    pgDateSelectionModal.style.display = 'none';
-});
-
-// 2. Generación del Reporte
-btnGeneratePg.addEventListener('click', generatePgReport);
-
-async function generatePgReport() {
-    pgTableBody.innerHTML = '<tr><td colspan="8">Generando informe... esto puede tardar un poco.</td></tr>';
-
-    if (!currentPgMode) return alert('Seleccione un modo (Diario/Semanal)');
-    // Validación de Filtros Estricta
-    // if (pgFilterDept.value === "" && pgFilterUser.value === "") {
-    //     pgTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; color: #dc3545; font-weight: bold;">Por favor configure su consulta en el espacio de filtros (Seleccione al menos un Departamento o Asesor).</td></tr>';
-    //     return;
-    // }
-
-    // A. Usar fechas del estado global
-    const start = pgDateState.start;
-    const end = pgDateState.end;
-    if (!start) return alert('Seleccione una fecha');
-
-    const startISO = start.toISOString();
-    const endISO = end.toISOString();
-
-    try {
-        // 1. Calcular fecha de retroceso (Lookback)
-        const isWeekly = currentPgMode === 'weekly';
-        const lookbackDate = new Date(start);
-        lookbackDate.setDate(lookbackDate.getDate() - (isWeekly ? 365 : 180));
-        
-        // 2. Consultas sin límite
-        const { data: debtors, error: debtError } = await sbClient
-            .from('debtors')
-            .select('*')
-            .gte('created_at', lookbackDate.toISOString())
-            .lte('created_at', end.toISOString());
-
-        if (debtError) throw debtError;
-
-        const { data: payments, error: payError } = await sbClient
-            .from('payments')
-            .select('*')
-            .gte('created_at', start.toISOString())
-            .lte('created_at', end.toISOString());
-
-        if (payError) throw payError;
-
-        const expenseTable = isWeekly ? 'wreports' : 'reports';
-        let reportsQuery = sbClient.from(expenseTable).select('*');
-        
-        // Filtro de usuario para reportes de gastos si aplica
-        if (pgFilterUser.value) {
-             reportsQuery = reportsQuery.eq('user_name', pgFilterUser.value);
-        }
-        
-        const { data: reportsSnap, error: reportsError } = await reportsQuery;
-        if (reportsError) throw reportsError;
-
-        // Procesamiento (Lógica de guia.html adaptada)
-        const dataMap = {}; 
-        const getKey = (dateStr, userName, muniName) => `${dateStr}|${userName}|${muniName}`;
-        
-        const initRow = (key, dateStr, userName, muniName, sortTime) => {
-            if (!dataMap[key]) {
-                dataMap[key] = { 
-                    date: dateStr, 
-                    user: userName, 
-                    muni: muniName, 
-                    cobro: 0, 
-                    creditos: 0, 
-                    ganancia: 0, 
-                    cobroReal: 0, 
-                    gastos: 0, 
-                    sortDate: sortTime 
-                };
-            }
-        };
-
-        const isDiario = (term) => {
-            if (!term) return false;
-            if (Array.isArray(term)) return term.some(t => String(t).toUpperCase() === 'DIARIO');
-            return String(term).toUpperCase() === 'DIARIO';
-        };
-        
-        const isSemanal = (term) => {
-            if (!term) return false;
-            if (Array.isArray(term)) return term.some(t => String(t).toUpperCase() === 'SEMANAL');
-            return String(term).toUpperCase() === 'SEMANAL';
-        };
-
-        const getWeekInfo = (dateObj) => {
-            const d = dateObj.getDate();
-            const m = dateObj.getMonth();
-            const y = dateObj.getFullYear();
-            const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-            let w = 4;
-            if (d <= 7) w = 1;
-            else if (d <= 14) w = 2;
-            else if (d <= 21) w = 3;
-            const label = `Semana ${w} - ${months[m]} ${y}`;
-            const sortTime = new Date(y, m, (w - 1) * 7 + 1).getTime();
-            return { label, sortTime };
-        };
-
-        const debtorsMap = new Map();
-        const datesInRange = [];
-        let currentDateIter = new Date(start);
-        while (currentDateIter <= end) {
-            datesInRange.push(new Date(currentDateIter));
-            currentDateIter.setDate(currentDateIter.getDate() + 1);
-        }
-
-        // Procesar Créditos
-        debtors.forEach(d => {
-            if (pgFilterUser.value && d.asesor_name !== pgFilterUser.value) return;
-            if (pgFilterMuni.value && d.municipality !== pgFilterMuni.value) return;
-            
-            debtorsMap.set(d.id, d);
-
-            if (isWeekly) { if (!isSemanal(d.payment_term)) return; } 
-            else { if (!isDiario(d.payment_term)) return; }
-
-            const createdAt = new Date(d.created_at);
-
-            // Nuevos Créditos y Ganancia
-            if (d.imported !== true && createdAt >= start && createdAt <= end) {
-                let dateStr, sortTime;
-                if (isWeekly) {
-                    const info = getWeekInfo(createdAt);
-                    dateStr = info.label;
-                    sortTime = info.sortTime;
-                } else {
-                    dateStr = getLocalDateKey(createdAt); // YYYY-MM-DD
-                    sortTime = createdAt.getTime();
-                }
-                const key = getKey(dateStr, d.asesor_name, d.municipality);
-                initRow(key, dateStr, d.asesor_name, d.municipality, sortTime);
-                dataMap[key].creditos += (Number(d.sale_value) || 0);
-                dataMap[key].ganancia += (Number(d.interests) || 0);
-            }
-
-            // Cobro Esperado
-            let effectiveDate = createdAt;
-            if (d.sale_date) {
-                const parsed = parseDateValue(d.sale_date);
-                if (parsed) effectiveDate = parsed;
-            }
-
-            const numDays = Number(d.number_of_payments) || 0;
-            const expirationDate = new Date(effectiveDate);
-            if (isWeekly) expirationDate.setDate(expirationDate.getDate() + (numDays * 7));
-            else expirationDate.setDate(expirationDate.getDate() + numDays);
-
-            const activeStart = new Date(effectiveDate);
-            activeStart.setDate(activeStart.getDate() + 1);
-            activeStart.setHours(0,0,0,0);
-            const activeEnd = new Date(expirationDate);
-            activeEnd.setHours(23,59,59,999);
-
-            datesInRange.forEach(dayDate => {
-                const dayStart = new Date(dayDate);
-                dayStart.setHours(0,0,0,0);
-                const hasBalance = (Number(d.balance) || 0) > 0;
-
-                if (dayStart >= activeStart && (dayStart <= activeEnd || hasBalance)) {
-                    if (!isWeekly || (isWeekly && dayStart.getDay() === effectiveDate.getDay())) {
-                        let dateStr, sortTime;
-                        if (isWeekly) {
-                            const info = getWeekInfo(dayStart);
-                            dateStr = info.label;
-                            sortTime = info.sortTime;
-                        } else {
-                            dateStr = getLocalDateKey(dayStart);
-                            sortTime = dayStart.getTime();
-                        }
-                        const key = getKey(dateStr, d.asesor_name, d.municipality);
-                        initRow(key, dateStr, d.asesor_name, d.municipality, sortTime);
-                        dataMap[key].cobro += (Number(d.valor_cuota) || 0);
-                    }
-                }
-            });
-        });
-
-        // Procesar Pagos
-        payments.forEach(p => {
-            if (pgFilterUser.value && p.user_name !== pgFilterUser.value) return;
-            if (pgFilterMuni.value && p.municipality !== pgFilterMuni.value) return;
-            if (isWeekly && p.imported === true) return;
-            if (p.imported === true) return;
-
-            const debtor = debtorsMap.get(p.debtor_id);
-            if (!debtor) return;
-            
-            if (isWeekly) { if (!isSemanal(debtor.payment_term)) return; }
-            else { if (!isDiario(debtor.payment_term)) return; }
-
-            const date = new Date(p.created_at);
-            let dateStr, sortTime;
-            if (isWeekly) {
-                const info = getWeekInfo(date);
-                dateStr = info.label;
-                sortTime = info.sortTime;
-            } else {
-                dateStr = getLocalDateKey(date);
-                sortTime = date.getTime();
-            }
-            const key = getKey(dateStr, p.user_name, p.municipality);
-            initRow(key, dateStr, p.user_name, p.municipality, sortTime);
-            dataMap[key].cobroReal += (parseFloat(p.payment_amount) || 0);
-        });
-
-        // Gastos
-        const expensesMap = {};
-        reportsSnap.forEach(r => {
-            let rDate, dateStr;
-            if (isWeekly) {
-                rDate = new Date(r.created_at);
-                const info = getWeekInfo(rDate);
-                dateStr = info.label;
-            } else {
-                const parsed = parseDateValue(r.report_date);
-                rDate = parsed || new Date(r.created_at);
-                dateStr = r.report_date || getLocalDateKey(rDate);
-            }
-            if (rDate >= start && rDate <= end) {
-                expensesMap[`${dateStr}|${r.user_name}`] = (Number(r.expense_report) || Number(r.expenses_report) || 0);
-            }
-        });
-
-        const expensesApplied = new Set();
-        Object.values(dataMap).forEach(row => {
-            const expKey = `${row.date}|${row.user}`;
-            if (expensesMap[expKey] && !expensesApplied.has(expKey)) {
-                row.gastos = expensesMap[expKey];
-                expensesApplied.add(expKey);
-            }
-        });
-
-        // Renderizar
-        currentPgReportData = Object.values(dataMap).sort((a,b) => a.date.localeCompare(b.date));
-        pgTableBody.innerHTML = '';
-        
-        currentPgReportData.forEach(row => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${row.date}</td>
-                <td>${row.user}</td>
-                <td>${row.muni}</td>
-                <td>$${row.cobro.toLocaleString()}</td>
-                <td>$${row.gastos.toLocaleString()}</td>
-                <td>$${row.creditos.toLocaleString()}</td>
-                <td>$${row.ganancia.toLocaleString()}</td>
-                <td>$${row.cobroReal.toLocaleString()}</td>
-            `;
-            pgTableBody.appendChild(tr);
-        });
-
-    } catch (e) {
-        console.error(e);
-        pgTableBody.innerHTML = `<tr><td colspan="8" style="color:red">Error: ${e.message}</td></tr>`;
-    }
-}
-
-// 3. Descarga Excel
-btnDownloadPg.addEventListener('click', () => {
-    if (!currentPgReportData.length) return alert('No hay datos para descargar');
-    
-    const exportData = currentPgReportData.map(row => ({
-        "FECHA": adjustDateForExport(row.date),
-        "ASESOR": row.user,
-        "MUNICIPIO": row.muni,
-        "COBRO REAL": row.cobro, // Expectativa
-        "GASTOS": row.gastos,
-        "CREDITOS": row.creditos,
-        "GANANCIA": row.ganancia,
-        "RECAUDO": row.cobroReal // Real
-    }));
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    XLSX.utils.book_append_sheet(wb, ws, "Informe PG");
-    XLSX.writeFile(wb, "Informe_PG.xlsx");
-});
-
-// ==========================================
-// LÓGICA INFORME COMPORTAMIENTO DE PAGO (PB)
-// ==========================================
-
-btnPbDaily.addEventListener('click', () => {
-    currentPbMode = 'daily';
-    btnPbDaily.className = 'btn-primary';
-    btnPbWeekly.className = 'btn-secondary';
-    pbFilterDateText.innerText = 'Seleccionar Fecha';
-});
-
-btnPbWeekly.addEventListener('click', () => {
-    currentPbMode = 'weekly';
-    btnPbWeekly.className = 'btn-primary';
-    btnPbDaily.className = 'btn-secondary';
-    pbFilterDateText.innerText = 'Seleccionar Fecha';
-});
-
-async function loadPbFilters() {
-    // Reutilizamos lógica de carga pero para elementos PB
-    // Asesores
-    const { data: users } = await sbClient.from('users').select('name')
-        .neq('role', 'Administrador').neq('role', 'Administrador maestro').neq('role', 'Desarrollador');
-    pbFilterUser.innerHTML = '<option value="">Todos los Asesores</option>';
-    if (users) users.forEach(u => pbFilterUser.innerHTML += `<option value="${u.name}">${u.name}</option>`);
-
-    // Departamentos
-    const { data: deptsData } = await sbClient.from('municipalities').select('id, municipalities');
-    pbFilterDept.innerHTML = '<option value="">Todos los Departamentos</option>';
-    if (deptsData) {
-        deptsData.forEach(dept => {
-            const option = document.createElement('option');
-            option.value = dept.id;
-            option.textContent = dept.id;
-            pbFilterDept.appendChild(option);
-        });
-        if (deptsData.length === 1) {
-            pbFilterDept.value = deptsData[0].id;
-            pbFilterDept.disabled = true;
-            pbFilterDept.dispatchEvent(new Event('change'));
-        } else {
-            pbFilterDept.disabled = false;
-        }
-    }
-}
-
-// Lógica Dept -> Muni para PB
-pbFilterDept.addEventListener('change', async () => {
-    pbFilterMuni.innerHTML = '<option value="">Todos los Municipios</option>';
-    if (!pbFilterDept.value) return;
-    const { data } = await sbClient.from('municipalities').select('municipalities').eq('id', pbFilterDept.value).single();
-    if (data) data.municipalities.forEach(m => pbFilterMuni.innerHTML += `<option value="${m}">${m}</option>`);
-});
-
-// Lógica User -> Muni para PB
-pbFilterUser.addEventListener('change', () => {
-    updateUserMunicipalities(pbFilterUser.value, 'pb-filter-muni');
-});
-
-btnGeneratePb.addEventListener('click', generatePaymentBehaviorReport);
-
-async function generatePaymentBehaviorReport() {
-    pbTableBody.innerHTML = '<tr><td colspan="9">Buscando morosos...</td></tr>';
-
-    if (!currentPbMode) return alert('Seleccione un modo (Diario/Semanal)');
-    // Validación de Filtros Estricta
-    // if (pbFilterDept.value === "" && pbFilterUser.value === "") {
-    //     pbTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; color: #dc3545; font-weight: bold;">Por favor configure su consulta en el espacio de filtros (Seleccione al menos un Departamento o Asesor).</td></tr>';
-    //     return;
-    // }
-
-    const start = pgDateState.start;
-    const end = pgDateState.end;
-    if (!start) return alert('Seleccione una fecha');
-    const startISO = start.toISOString();
-    const endISO = end.toISOString();
-
-    try {
-        // 1. Consultar Deudores (Activos)
-        // Filtramos por saldo > 0
-        let query = sbClient.from('debtors').select('*').gt('balance', 0);
-        
-        if (pbFilterUser.value) query = query.eq('asesor_name', pbFilterUser.value);
-        if (pbFilterMuni.value) query = query.eq('municipality', pbFilterMuni.value);
-        
-        const { data: debtors, error: debtError } = await query;
-        if (debtError) throw debtError;
-
-        // Filtrar por frecuencia (Diario/Semanal)
-        const isWeekly = currentPbMode === 'weekly';
-        const targetTerm = isWeekly ? 'SEMANAL' : 'DIARIO';
-        
-        const activeDebtors = debtors.filter(d => {
-            let term = d.payment_term;
-            if (Array.isArray(term)) return term.some(t => t.toUpperCase() === targetTerm);
-            return String(term).toUpperCase() === targetTerm;
-        });
-
-        // 2. Consultar Pagos
-        // Helper for DD-MM-YYYY
-        const getDDMMYYYY = (dateObj) => {
-            const d = String(dateObj.getDate()).padStart(2, '0');
-            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const y = dateObj.getFullYear();
-            return `${d}-${m}-${y}`;
-        };
-
-        const queryDateStrings = [];
-        let currentDate = new Date(start);
-        while (currentDate <= end) {
-            queryDateStrings.push(getDDMMYYYY(currentDate));
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-
-        // Fetch payments in chunks (by payment_date string)
-        const chunks = [];
-        for (let i = 0; i < queryDateStrings.length; i += 20) {
-            chunks.push(queryDateStrings.slice(i, i + 20));
-        }
-
-        // Also fetch by created_at range to catch those without payment_date string or different format
-        const paymentsByCreatedPromise = sbClient
-            .from('payments')
-            .select('debtor_id, created_at, payment_date, payment_amount')
-            .gte('created_at', startISO)
-            .lte('created_at', endISO);
-
-        const chunkPromises = chunks.map(chunk => 
-            sbClient.from('payments').select('debtor_id, created_at, payment_date, payment_amount').in('payment_date', chunk)
-        );
-
-        const [createdResult, ...chunkResults] = await Promise.all([paymentsByCreatedPromise, ...chunkPromises]);
-
-        // Helper for Week Info
-        const getWeekInfo = (dateObj) => {
-            const d = dateObj.getDate();
-            const m = dateObj.getMonth();
-            const y = dateObj.getFullYear();
-            const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-            let w = 4;
-            if (d <= 7) w = 1;
-            else if (d <= 14) w = 2;
-            else if (d <= 21) w = 3;
-            const label = `Semana ${w} - ${months[m]} ${y}`;
-            return { label };
-        };
-
-        const paymentsMap = new Set();
-        const processPayment = (p) => {
-            let pDate = parseDateValue(p.payment_date) || parseDateValue(p.created_at);
-            if (pDate) {
-                if (isWeekly) {
-                    const label = getWeekInfo(pDate).label;
-                    paymentsMap.add(`${p.debtor_id}|${label}`);
-                } else {
-                    paymentsMap.add(`${p.debtor_id}|${getDDMMYYYY(pDate)}`);
-                }
-            }
-        };
-
-        if (createdResult.data) createdResult.data.forEach(processPayment);
-        chunkResults.forEach(res => {
-            if (res.data) res.data.forEach(processPayment);
-        });
-
-        // 3. Detect Misses
-        const misses = [];
-
-        if (isWeekly) {
-            // Iterate Weeks
-            const weeksProcessed = new Set();
-            currentDate = new Date(start);
-            while (currentDate <= end) {
-                const info = getWeekInfo(currentDate);
-                if (!weeksProcessed.has(info.label)) {
-                    weeksProcessed.add(info.label);
-                    
-                    activeDebtors.forEach(debtor => {
-                        const created = parseDateValue(debtor.sale_date) || parseDateValue(debtor.created_at);
-                        // If created > currentDate (approx start of week check), skip
-                        if (created && created > currentDate) return;
-
-                        if (!paymentsMap.has(`${debtor.id}|${info.label}`)) {
-                            misses.push({
-                                dateStr: info.label,
-                                debtor: debtor
-                            });
-                        }
-                    });
-                }
-                currentDate.setDate(currentDate.getDate() + 1);
-            }
-        } else {
-            // Iterate Days
-            currentDate = new Date(start);
-            while (currentDate <= end) {
-                const dateStr = getDDMMYYYY(currentDate);
-                const checkTs = currentDate.getTime();
-
-                activeDebtors.forEach(debtor => {
-                    const created = parseDateValue(debtor.sale_date) || parseDateValue(debtor.created_at);
-                    // If created today or later, skip (assuming payment starts next day)
-                    if (created && created.getTime() >= checkTs) return;
-
-                    if (!paymentsMap.has(`${debtor.id}|${dateStr}`)) {
-                        misses.push({
-                            dateStr: dateStr,
-                            debtor: debtor
-                        });
-                    }
-                });
-                currentDate.setDate(currentDate.getDate() + 1);
-            }
-        }
-
-        currentPbReportData = misses;
-        renderPbTable(misses);
-
-    } catch (e) {
-        console.error(e);
-        pbTableBody.innerHTML = `<tr><td colspan="9" style="color:red">Error: ${e.message}</td></tr>`;
-    }
-}
-
-function renderPbTable(data) {
-    pbTableBody.innerHTML = '';
-    if (data.length === 0) {
-        pbTableBody.innerHTML = '<tr><td colspan="9">¡Excelente! No se encontraron morosos en este periodo.</td></tr>';
-        return;
-    }
-
-    data.forEach((item, index) => {
-        const d = item.debtor;
-        const isNew = (d.credit_type || '').toUpperCase() === 'NUEVO';
-        const row = document.createElement('tr');
-        
-        row.innerHTML = `
-            <td>${d.name || ''}</td>
-            <td>${d.municipality || ''}</td>
-            <td>${d.asesor_name || ''}</td>
-            <td>${item.dateStr}</td>
-            <td>${isNew ? '$' + parseFloat(d.sale_value).toLocaleString() : '-'}</td>
-            <td>${!isNew ? '$' + parseFloat(d.sale_value).toLocaleString() : '-'}</td>
-            <td>$${(parseFloat(d.valor_cuota) || 0).toLocaleString()}</td>
-            <td>
-                <span class="btn-drill-down" data-id="${d.id}" data-idx="${index}" style="cursor:pointer; color:blue; font-weight:bold; margin-left:5px;" title="Ver Historial">▼</span>
-            </td>
-            <td>$${(parseFloat(d.balance) || 0).toLocaleString()}</td>
-        `;
-        pbTableBody.appendChild(row);
-        
-        // Fila oculta para el drill-down
-        const detailRow = document.createElement('tr');
-        detailRow.id = `detail-row-${index}`;
-        detailRow.style.display = 'none';
-        detailRow.innerHTML = `<td colspan="9" id="detail-content-${index}" style="background-color: #f8f9fa; padding: 10px;"></td>`;
-        pbTableBody.appendChild(detailRow);
-    });
-
-    // Listeners para drill-down
-    document.querySelectorAll('.btn-drill-down').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const debtorId = e.target.dataset.id;
-            const idx = e.target.dataset.idx;
-            toggleMissedPaymentDetails(debtorId, idx);
-        });
-    });
-}
-
-// 4. Interactividad: Historial Desplegable
-async function getLastPaymentsForDebtor(debtorId) {
-    const limit = currentPbMode === 'daily' ? 15 : 4;
-    const { data: history } = await sbClient
-        .from('payments')
-        .select('*')
-        .eq('debtor_id', debtorId)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-    return history || [];
-}
-
-async function toggleMissedPaymentDetails(debtorId, idx) {
-    const row = document.getElementById(`detail-row-${idx}`);
-    const content = document.getElementById(`detail-content-${idx}`);
-    
-    if (row.style.display === 'none') {
-        row.style.display = 'table-row';
-        content.innerHTML = 'Cargando últimos pagos...';
-        
-        const history = await getLastPaymentsForDebtor(debtorId);
-            
-        if (history.length === 0) {
-            content.innerHTML = '<strong>No hay pagos registrados recientemente.</strong>';
-        } else {
-            let html = '<div style="margin-bottom: 10px;"><button class="btn-download-history" data-idx="' + idx + '" style="background-color: #28a745; color: white; border: none; padding: 5px 10px; cursor: pointer;">Descargar Historial Excel</button></div>';
-            html += '<table border="1" style="width:100%; font-size:0.85em;"><thead><tr><th>Fecha Pago</th><th>Abono</th><th>Método</th></tr></thead><tbody>';
-            history.forEach(h => {
-                const date = h.payment_date || getLocalDateKey(new Date(h.created_at));
-                html += `<tr><td>${date}</td><td>$${parseFloat(h.payment_amount).toLocaleString()}</td><td>${h.payment_method || 'Efectivo'}</td></tr>`;
-            });
-            html += '</tbody></table>';
-            content.innerHTML = html;
-        }
-    } else {
-        row.style.display = 'none';
-    }
-}
-
-// Listener para descarga de historial individual (Delegación)
-pbTableBody.addEventListener('click', (e) => {
-    if (e.target.classList.contains('btn-download-history')) {
-        const idx = e.target.dataset.idx;
-        downloadMissedPaymentHistory(idx);
-    }
-});
-
-async function downloadMissedPaymentHistory(idx) {
-    const item = currentPbReportData[idx];
-    if (!item) return alert('Error al obtener datos del cliente.');
-    
-    const debtor = item.debtor;
-    const history = await getLastPaymentsForDebtor(debtor.id);
-
-    // Construcción del Excel
-    const ws_data = [];
-
-    // Bloque 1: Cabecera del Cliente
-    ws_data.push(['ASESOR', 'MUNICIPIO', 'FECHA PRESTAMO', 'TIPO CREDITO', 'VALOR CUOTA', 'SALDO ACTUAL', 'FRECUENCIA']);
-    ws_data.push([
-        debtor.asesor_name || '',
-        debtor.municipality || '',
-        debtor.sale_date || '',
-        debtor.credit_type || '',
-        parseFloat(debtor.valor_cuota) || 0,
-        parseFloat(debtor.balance) || 0,
-        debtor.payment_term || ''
-    ]);
-
-    // Separación (2 filas vacías)
-    ws_data.push([]);
-    ws_data.push([]);
-
-    // Bloque 2: Tabla de Pagos
-    if (currentPbMode === 'weekly') {
-        ws_data.push(['SEMANA', 'MES', 'FECHA PAGO', 'VALOR CUOTA', 'ABONO']);
-    } else {
-        ws_data.push(['FECHA PAGO', 'VALOR CUOTA', 'ABONO']);
-    }
-
-    history.forEach(h => {
-        const dateStr = h.payment_date || getLocalDateKey(new Date(h.created_at));
-        const amount = parseFloat(h.payment_amount) || 0;
-        const quota = parseFloat(debtor.valor_cuota) || 0;
-
-        // Formato de fecha corta m/d/yy
-        let formattedDate = dateStr;
-        const parts = dateStr.split('-');
-        if (parts.length === 3) {
-            formattedDate = `${parseInt(parts[1])}/${parseInt(parts[2])}/${parts[0].slice(2)}`;
-        }
-
-        if (currentPbMode === 'weekly') {
-            const d = new Date(dateStr);
-            d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
-            const month = d.toLocaleString('es-ES', { month: 'long' });
-            // Cálculo aproximado de semana
-            const onejan = new Date(d.getFullYear(), 0, 1);
-            const week = Math.ceil((((d.getTime() - onejan.getTime()) / 86400000) + onejan.getDay() + 1) / 7);
-            ws_data.push([week, month.toUpperCase(), formattedDate, quota, amount]);
-        } else {
-            ws_data.push([formattedDate, quota, amount]);
-        }
-    });
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(ws_data);
-    XLSX.utils.book_append_sheet(wb, ws, "Historial");
-    XLSX.writeFile(wb, `Historial_${(debtor.name || 'Cliente').replace(/\s+/g, '_')}.xlsx`);
-}
-
-// 5. Descarga Excel
-btnDownloadPb.addEventListener('click', () => {
-    if (!currentPbReportData.length) return alert('No hay datos para descargar');
-    
-    const exportData = currentPbReportData.map(item => ({
-        "FECHA REVISION": adjustDateForExport(item.date),
-        "CLIENTE": item.debtor.name,
-        "MUNICIPIO": item.debtor.municipality,
-        "ASESOR": item.debtor.asesor_name,
-        "SALDO PENDIENTE": item.debtor.balance
-    }));
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    XLSX.utils.book_append_sheet(wb, ws, "Morosos");
-    XLSX.writeFile(wb, "Reporte_Mora.xlsx");
-});
-
-// ==========================================
-// LÓGICA INFORME DE CRÉDITOS (CR)
-// ==========================================
-
-btnCrDaily.addEventListener('click', () => {
-    currentCrMode = 'daily';
-    btnCrDaily.className = 'btn-primary';
-    btnCrWeekly.className = 'btn-secondary';
-    crFilterDateText.innerText = 'Seleccionar Fecha';
-});
-
-btnCrWeekly.addEventListener('click', () => {
-    currentCrMode = 'weekly';
-    btnCrWeekly.className = 'btn-primary';
-    btnCrDaily.className = 'btn-secondary';
-    crFilterDateText.innerText = 'Seleccionar Fecha';
-});
-
-async function loadCrFilters() {
-    // Reutilizamos lógica de carga para CR
-    // Asesores
-    const { data: users } = await sbClient.from('users').select('name')
-        .neq('role', 'Administrador').neq('role', 'Administrador maestro').neq('role', 'Desarrollador');
-    crFilterUser.innerHTML = '<option value="">Todos los Asesores</option>';
-    if (users) users.forEach(u => crFilterUser.innerHTML += `<option value="${u.name}">${u.name}</option>`);
-
-    // Departamentos
-    const { data: deptsData } = await sbClient.from('municipalities').select('id, municipalities');
-    crFilterDept.innerHTML = '<option value="">Todos los Departamentos</option>';
-    if (deptsData) {
-        deptsData.forEach(dept => {
-            const option = document.createElement('option');
-            option.value = dept.id;
-            option.textContent = dept.id;
-            crFilterDept.appendChild(option);
-        });
-        if (deptsData.length === 1) {
-            crFilterDept.value = deptsData[0].id;
-            crFilterDept.disabled = true;
-            crFilterDept.dispatchEvent(new Event('change'));
-        } else {
-            crFilterDept.disabled = false;
-        }
-    }
-}
-
-// Lógica Dept -> Muni para CR
-crFilterDept.addEventListener('change', async () => {
-    crFilterMuni.innerHTML = '<option value="">Todos los Municipios</option>';
-    if (!crFilterDept.value) return;
-    const { data } = await sbClient.from('municipalities').select('municipalities').eq('id', crFilterDept.value).single();
-    if (data) data.municipalities.forEach(m => crFilterMuni.innerHTML += `<option value="${m}">${m}</option>`);
-});
-
-// Lógica User -> Muni para CR (Reutiliza updateUserMunicipalities)
-crFilterUser.addEventListener('change', () => {
-    updateUserMunicipalities(crFilterUser.value, 'cr-filter-muni');
-});
-
-btnGenerateCr.addEventListener('click', generateCreditsReport);
-
-async function generateCreditsReport() {
-    crTableBody.innerHTML = '<tr><td colspan="6">Generando informe...</td></tr>';
-    crTotalDisplay.innerText = '$0';
-
-    if (!currentCrMode) return alert('Seleccione un modo (Diario/Semanal)');
-    // Validación de Filtros Estricta
-    // if (crFilterDept.value === "" && crFilterUser.value === "") {
-    //     crTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: #dc3545; font-weight: bold;">Por favor configure su consulta en el espacio de filtros (Seleccione al menos un Departamento o Asesor).</td></tr>';
-    //     return;
-    // }
-
-    const start = pgDateState.start;
-    const end = pgDateState.end;
-    if (!start) return alert('Seleccione una fecha');
-    const startTs = start.getTime();
-    const endTs = end.getTime();
-
-    try {
-        // 1. Consulta sin límite de fecha (Filtrado en memoria)
-        let query = sbClient.from('debtors').select('*');
-
-        if (crFilterUser.value) query = query.eq('asesor_name', crFilterUser.value);
-        if (crFilterMuni.value) query = query.eq('municipality', crFilterMuni.value);
-        
-        const { data: snapshot, error } = await query;
-        if (error) throw error;
-
-        // 2. Filtrado en Memoria
-        const records = [];
-        const isWeekly = currentCrMode === 'weekly';
-        const targetTerm = isWeekly ? 'SEMANAL' : 'DIARIO';
-        
-        snapshot.forEach(d => {
-            // Filtro de Fecha
-            const recordDate = parseDateValue(d.sale_date) || parseDateValue(d.created_at);
-            if (!recordDate || recordDate < start || recordDate > end) return;
-
-            // Filtro de Modo
-            let term = d.payment_term;
-            let match = false;
-            
-            if (Array.isArray(term)) {
-                match = term.some(t => String(t).toUpperCase() === targetTerm);
-            } else {
-                match = String(term).toUpperCase() === targetTerm;
-            }
-            
-            if (!match) return;
-
-            records.push(d);
-        });
-
-        // Ordenamiento Descendente por fecha
-        records.sort((a, b) => {
-            const dateA = parseDateValue(a.sale_date) || parseDateValue(a.created_at) || new Date(0);
-            const dateB = parseDateValue(b.sale_date) || parseDateValue(b.created_at) || new Date(0);
-            return dateB - dateA;
-        });
-
-        currentCrReportData = records;
-        renderCrTable(records);
-
-    } catch (e) {
-        console.error(e);
-        crTableBody.innerHTML = `<tr><td colspan="6" style="color:red">Error: ${e.message}</td></tr>`;
-    }
-}
-
-function renderCrTable(data) {
-    crTableBody.innerHTML = '';
-    let totalSales = 0;
-
-    if (data.length === 0) {
-        crTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No se encontraron registros.</td></tr>';
-        return;
-    }
-
-    let html = '';
-    data.forEach(r => {
-        const isNew = (r.credit_type || '').toUpperCase() === 'NUEVO';
-        const saleVal = parseFloat(r.sale_value) || 0;
-        totalSales += saleVal;
-
-        const nuevo = isNew ? saleVal : 0;
-        const represte = !isNew ? saleVal : 0;
-
-        let dateStr = 'N/A';
-        if (r.sale_date) dateStr = r.sale_date;
-        else if (r.created_at) dateStr = new Date(r.created_at).toLocaleDateString();
-
-        html += `<tr>
-            <td>${r.name || 'N/A'}</td>
-            <td>${dateStr}</td>
-            <td>${r.asesor_name || 'N/A'}</td>
-            <td>${r.municipality || 'N/A'}</td>
-            <td>$${nuevo.toLocaleString('es-CO')}</td>
-            <td>$${represte.toLocaleString('es-CO')}</td>
-        </tr>`;
-    });
-
-    crTableBody.innerHTML = html;
-    crTotalDisplay.innerText = '$' + totalSales.toLocaleString('es-CO');
-}
-
-btnDownloadCr.addEventListener('click', () => {
-    if (!currentCrReportData.length) return alert('No hay datos para descargar');
-
-    const exportData = currentCrReportData.map(r => {
-        const isNew = (r.credit_type || '').toUpperCase() === 'NUEVO';
-        const saleVal = parseFloat(r.sale_value) || 0;
-        
-        return {
-            "CLIENTE": r.name,
-            "FECHA": adjustDateForExport(r.sale_date || r.created_at),
-            "ASESOR": r.asesor_name,
-            "MUNICIPIO": r.municipality,
-            "NUEVO": isNew ? saleVal : 0,
-            "REPRESTE": !isNew ? saleVal : 0
-        };
-    });
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    XLSX.utils.book_append_sheet(wb, ws, "Informe Creditos");
-    XLSX.writeFile(wb, `Informe_Creditos_${Date.now()}.xlsx`);
-});
-
-// ==========================================
-// LÓGICA INFORME DE COBROS (PM)
-// ==========================================
-
-btnPmDaily.addEventListener('click', () => {
-    currentPmMode = 'daily';
-    btnPmDaily.className = 'btn-primary';
-    btnPmWeekly.className = 'btn-secondary';
-    pmFilterDateText.innerText = 'Seleccionar Fecha';
-});
-
-btnPmWeekly.addEventListener('click', () => {
-    currentPmMode = 'weekly';
-    btnPmWeekly.className = 'btn-primary';
-    btnPmDaily.className = 'btn-secondary';
-    pmFilterDateText.innerText = 'Seleccionar Fecha';
-});
-
-async function loadPmFilters() {
-    // Reutilizamos lógica de carga para PM
-    // Asesores
-    const { data: users } = await sbClient.from('users').select('name')
-        .neq('role', 'Administrador').neq('role', 'Administrador maestro').neq('role', 'Desarrollador');
-    pmFilterUser.innerHTML = '<option value="">Todos los Asesores</option>';
-    if (users) users.forEach(u => pmFilterUser.innerHTML += `<option value="${u.name}">${u.name}</option>`);
-
-    // Departamentos
-    const { data: deptsData } = await sbClient.from('municipalities').select('id, municipalities');
-    pmFilterDept.innerHTML = '<option value="">Todos los Departamentos</option>';
-    if (deptsData) {
-        deptsData.forEach(dept => {
-            const option = document.createElement('option');
-            option.value = dept.id;
-            option.textContent = dept.id;
-            pmFilterDept.appendChild(option);
-        });
-        if (deptsData.length === 1) {
-            pmFilterDept.value = deptsData[0].id;
-            pmFilterDept.disabled = true;
-            pmFilterDept.dispatchEvent(new Event('change'));
-        } else {
-            pmFilterDept.disabled = false;
-        }
-    }
-}
-
-// Lógica Dept -> Muni para PM
-pmFilterDept.addEventListener('change', async () => {
-    pmFilterMuni.innerHTML = '<option value="">Todos los Municipios</option>';
-    if (!pmFilterDept.value) return;
-    const { data } = await sbClient.from('municipalities').select('municipalities').eq('id', pmFilterDept.value).single();
-    if (data) data.municipalities.forEach(m => pmFilterMuni.innerHTML += `<option value="${m}">${m}</option>`);
-});
-
-// Lógica User -> Muni para PM (Reutiliza updateUserMunicipalities)
-pmFilterUser.addEventListener('change', () => {
-    updateUserMunicipalities(pmFilterUser.value, 'pm-filter-muni');
-});
-
-btnGeneratePm.addEventListener('click', generatePmReport);
-
-async function generatePmReport() {
-    pmTableBody.innerHTML = '<tr><td colspan="6">Generando informe...</td></tr>';
-    pmTotalCobroDisplay.innerText = '$0';
-    pmTotalRecaudoDisplay.innerText = '$0';
-
-    if (!currentPmMode) return alert('Seleccione un modo (Diario/Semanal)');
-    // Validación de Filtros Estricta
-    // if (pmFilterDept.value === "" && pmFilterUser.value === "") {
-    //     pmTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: #dc3545; font-weight: bold;">Por favor configure su consulta en el espacio de filtros (Seleccione al menos un Departamento o Asesor).</td></tr>';
-    //     return;
-    // }
-
-    const start = pgDateState.start;
-    const end = pgDateState.end;
-    if (!start) return alert('Seleccione una fecha');
-    const startISO = start.toISOString();
-    const endISO = end.toISOString();
-
-    try {
-        // 1. Consulta de Pagos
-        let query = sbClient.from('payments').select('*')
-            .gte('created_at', startISO)
-            .lte('created_at', endISO);
-
-        if (pmFilterUser.value) query = query.eq('user_name', pmFilterUser.value);
-        if (pmFilterMuni.value) query = query.eq('municipality', pmFilterMuni.value);
-
-        const { data: payments, error: payError } = await query;
-        if (payError) throw payError;
-
-        if (!payments || payments.length === 0) {
-            pmTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No se encontraron pagos en este periodo.</td></tr>';
-            return;
-        }
-
-        // 2. Enriquecimiento de Datos (Debtors)
-        const debtorIds = [...new Set(payments.map(p => p.debtor_id))];
-        let debtorsMap = new Map();
-        
-        if (debtorIds.length > 0) {
-            const chunkSize = 200;
-            for (let i = 0; i < debtorIds.length; i += chunkSize) {
-                const chunk = debtorIds.slice(i, i + chunkSize);
-                const { data: debtorsChunk, error: debtError } = await sbClient
-                    .from('debtors')
-                    .select('id, name, municipality, asesor_name, payment_term, valor_cuota')
-                    .in('id', chunk);
-                
-                if (debtError) throw debtError;
-                debtorsChunk.forEach(d => debtorsMap.set(d.id, d));
-            }
-        }
-
-        // 3. Procesamiento
-        const records = [];
-        const isWeekly = currentPmMode === 'weekly';
-        const targetTerm = isWeekly ? 'SEMANAL' : 'DIARIO';
-        
-        let totalCobro = 0;
-        let totalRecaudo = 0;
-
-        payments.forEach(p => {
-            const debtor = debtorsMap.get(p.debtor_id);
-            
-            // Determinar modo (Default Diario si no hay deudor)
-            let term = debtor ? debtor.payment_term : 'Diario';
-            let match = false;
-            
-            if (Array.isArray(term)) {
-                match = term.some(t => String(t).toUpperCase() === targetTerm);
-            } else {
-                match = String(term).toUpperCase() === targetTerm;
-            }
-            
-            if (!match) return;
-
-            const valorCuota = debtor ? (Number(debtor.valor_cuota) || 0) : (Number(p.valor_cuota) || 0);
-            const paymentAmount = Number(p.payment_amount) || 0;
-
-            totalCobro += valorCuota;
-            totalRecaudo += paymentAmount;
-
-            const pDate = parseDateValue(p.payment_date) || parseDateValue(p.created_at);
-            const dateStr = getLocalDateKey(pDate);
-
-            records.push({
-                debtorName: p.debtor_name || (debtor ? debtor.name : 'Desconocido'),
-                paymentDate: dateStr,
-                created_at: p.created_at,
-                userName: p.user_name,
-                municipality: p.municipality,
-                valorCuota: valorCuota,
-                paymentAmount: paymentAmount
-            });
-        });
-
-        // Sort
-        records.sort((a, b) => {
-            const dateA = parseDateValue(a.paymentDate) || parseDateValue(a.created_at) || new Date(0);
-            const dateB = parseDateValue(b.paymentDate) || parseDateValue(b.created_at) || new Date(0);
-            return dateB - dateA;
-        });
-
-        currentPmReportData = records;
-        renderPmTable(records, totalCobro, totalRecaudo);
-
-    } catch (e) {
-        console.error(e);
-        pmTableBody.innerHTML = `<tr><td colspan="6" style="color:red">Error: ${e.message}</td></tr>`;
-    }
-}
-
-function renderPmTable(data, totalCobro, totalRecaudo) {
-    pmTableBody.innerHTML = '';
-    
-    if (data.length === 0) {
-        pmTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No se encontraron pagos que coincidan con los filtros.</td></tr>';
-        return;
-    }
-
-    let html = '';
-    data.forEach(r => {
-        html += `<tr>
-            <td>${r.debtorName || 'N/A'}</td>
-            <td>${r.paymentDate}</td>
-            <td>${r.userName || 'N/A'}</td>
-            <td>${r.municipality || 'N/A'}</td>
-            <td>$${r.valorCuota.toLocaleString('es-CO')}</td>
-            <td>$${r.paymentAmount.toLocaleString('es-CO')}</td>
-        </tr>`;
-    });
-
-    pmTableBody.innerHTML = html;
-    pmTotalCobroDisplay.innerText = '$' + totalCobro.toLocaleString('es-CO');
-    pmTotalRecaudoDisplay.innerText = '$' + totalRecaudo.toLocaleString('es-CO');
-}
-
-btnDownloadPm.addEventListener('click', () => {
-    if (!currentPmReportData.length) return alert('No hay datos para descargar');
-
-    const exportData = currentPmReportData.map(r => ({
-        "CLIENTE": r.debtorName,
-        "FECHA": adjustDateForExport(r.paymentDate || r.created_at),
-        "ASESOR": r.userName,
-        "MUNICIPIO": r.municipality,
-        "CUOTA": r.valorCuota,
-        "ABONO": r.paymentAmount
-    }));
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    XLSX.utils.book_append_sheet(wb, ws, "Informe Cobros");
-    XLSX.writeFile(wb, `Informe_Cobros_${Date.now()}.xlsx`);
-});
-
-// ==========================================
-// LÓGICA INFORME DE OTROS GASTOS (EX)
-// ==========================================
-
-btnExDaily.addEventListener('click', () => {
-    currentExMode = 'daily';
-    btnExDaily.className = 'btn-primary';
-    btnExWeekly.className = 'btn-secondary';
-    exFilterDateText.innerText = 'Seleccionar Fecha';
-});
-
-btnExWeekly.addEventListener('click', () => {
-    currentExMode = 'weekly';
-    btnExWeekly.className = 'btn-primary';
-    btnExDaily.className = 'btn-secondary';
-    exFilterDateText.innerText = 'Seleccionar Fecha';
-});
-
-async function loadExFilters() {
-    // Cargar Asesores
-    const { data: users } = await sbClient.from('users').select('name')
-        .neq('role', 'Administrador').neq('role', 'Administrador maestro').neq('role', 'Desarrollador');
-    exFilterUser.innerHTML = '<option value="">Todos los Asesores</option>';
-    if (users) users.forEach(u => exFilterUser.innerHTML += `<option value="${u.name}">${u.name}</option>`);
-}
-
-btnGenerateEx.addEventListener('click', generateExReport);
-
-async function generateExReport() {
-    exTableBody.innerHTML = '<tr><td colspan="4">Generando informe...</td></tr>';
-
-    if (!currentExMode) return alert('Seleccione un modo (Diario/Semanal)');
-    // Validación de Filtros Estricta (Opcional, aquí solo usuario es filtro)
-    // Si se requiere usuario obligatorio:
-    // if (exFilterUser.value === "") return alert('Seleccione un asesor');
-
-    const start = pgDateState.start;
-    const end = pgDateState.end;
-    const startISO = start.toISOString();
-    const endISO = end.toISOString();
-    if (!start) return alert('Seleccione una fecha');
-
-    try {
-        // 1. Selección Dinámica de Colección
-        // Diario -> expenses, Semanal -> wexpenses (Tablas de detalle de gastos)
-        const collectionName = currentExMode === 'weekly' ? 'wexpenses' : 'expenses';
-
-        // 2. Consulta a Firestore
-        let query = sbClient.from(collectionName)
-            .select('*')
-
-        // Filtro opcional por usuario
-        if (exFilterUser.value) {
-            query = query.eq('user_name', exFilterUser.value);
-        }
-
-        const { data: reports, error } = await query;
-        if (error) throw error;
-
-        // 3. Lógica de Filtrado en Memoria (Regla de Negocio)
-        const processedData = [];
-
-        if (reports) {
-            reports.forEach(r => {
-                // Filtro de Fecha (expenses_date o created_at)
-                const rDate = parseDateValue(r.expenses_date) || parseDateValue(r.created_at);
-                if (rDate < start || rDate > end) return;
-
-                // Extraer información del campo 'others'
-                // others es un array: [valor, descripcion]
-                let others = r.others;
-                
-                // Asegurar que sea array (por si Supabase devuelve string JSON)
-                if (typeof others === 'string') {
-                    try { others = JSON.parse(others); } catch (e) { others = []; }
-                }
-                
-                if (Array.isArray(others) && others.length >= 1) {
-                    const valor = parseFloat(others[0]) || 0;
-                    const descripcion = others[1] || 'N/A';
-
-                    // Condición de Visualización: valor > 0
-                    if (valor > 0) {
-                        processedData.push({
-                            userName: r.user_name,
-                            createdAt: r.expenses_date || r.created_at,
-                            valor: valor,
-                            descripcion: descripcion
-                        });
-                    }
-                }
-            });
-        }
-
-        currentExReportData = processedData;
-        renderExTable(processedData);
-
-    } catch (e) {
-        console.error(e);
-        exTableBody.innerHTML = `<tr><td colspan="4" style="color:red">Error: ${e.message}</td></tr>`;
-    }
-}
-
-function renderExTable(data) {
-    exTableBody.innerHTML = '';
-    
-    if (data.length === 0) {
-        exTableBody.innerHTML = '<tr><td colspan="4">No se encontraron gastos en este periodo.</td></tr>';
-        return;
-    }
-
-    data.forEach(r => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${r.userName || ''}</td>
-            <td>${new Date(r.createdAt).toLocaleDateString()}</td>
-            <td>$${r.valor.toLocaleString()}</td>
-            <td>${r.descripcion}</td>
-        `;
-        exTableBody.appendChild(row);
-    });
-}
-
-btnDownloadEx.addEventListener('click', () => {
-    if (!currentExReportData.length) return alert('No hay datos para descargar');
-
-    const exportData = currentExReportData.map(r => ({
-        "ASESOR": r.userName,
-        "FECHA": adjustDateForExport(r.createdAt),
-        "VALOR": r.valor,
-        "DESCRIPCION": r.descripcion
-    }));
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    XLSX.utils.book_append_sheet(wb, ws, "Otros Gastos");
-    XLSX.writeFile(wb, `Otros_Gastos_${Date.now()}.xlsx`);
-});
-
-// ==========================================
-// LÓGICA INFORME GENERAL (GN)
-// ==========================================
-
-btnGnDaily.addEventListener('click', () => {
-    currentGnMode = 'daily';
-    btnGnDaily.className = 'btn-primary';
-    btnGnWeekly.className = 'btn-secondary';
-    gnFilterDateText.innerText = 'Seleccionar Fecha';
-});
-
-btnGnWeekly.addEventListener('click', () => {
-    currentGnMode = 'weekly';
-    btnGnWeekly.className = 'btn-primary';
-    btnGnDaily.className = 'btn-secondary';
-    gnFilterDateText.innerText = 'Seleccionar Fecha';
-});
-
-async function loadGnFilters() {
-    // Cargar Asesores
-    const { data: users } = await sbClient.from('users').select('name')
-        .neq('role', 'Administrador').neq('role', 'Administrador maestro').neq('role', 'Desarrollador');
-    gnFilterUser.innerHTML = '<option value="">Todos los Asesores</option>';
-    if (users) users.forEach(u => gnFilterUser.innerHTML += `<option value="${u.name}">${u.name}</option>`);
-}
-
-btnGenerateGn.addEventListener('click', generateGnReport);
-
-async function generateGnReport() {
-    gnTableBody.innerHTML = '<tr><td colspan="8">Generando informe...</td></tr>';
-
-    if (!currentGnMode) return alert('Seleccione un modo (Diario/Semanal)');
-    if (!pgDateState.start) return alert('Seleccione una fecha'); // Validación de fecha
-
-    const start = pgDateState.start;
-    const end = pgDateState.end;
-    const startISO = start.toISOString();
-    const endISO = end.toISOString();
-
-    try {
-        // 1. Selección de Fuente de Datos
-        const collectionName = currentGnMode === 'weekly' ? 'wreports' : 'reports';
-
-        // 2. Consulta a Firestore
-        let query = sbClient.from(collectionName)
-            .select('*')
-            .order('created_at', { ascending: false }); // Orden descendente para inyección
-
-        if (gnFilterUser.value) {
-            query = query.eq('user_name', gnFilterUser.value);
-        }
-
-        const { data: reports, error } = await query;
-        if (error) throw error;
-
-        // Filtro de Fecha en Memoria (report_date o created_at)
-        currentGnReportData = (reports || []).filter(r => {
-            const rDate = parseDateValue(r.report_date) || parseDateValue(r.created_at);
-            return rDate >= start && rDate <= end;
-        });
-        
-        renderGnTable(currentGnReportData);
-
-    } catch (e) {
-        console.error(e);
-        gnTableBody.innerHTML = `<tr><td colspan="8" style="color:red">Error: ${e.message}</td></tr>`;
-    }
-}
-
-function renderGnTable(data) {
-    gnTableBody.innerHTML = '';
-
-    if (data.length === 0) {
-        gnTableBody.innerHTML = '<tr><td colspan="8">No se encontraron reportes.</td></tr>';
-        return;
-    }
-
-    // 1. Agrupar los reportes por usuario
-    const reportsByUser = data.reduce((acc, report) => {
-        const user = report.user_name;
-        if (!acc[user]) {
-            acc[user] = [];
-        }
-        acc[user].push(report);
-        return acc;
-    }, {});
-
-    // 2. Iterar sobre cada usuario y renderizar su bloque
-    Object.keys(reportsByUser).forEach(userName => {
-        const userReports = reportsByUser[userName];
-
-        // 4. Renderizar los reportes normales para este usuario
-        userReports.forEach(r => {
-            const row = document.createElement('tr');
-            
-            const creditsVal = parseFloat(r.credits_report) || 0;
-            const paymentsVal = parseFloat(r.payments_report) || 0;
-            const expensesVal = parseFloat(r.expense_report) || parseFloat(r.expenses_report) || 0;
-            const initialBase = parseFloat(r.initial_base) || 0;
-            const finalBase = parseFloat(r.final_base) || 0;
-            const dateObj = new Date(r.created_at);
-
-            row.innerHTML = `
-                <td>${r.user_name}</td>
-                <td>
-                    $${creditsVal.toLocaleString()}
-                    <button class="btn btn-view-gn-credits" data-user="${r.user_name}" data-date="${r.created_at}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #3498db;">👁️</button>
-                </td>
-                <td>
-                    $${paymentsVal.toLocaleString()}
-                    <button class="btn btn-view-gn-payments" data-user="${r.user_name}" data-date="${r.created_at}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #3498db;">👁️</button>
-                </td>
-                <td>
-                    $${expensesVal.toLocaleString()}
-                    <button class="btn btn-edit-gn-expenses" data-id="${r.id}" data-user="${r.user_name}" data-date="${r.created_at}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #f39c12;">✏️</button>
-                    <button class="btn btn-view-gn-expenses" data-user="${r.user_name}" data-date="${r.created_at}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #3498db;">👁️</button>
-                </td>
-                <td>
-                    $${initialBase.toLocaleString()}
-                    <button class="btn btn-edit-base" data-type="initial" data-id="${r.id}" data-val="${initialBase}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #f39c12;">✏️</button>
-                </td>
-                <td>
-                    $${finalBase.toLocaleString()}
-                    <button class="btn btn-edit-base" data-type="final" data-id="${r.id}" data-val="${finalBase}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; cursor:pointer; background-color: #f39c12;">✏️</button>
-                </td>
-                <td>${dateObj.toLocaleDateString('es-ES', { weekday: 'long' })}</td>
-                <td>${dateObj.toLocaleDateString()}</td>
-            `;
-            gnTableBody.appendChild(row);
-        });
-
-        // El primer reporte en la lista es el más reciente porque los datos vienen ordenados desc.
-        const lastRecord = userReports[0];
-
-        // 3. Renderizar la fila de "Inyección" para este usuario
-        const lastDate = new Date(lastRecord.created_at);
-        const nextDate = new Date(lastDate);
-        if (currentGnMode === 'daily') {
-            nextDate.setDate(nextDate.getDate() + 1);
-        } else {
-            nextDate.setDate(nextDate.getDate() + 7);
-        }
-        const projectedBase = parseFloat(lastRecord.final_base) || 0;
-
-        const injectionRow = document.createElement('tr');
-        injectionRow.style.backgroundColor = '#d4edda'; // Verde claro
-        injectionRow.innerHTML = `
-            <td>${lastRecord.user_name} <strong>(Inyección)</strong></td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
-            <td>
-                <input type="number" id="injection-input-${lastRecord.id}" value="${projectedBase}" style="width: 100px; padding: 2px;">
-                <button class="btn save-injection-btn" data-id="${lastRecord.id}" style="width: 25px; height: 25px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; margin-left: 5px; background-color: #2ecc71;" title="Guardar">💾</button>
-            </td>
-            <td>-</td>
-            <td>${nextDate.toLocaleDateString('es-ES', { weekday: 'long' })}</td>
-            <td>${nextDate.toLocaleDateString()}</td>
-        `;
-        gnTableBody.appendChild(injectionRow);
-    });
-}
-
-// Listeners de la tabla GN
-gnTableBody.addEventListener('click', async (e) => {
-    const target = e.target;
-
-    // 3. Persistencia de la Inyección
-    if (target.classList.contains('save-injection-btn')) {
-        const id = target.dataset.id; // ID del registro ANTERIOR
-        const inputVal = document.getElementById(`injection-input-${id}`).value;
-        const baseVal = parseFloat(inputVal);
-        
-        if (confirm(`¿Confirmar inyección de base $${baseVal.toLocaleString()} para el siguiente periodo?`)) {
-            const collection = currentGnMode === 'daily' ? 'reports' : 'wreports';
-            
-            const { data: { session } } = await sbClient.auth.getSession();
-            const { error } = await sbClient.functions.invoke('update-report-base', {
-                body: { 
-                    report_id: id, 
-                    collection: collection, 
-                    type: 'final', 
-                    new_value: baseVal 
-                },
-                headers: { Authorization: `Bearer ${session?.access_token}` }
-            });
-            
-            if (error) alert('Error al guardar inyección: ' + error.message);
-            else {
-                alert('Proyección guardada (Cierre actualizado).');
-                generateGnReport();
-            }
-        }
-    }
-
-    // 4. Edición de Bases (Inline)
-    if (target.classList.contains('btn-edit-base')) {
-        const type = target.dataset.type; // 'initial' or 'final'
-        const id = target.dataset.id;
-        const currentVal = target.dataset.val;
-        const collection = currentGnMode === 'daily' ? 'reports' : 'wreports';
-        
-        const cell = target.closest('td');
-        
-        // Replace content with input and save button
-        cell.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 2px;">
-                <input type="number" id="input-base-${type}-${id}" value="${currentVal}" style="width: 70px; padding: 2px;">
-                <button class="btn btn-save-base btn-action-small" data-id="${id}" data-type="${type}" data-collection="${collection}" style="background-color: #2ecc71; width: 30px; height: 30px; padding: 0; display: inline-flex; justify-content: center; align-items: center;"><i class="fas fa-save"></i></button>
-                <button class="btn btn-cancel-base btn-action-small" onclick="generateGnReport()" style="background-color: #e74c3c; width: 30px; height: 30px; padding: 0; display: inline-flex; justify-content: center; align-items: center;"><i class="fas fa-times"></i></button>
-            </div>
-        `;
-    }
-
-    // Save Base Listener
-    if (target.classList.contains('btn-save-base') || target.closest('.btn-save-base')) {
-        const btn = target.classList.contains('btn-save-base') ? target : target.closest('.btn-save-base');
-        const id = btn.dataset.id;
-        const type = btn.dataset.type;
-        const collection = btn.dataset.collection;
-        const input = document.getElementById(`input-base-${type}-${id}`);
-        const newVal = parseFloat(input.value);
-
-        if (isNaN(newVal)) return alert('Valor inválido');
-
-        btn.innerHTML = '<div class="small-spinner"></div>';
-        btn.disabled = true;
-        
-        const { data: { session } } = await sbClient.auth.getSession();
-        const { error } = await sbClient.functions.invoke('update-report-base', {
-            body: { report_id: id, collection: collection, type: type, new_value: newVal },
-            headers: { Authorization: `Bearer ${session?.access_token}` }
-        });
-
-        if (error) alert('Error: ' + error.message);
-        else generateGnReport();
-    }
-
-    // 5. Edición de Gastos (Abre Modal)
-    if (target.classList.contains('btn-edit-gn-expenses')) {
-        const id = target.dataset.id; // ID del reporte padre
-        const userName = target.dataset.user;
-        const dateStr = target.dataset.date;
-        
-        // Buscar detalle en expenses/wexpenses
-        const detailCollection = currentGnMode === 'daily' ? 'expenses' : 'wexpenses';
-        // La relación suele ser por userName y fecha aproximada o exacta.
-        // Asumiremos que created_at coincide o buscamos por rango pequeño.
-        
-        // Intentar búsqueda exacta primero
-        let { data: expData } = await sbClient.from(detailCollection)
-            .select('*')
-            .eq('user_name', userName)
-            .eq('created_at', dateStr) // Asumiendo match exacto de timestamp
-            .maybeSingle();
-        
-        // Si no encuentra, buscar por rango del día (Fix 406 y timestamps inexactos)
-        if (!expData) {
-            const d = new Date(dateStr);
-            const start = new Date(d); start.setHours(0,0,0,0);
-            const end = new Date(d); end.setHours(23,59,59,999);
-            const { data: rangeData } = await sbClient.from(detailCollection).select('*').eq('user_name', userName).gte('created_at', start.toISOString()).lte('created_at', end.toISOString()).maybeSingle();
-            expData = rangeData;
-        }
-            
-        if (expData) {
-            currentExpEditData = { ...expData, parentId: id, collection: detailCollection };
-            
-            editExpGas.value = expData.fuel || 0;
-            editExpLunch.value = expData.lunch || 0;
-            // others es array [val, desc]
-            const others = expData.others || [0, ''];
-            editExpOtherVal.value = others[0] || 0;
-            editExpOtherDesc.value = others[1] || '';
-            
-            // Calcular total inicial al abrir
-            const initialTotal = (parseFloat(editExpGas.value) || 0) + (parseFloat(editExpLunch.value) || 0) + (parseFloat(editExpOtherVal.value) || 0);
-            document.getElementById('edit-exp-total-display').innerText = '$ ' + initialTotal.toLocaleString();
-            editExpensesModal.style.display = 'block';
-        } else {
-            alert('No se encontraron detalles de gastos para este registro.');
-        }
-    }
-
-    // 5. Ver Detalles Gastos (Solo Lectura)
-    if (target.classList.contains('btn-view-gn-expenses')) {
-        const userName = target.dataset.user;
-        const dateStr = target.dataset.date;
-        
-        const detailCollection = currentGnMode === 'daily' ? 'expenses' : 'wexpenses';
-        
-        // Intentar búsqueda exacta
-        let { data: expData } = await sbClient.from(detailCollection)
-            .select('*')
-            .eq('user_name', userName)
-            .eq('created_at', dateStr)
-            .maybeSingle();
-
-        // Si no encuentra, buscar por rango (Fix 406)
-        if (!expData) {
-            const d = new Date(dateStr);
-            const start = new Date(d); start.setHours(0,0,0,0);
-            const end = new Date(d); end.setHours(23,59,59,999);
-            const { data: rangeData } = await sbClient.from(detailCollection).select('*').eq('user_name', userName).gte('created_at', start.toISOString()).lte('created_at', end.toISOString()).maybeSingle();
-            expData = rangeData;
-        }
-            
-        if (expData) {
-            viewExpGas.innerText = '$ ' + (expData.fuel || 0).toLocaleString();
-            viewExpLunch.innerText = '$ ' + (expData.lunch || 0).toLocaleString();
-            const others = expData.others || [0, ''];
-            viewExpOtherVal.innerText = '$ ' + (others[0] || 0).toLocaleString();
-            viewExpOtherDesc.innerText = others[1] || 'N/A';
-            viewExpTotal.innerText = '$ ' + (expData.total_expenses || 0).toLocaleString();
-            
-            viewExpensesModal.style.display = 'block';
-        } else {
-            alert('No hay detalles de gastos.');
-        }
-    }
-
-    // 6. Ver Detalles Créditos (Drill-down)
-    if (target.classList.contains('btn-view-gn-credits')) {
-        const userName = target.dataset.user;
-        const dateStr = target.dataset.date;
-        loadReportCreditsDetails(userName, dateStr);
-        document.getElementById('view-report-credits-modal').style.display = 'block';
-    }
-
-    // 6. Ver Detalles Cobros (Drill-down)
-    if (target.classList.contains('btn-view-gn-payments')) {
-        const userName = target.dataset.user;
-        const dateStr = target.dataset.date;
-        loadReportPaymentsDetails(userName, dateStr);
-        document.getElementById('view-report-payments-modal').style.display = 'block';
-    }
-});
-
-// Listeners para recalcular total en tiempo real en el modal de edición
-function updateEditExpTotal() {
-    const gas = parseFloat(editExpGas.value) || 0;
-    const lunch = parseFloat(editExpLunch.value) || 0;
-    const other = parseFloat(editExpOtherVal.value) || 0;
-    document.getElementById('edit-exp-total-display').innerText = '$ ' + (gas + lunch + other).toLocaleString();
-}
-editExpGas.addEventListener('input', updateEditExpTotal);
-editExpLunch.addEventListener('input', updateEditExpTotal);
-editExpOtherVal.addEventListener('input', updateEditExpTotal);
-
-// --- Lógica Guardar Edición Gastos ---
-btnSaveExpChanges.addEventListener('click', async () => {
-    if (!currentExpEditData) return;
-
-    const newGas = parseFloat(editExpGas.value) || 0;
-    const newLunch = parseFloat(editExpLunch.value) || 0;
-    const newOtherVal = parseFloat(editExpOtherVal.value) || 0;
-    const newOtherDesc = editExpOtherDesc.value;
-    
-    const newTotal = newGas + newLunch + newOtherVal;
-
-    const updates = {
-        fuel: newGas,
-        lunch: newLunch,
-        others: [newOtherVal, newOtherDesc],
-        total_expenses: newTotal
-    };
-
-    const { data: { session } } = await sbClient.auth.getSession();
-    const { error } = await sbClient.functions.invoke('update-expense', {
-        body: { 
-            expense_id: currentExpEditData.id, 
-            collection: currentExpEditData.collection, 
-            updates: updates, 
-            parent_id: currentExpEditData.parentId, 
-            parent_collection: currentGnMode === 'daily' ? 'reports' : 'wreports'
-        },
-        headers: { Authorization: `Bearer ${session?.access_token}` }
-    });
-
-    if (error) alert('Error actualizando gastos: ' + error.message);
-    else {
-        alert('Gastos actualizados y reporte balanceado.');
-        editExpensesModal.style.display = 'none';
-        generateGnReport();
-    }
-});
-
-// --- Funciones de Detalle (Drill-down) ---
-
-function getReportDateRange(dateStr) {
-    const dateObj = new Date(dateStr);
-    let start = new Date(dateObj);
-    let end = new Date(dateObj);
-    
-    if (currentGnMode === 'daily') {
-        start.setHours(0,0,0,0);
-        end.setHours(23,59,59,999);
-    } else {
-        // Modo semanal: Calcular semana completa (Lunes a Domingo)
-        const day = start.getDay(); // 0 (Dom) - 6 (Sab)
-        const diff = start.getDate() - day + (day === 0 ? -6 : 1); // Ajustar al lunes
-        start.setDate(diff);
-        start.setHours(0,0,0,0);
-        
-        end = new Date(start);
-        end.setDate(start.getDate() + 6); // Domingo
-        end.setHours(23,59,59,999);
-    }
-    return { start, end };
-}
-
-// Helper para ajustar fecha a mediodía local para exportación
-function adjustDateForExport(dateInput) {
-     if (!dateInput) return null;
-   if (!dateInput) return null;
-    
-    // Si es string YYYY-MM-DD, parsear manualmente para evitar desfase UTC
-    if (typeof dateInput === 'string') {
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
-            const [y, m, d] = dateInput.split('-').map(Number);
-            return new Date(y, m - 1, d, 12, 0, 0);
-        }
-        // Si es string DD-MM-YYYY
-        if (/^\d{2}-\d{2}-\d{4}$/.test(dateInput)) {
-            const [d, m, y] = dateInput.split('-').map(Number);
-            return new Date(y, m - 1, d, 12, 0, 0);
-        }
-        // ISO String (YYYY-MM-DDTHH:mm:ss...) - Extraer partes para evitar desfase UTC
-        if (/^\d{4}-\d{2}-\d{2}T/.test(dateInput)) {
-            const [y, m, d] = dateInput.split('T')[0].split('-').map(Number);
-            return new Date(y, m - 1, d, 12, 0, 0);
-        }
-    }
-
-    const d = new Date(dateInput);
-    if (isNaN(d.getTime())) return null;
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0);
-}
-
-async function loadReportCreditsDetails(userName, dateStr) {
-    reportCreditsDetailBody.innerHTML = '<tr><td colspan="3">Cargando...</td></tr>';
-    reportCreditsTotal.innerText = '$ 0';
-    
-    // Guardar contexto para descarga
-    currentDownloadUser = userName;
-    currentDownloadDate = dateStr;
-    
-    const { start, end } = getReportDateRange(dateStr);
-
-    const { data: credits } = await sbClient
-        .from('debtors')
-        .select('*')
-        .eq('asesor_name', userName)
-        .gte('created_at', start.toISOString())
-        .lte('created_at', end.toISOString());
-
-    reportCreditsDetailBody.innerHTML = '';
-
-    // Filtrar por modo (Diario/Semanal)
-    const targetTerm = currentGnMode === 'daily' ? 'DIARIO' : 'SEMANAL';
-    const filteredCredits = (credits || []).filter(c => {
-        let term = c.payment_term;
-        if (Array.isArray(term)) return term.some(t => t.toUpperCase() === targetTerm);
-        if (typeof term === 'string') return term.toUpperCase() === targetTerm;
-        return false;
-    });
-
-    if (!filteredCredits || filteredCredits.length === 0) {
-        reportCreditsDetailBody.innerHTML = '<tr><td colspan="12">No hay créditos.</td></tr>';
-        return;
-    }
-
-    let total = 0;
-    filteredCredits.forEach(c => {
-        const val = parseFloat(c.sale_value) || 0;
-        total += val;
-        
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td class="c-date">${new Date(c.created_at).toLocaleDateString()}</td>
-            <td>${c.name || ''}</td>
-            <td>${c.cedula || ''}</td>
-            <td>${c.phone || ''}</td>
-            <td class="credit-val-cell" data-val="${val}">$ ${val.toLocaleString()}</td>
-            <td class="c-int">$ ${(Number(c.interests) || 0).toLocaleString()}</td>
-            <td class="c-cuotas">${c.number_of_payments || ''}</td>
-            <td class="c-vcuota">$ ${(Number(c.valor_cuota) || 0).toLocaleString()}</td>
-            <td>${c.credit_type || ''}</td>
-            <td>${c.payment_term || ''}</td>
-            <td>${c.municipality || ''}</td>
-            <td>
-                <button class="btn-edit-detail-credit btn-action-small" data-id="${c.id}" data-val="${val}" style="background-color: #f39c12;">✏️</button>
-            </td>
-        `;
-        // Guardar datos completos en el row para edición
-        row.dataset.fullData = JSON.stringify(c);
-        reportCreditsDetailBody.appendChild(row);
-    });
-    reportCreditsTotal.innerText = '$ ' + total.toLocaleString();
-}
-
-// Listener Edición Crédito en Detalle
-reportCreditsDetailBody.addEventListener('click', async (e) => {
-    const target = e.target;
-    if (target.classList.contains('btn-edit-detail-credit')) {
-        const row = target.closest('tr');
-        const data = JSON.parse(row.dataset.fullData);
-        
-        // Convertir fecha para input
-        let dateVal = '';
-        if (data.sale_date) {
-             // Intentar parsear dd-MM-yyyy
-             if (/^\d{2}-\d{2}-\d{4}$/.test(data.sale_date)) {
-                const parts = data.sale_date.split('-');
-                dateVal = `${parts[2]}-${parts[1]}-${parts[0]}`;
-            } else {
-                const d = new Date(data.sale_date);
-                if (!isNaN(d)) dateVal = getLocalDateKey(d);
-            }
-        } else {
-            const d = new Date(data.created_at);
-            if (!isNaN(d)) dateVal = getLocalDateKey(d);
-        }
-
-        row.innerHTML = `
-            <td><input type="date" class="edit-c-date" value="${dateVal}" style="width:110px"></td>
-            <td>${data.name}</td>
-            <td>${data.cedula}</td>
-            <td>${data.phone}</td>
-            <td><input type="number" class="edit-c-val" value="${data.sale_value}" style="width:80px"></td>
-            <td><input type="number" class="edit-c-int" value="${data.interests}" style="width:60px"></td>
-            <td><input type="number" class="edit-c-ncuotas" value="${data.number_of_payments}" style="width:50px"></td>
-            <td><input type="number" class="edit-c-vcuota" value="${data.valor_cuota}" style="width:80px"></td>
-            <td>
-                <select class="edit-c-type">
-                    <option value="Nuevo" ${data.credit_type === 'Nuevo' ? 'selected' : ''}>Nuevo</option>
-                    <option value="Represte" ${data.credit_type === 'Represte' ? 'selected' : ''}>Represte</option>
-                </select>
-            </td>
-            <td>
-                <select class="edit-c-term">
-                    <option value="Diario" ${data.payment_term === 'Diario' ? 'selected' : ''}>Diario</option>
-                    <option value="Semanal" ${data.payment_term === 'Semanal' ? 'selected' : ''}>Semanal</option>
-                </select>
-            </td>
-            <td><input type="text" class="edit-c-muni" value="${data.municipality}" style="width:100px"></td>
-            <td>
-                <button class="btn-save-detail-credit-confirm btn-action-small" data-id="${data.id}" style="background-color: #2ecc71;">💾</button>
-                <button class="btn-cancel-detail btn-action-small" onclick="loadReportCreditsDetails('${currentDownloadUser}', '${currentDownloadDate}')" style="background-color: #e74c3c;">❌</button>
-            </td>
-        `;
-    }
-
-    if (target.classList.contains('btn-save-detail-credit-confirm')) {
-        const id = target.dataset.id;
-        const row = target.closest('tr');
-        
-        // Recolectar datos
-        const updates = {
-            sale_date: row.querySelector('.edit-c-date').value, // Guardar como YYYY-MM-DD o convertir si se prefiere
-            sale_value: parseFloat(row.querySelector('.edit-c-val').value) || 0,
-            interests: parseFloat(row.querySelector('.edit-c-int').value) || 0,
-            number_of_payments: parseInt(row.querySelector('.edit-c-ncuotas').value) || 0,
-            valor_cuota: parseFloat(row.querySelector('.edit-c-vcuota').value) || 0,
-            credit_type: row.querySelector('.edit-c-type').value,
-            payment_term: [row.querySelector('.edit-c-term').value],
-            municipality: row.querySelector('.edit-c-muni').value
-        };
-
-        const { data: { session } } = await sbClient.auth.getSession();
-        const { error } = await sbClient.functions.invoke('update-credit', {
-            body: { credit_id: id, updates: updates },
-            headers: { Authorization: `Bearer ${session?.access_token}` }
-        });
-
-        if (error) return alert('Error: ' + error.message);
-
-        await recalculateParentReport(currentDownloadUser, currentDownloadDate);
-        loadReportCreditsDetails(currentDownloadUser, currentDownloadDate);
-        generateGnReport();
-    }
-});
-
-async function loadReportPaymentsDetails(userName, dateStr) {
-    reportPaymentsDetailBody.innerHTML = '<tr><td colspan="3">Cargando...</td></tr>';
-    reportPaymentsTotal.innerText = '$ 0';
-
-    reportPaymentsCash.innerText = '$ 0';
-    reportPaymentsTransfer.innerText = '$ 0';
-    
-    currentDownloadUser = userName;
-    currentDownloadDate = dateStr;
-    
-    const { start, end } = getReportDateRange(dateStr);
-
-    // Estrategia: Buscar pagos en rango -> Enriquecer con municipio (join manual)
-    // Nota: Payments no tiene asesor_name directo. Asumimos que el filtro de GN ya validó que estos pagos pertenecen al asesor.
-    // Pero para ser precisos, deberíamos filtrar los pagos cuyos deudores tengan este asesor.
-    // Simplificación: Traemos pagos del rango y filtramos en memoria o asumimos consistencia si el reporte GN ya los sumó.
-    // Para edición segura, mejor verificar.
-    
-    const { data: payments } = await sbClient
-        .from('payments')
-        .select('id, payment_amount, created_at, payment_date, debtor_name, payment_method, debtor_id')
-        .gte('created_at', start.toISOString())
-        .lte('created_at', end.toISOString());
-
-    reportPaymentsDetailBody.innerHTML = '';
-    if (!payments || payments.length === 0) {
-        reportPaymentsDetailBody.innerHTML = '<tr><td colspan="6">No hay cobros.</td></tr>';
-        return;
-    }
-
-    // Obtener municipios de los deudores para mostrar
-    const debtorIds = [...new Set(payments.map(p => p.debtor_id))];
-    const { data: debtors } = await sbClient.from('debtors').select('id, municipality, asesor_name, payment_term').in('id', debtorIds);
-    const debtorMap = new Map(debtors.map(d => [d.id, d]));
-
-    let total = 0;
-    let cash = 0;
-    let transfer = 0;
-
-    const targetTerm = currentGnMode === 'daily' ? 'DIARIO' : 'SEMANAL';
-
-    payments.forEach(p => {
-        const debtor = debtorMap.get(p.debtor_id);
-        // Filtrar por asesor si es necesario (doble check)
-        if (debtor && debtor.asesor_name !== userName) return;
-
-        // Filtrar por modo (Diario/Semanal)
-        // ELIMINADO: Se comenta el filtro para mostrar todos los pagos reales en el detalle
-        /*
-        if (debtor) {
-            let term = debtor.payment_term;
-            let isTermValid = false;
-            if (Array.isArray(term)) isTermValid = term.some(t => t.toUpperCase() === targetTerm);
-            else if (typeof term === 'string') isTermValid = term.toUpperCase() === targetTerm;
-            if (!isTermValid) return;
-        }
-        */
-
-        const val = parseFloat(p.payment_amount) || 0;
-        const method = (p.payment_method || 'Efectivo').toLowerCase();
-        const paymentDate = p.payment_date || getLocalDateKey(new Date(p.created_at));
-
-        
-        total += val;
-        if (method.includes('efectivo')) cash += val;
-        if (method.includes('transferencia')) transfer += val;
-
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${p.payment_date || new Date(p.created_at).toLocaleDateString()}</td>
-           <td>${paymentDate}</td>
-            <td>${p.debtor_name || 'Cliente'} <small>(${debtor ? debtor.municipality : ''})</small></td>
-            <td class="pay-val-cell" data-id="${p.id}" data-val="${val}">$ ${val.toLocaleString()}</td>
-            <td>${p.payment_method || 'Efectivo'}</td>
-            <td>${debtor ? debtor.municipality : ''}</td>
-            <td>
-                <button class="btn-edit-detail-payment btn-action-small" data-id="${p.id}" data-val="${val}" style="background-color: #f39c12;">✏️</button>
-            </td>
-        `;
-        // Guardar datos para edición
-        row.dataset.fullData = JSON.stringify({ ...p, municipality: debtor ? debtor.municipality : '', debtor_id: p.debtor_id });
-        reportPaymentsDetailBody.appendChild(row);
-    });
-
-    reportPaymentsTotal.innerText = '$ ' + total.toLocaleString();
-    reportPaymentsCash.innerText = '$ ' + cash.toLocaleString();
-    reportPaymentsTransfer.innerText = '$ ' + transfer.toLocaleString();
-}
-
-// Listener Edición Cobro en Detalle
-reportPaymentsDetailBody.addEventListener('click', async (e) => {
-    const target = e.target;
-    if (target.classList.contains('btn-edit-detail-payment')) {
-        const row = target.closest('tr');
-        const data = JSON.parse(row.dataset.fullData);
-        
-        // Obtener municipios asignados al usuario (asesor)
-        const { data: user } = await sbClient.from('users').select('assigned_municipality').eq('name', currentDownloadUser).single();
-        let assignedMunis = [];
-        if (user && user.assigned_municipality) {
-            assignedMunis = Array.isArray(user.assigned_municipality) ? user.assigned_municipality : user.assigned_municipality.split(',');
-        }
-
-        let muniOptions = '';
-        assignedMunis.forEach(m => {
-            const mTrim = m.trim();
-            muniOptions += `<option value="${mTrim}" ${data.municipality === mTrim ? 'selected' : ''}>${mTrim}</option>`;
-        });
-
-        // Fecha input
-        let dateVal = data.payment_date || getLocalDateKey(new Date(data.created_at));
-        // Si es dd-MM-yyyy convertir
-        if (/^\d{2}-\d{2}-\d{4}$/.test(dateVal)) {
-             const parts = dateVal.split('-');
-             dateVal = `${parts[2]}-${parts[1]}-${parts[0]}`;
-        }
-
-        row.innerHTML = `
-            <td><input type="date" class="edit-p-date" value="${dateVal}" style="width:110px"></td>
-            <td>${data.debtor_name}</td>
-            <td><input type="number" class="edit-p-val" value="${data.payment_amount}" style="width:80px"></td>
-            <td>
-                <select class="edit-p-method">
-                    <option value="Efectivo" ${data.payment_method === 'Efectivo' ? 'selected' : ''}>Efectivo</option>
-                    <option value="Transferencia" ${data.payment_method === 'Transferencia' ? 'selected' : ''}>Transferencia</option>
-                </select>
-            </td>
-            <td>
-                <select class="edit-p-muni">${muniOptions}</select>
-            </td>
-            <td>
-                <button class="btn-save-detail-payment-confirm btn-action-small" data-id="${data.id}" data-debtor-id="${data.debtor_id}" style="background-color: #2ecc71;">💾</button>
-                <button class="btn-cancel-detail btn-action-small" onclick="loadReportPaymentsDetails('${currentDownloadUser}', '${currentDownloadDate}')" style="background-color: #e74c3c;">❌</button>
-            </td>
-        `;
-    }
-
-    if (target.classList.contains('btn-save-detail-payment-confirm')) {
-        const id = target.dataset.id;
-        const debtorId = target.dataset.debtorId;
-        const row = target.closest('tr');
-
-        const updatesPayment = {
-            payment_date: row.querySelector('.edit-p-date').value,
-            payment_amount: parseFloat(row.querySelector('.edit-p-val').value) || 0,
-            payment_method: row.querySelector('.edit-p-method').value
-        };
-        const newMuni = row.querySelector('.edit-p-muni').value;
-        
-        // Obtener datos originales para old_amount
-        const originalData = JSON.parse(row.dataset.fullData || '{}');
-        const oldAmount = parseFloat(originalData.payment_amount) || 0;
-
-        const { data: { session } } = await sbClient.auth.getSession();
-
-        // 1. Actualizar Pago (Edge Function)
-        const { error: payError } = await sbClient.functions.invoke('update-payment', {
-            body: { payment_id: id, updates: updatesPayment, old_amount: oldAmount, debtor_id: debtorId },
-            headers: { Authorization: `Bearer ${session?.access_token}` }
-        });
-        if (payError) return alert('Error actualizando pago: ' + payError.message);
-
-        // 2. Actualizar Municipio Deudor (Edge Function)
-        if (originalData.municipality !== newMuni) {
-            await sbClient.functions.invoke('update-credit', {
-                body: { credit_id: debtorId, updates: { municipality: newMuni } },
-                headers: { Authorization: `Bearer ${session?.access_token}` }
-            });
-        }
-
-        await recalculateParentReport(currentDownloadUser, currentDownloadDate);
-        loadReportPaymentsDetails(currentDownloadUser, currentDownloadDate);
-        generateGnReport();
-    }
-});
-
-// Función Genérica de Recálculo en Cascada
-async function recalculateParentReport(userName, dateStr) {
-    const { start, end } = getReportDateRange(dateStr);
-    const targetTerm = currentGnMode === 'daily' ? 'DIARIO' : 'SEMANAL';
-    
-    // 1. Calcular nuevos totales reales
-    // Créditos
-    const { data: credits } = await sbClient.from('debtors')
-        .select('sale_value, payment_term').eq('asesor_name', userName)
-        .gte('created_at', start.toISOString()).lte('created_at', end.toISOString());
-    
-    const filteredCredits = (credits || []).filter(c => {
-        let term = c.payment_term;
-        if (Array.isArray(term)) return term.some(t => t.toUpperCase() === targetTerm);
-        if (typeof term === 'string') return term.toUpperCase() === targetTerm;
-        return false;
-    });
-    const totalCredits = filteredCredits.reduce((sum, c) => sum + (parseFloat(c.sale_value) || 0), 0);
-
-    // Cobros (requiere cruce o filtro aproximado)
-    // Para precisión, sumamos pagos cuyos deudores son de este asesor
-    // Simplificación: Usamos la misma lógica que loadReportPaymentsDetails
-    const { data: payments } = await sbClient.from('payments')
-        .select('payment_amount, debtor_id').gte('created_at', start.toISOString()).lte('created_at', end.toISOString());
-    
-    // Filtrar pagos del asesor
-    const debtorIds = [...new Set(payments.map(p => p.debtor_id))];
-    const { data: debtors } = await sbClient.from('debtors').select('id, asesor_name, payment_term').in('id', debtorIds);
-    
-    const validDebtorIds = new Set(debtors.filter(d => {
-        if (d.asesor_name !== userName) return false;
-        
-        // ELIMINADO: Incluir todos los deudores que hayan pagado, sin importar su término
-        /*
-        let term = d.payment_term;
-        let isTermValid = false;
-        if (Array.isArray(term)) isTermValid = term.some(t => t.toUpperCase() === targetTerm);
-        else if (typeof term === 'string') isTermValid = term.toUpperCase() === targetTerm;
-        return isTermValid;
-        */
-       return true;
-    }).map(d => d.id));
-    
-    const totalPayments = (payments || []).filter(p => validDebtorIds.has(p.debtor_id))
-        .reduce((sum, p) => sum + (parseFloat(p.payment_amount) || 0), 0);
-
-    // Gastos (ya están en la colección hija, sumarlos)
-    const detailCollection = currentGnMode === 'daily' ? 'expenses' : 'wexpenses';
-    const { data: exp } = await sbClient.from(detailCollection)
-        .select('total_expenses').eq('user_name', userName).eq('created_at', dateStr).single();
-    const totalExpenses = exp ? (parseFloat(exp.total_expenses) || 0) : 0;
-
-    // 2. Buscar y Actualizar Reporte Padre
-    const parentCollection = currentGnMode === 'daily' ? 'reports' : 'wreports';
-    const { data: parent } = await sbClient.from(parentCollection)
-        .select('*').eq('user_name', userName).eq('created_at', dateStr).single();
-
-    if (parent) {
-        const initial = parseFloat(parent.initial_base) || 0;
-        const newFinal = (initial + totalPayments) - (totalCredits + totalExpenses);
-        
-        await sbClient.from(parentCollection).update({
-            credits_report: totalCredits,
-            payments_report: totalPayments,
-            expense_report: totalExpenses, // o expenses_report
-            final_base: newFinal,
-            og_final_base: newFinal
-        }).eq('id', parent.id);
-    }
-}
-
-// --- Descarga de Detalles ---
-
-btnDownloadReportCreditsDetails.addEventListener('click', async () => {
-    // Reutilizar lógica de carga para obtener datos limpios
-    const { start, end } = getReportDateRange(currentDownloadDate);
-    const { data: credits } = await sbClient.from('debtors')
-        .select('*').eq('asesor_name', currentDownloadUser)
-        .gte('created_at', start.toISOString()).lte('created_at', end.toISOString());
-
-    if (!credits || credits.length === 0) return alert('No hay datos');
-
-    const exportData = credits.map(c => ({
-        "FECHA": adjustDateForExport(c.created_at),
-        "CLIENTE": c.name,
-        "CEDULA": c.cedula,
-        "TELEFONO": c.phone,
-        "CREDITO": parseFloat(c.sale_value) || 0,
-        "INTERESES": parseFloat(c.interests) || 0,
-        "NRO CUOTAS": c.number_of_payments,
-        "CUOTA": parseFloat(c.valor_cuota) || 0,
-        "TIPO": c.credit_type,
-        "FRECUENCIA": c.payment_term,
-        "MUNICIPIO": c.municipality
-    }));
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    XLSX.utils.book_append_sheet(wb, ws, "Detalle Creditos");
-    XLSX.writeFile(wb, `Detalle_Creditos_${currentDownloadUser}.xlsx`);
-});
-
-btnDownloadReportPaymentsDetails.addEventListener('click', async () => {
-    const { start, end } = getReportDateRange(currentDownloadDate);
-    const { data: payments, error } = await sbClient.from('payments')
-        .select('*')
-        .gte('created_at', start.toISOString()).lte('created_at', end.toISOString());
-
-    if (error) return alert('Error al obtener datos: ' + error.message);
-    if (!payments || payments.length === 0) return alert('No hay datos para descargar');
-
-    // Filtrado manual y mapeo (si el join no funciona directo en JS client simple)
-    // Asumimos que payments tiene debtor_id. Hacemos fetch de deudores para filtrar por asesor.
-    const debtorIds = [...new Set(payments.map(p => p.debtor_id))];
-    const { data: debtors } = await sbClient.from('debtors').select('id, municipality, asesor_name').in('id', debtorIds);
-    const debtorMap = new Map((debtors || []).map(d => [d.id, d]));
-
-    const filteredPayments = payments.filter(p => {
-        const d = debtorMap.get(p.debtor_id);
-        return d && d.asesor_name === currentDownloadUser;
-    });
-
-    if (filteredPayments.length === 0) return alert('No hay datos');
-
-    const exportData = filteredPayments.map(p => {
-        const d = debtorMap.get(p.debtor_id);
-        return {
-            "FECHA": adjustDateForExport(p.payment_date || p.created_at),
-            "CLIENTE": p.debtor_name,
-            "ABONO": parseFloat(p.payment_amount) || 0,
-            "METODO": p.payment_method,
-            "MUNICIPIO": d ? d.municipality : ''
-        };
-    });
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    XLSX.utils.book_append_sheet(wb, ws, "Detalle Cobros");
-    XLSX.writeFile(wb, `Detalle_Cobros_${currentDownloadUser}.xlsx`);
-});
-
-// 7. Descarga Excel GN
-btnDownloadGn.addEventListener('click', () => {
-    if (!currentGnReportData.length) return alert('No hay datos para descargar');
-
-    const exportData = currentGnReportData.map(r => ({
-        "ASESOR": r.user_name,
-        "CREDITO": parseFloat(r.credits_report) || 0,
-        "COBRO": parseFloat(r.payments_report) || 0,
-        "GASTOS": parseFloat(r.expense_report) || parseFloat(r.expenses_report) || 0,
-        "BASE INICIAL": parseFloat(r.initial_base) || 0,
-        "BASE FINAL": parseFloat(r.final_base) || 0,
-        "DIA": new Date(r.created_at).toLocaleDateString('es-ES', { weekday: 'long' }),
-        "FECHA": adjustDateForExport(r.created_at)
-    }));
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    XLSX.utils.book_append_sheet(wb, ws, "Reporte General");
-    XLSX.writeFile(wb, `Reporte_General_${Date.now()}.xlsx`);
-});
-
-// ==========================================
-// MÓDULO DE EXPORTACIÓN AVANZADA
-// ==========================================
-
-// 1. Arquitectura UI (Modales y Selectores)
-
-btnOpenExportModal.addEventListener('click', async () => {
-    // Cargar Departamentos
-    const { data: deptsData } = await sbClient.from('municipalities').select('id, municipalities');
-    exportDepartment.innerHTML = '<option value="">Seleccione Departamento</option>';
-    if (deptsData) {
-        deptsData.forEach(d => {
-            exportDepartment.innerHTML += `<option value="${d.id}">${d.id}</option>`;
-        });
-    }
-    exportMunicipality.innerHTML = '<option value="all">Todos los Municipios</option>';
-
-    // Cargar Usuarios
-    const { data: users } = await sbClient.from('users').select('name')
-        .neq('role', 'Administrador').neq('role', 'Administrador maestro').neq('role', 'Desarrollador');
-    exportUser.innerHTML = '<option value="all">Todos los usuarios</option>';
-    if (users) {
-        users.forEach(u => exportUser.innerHTML += `<option value="${u.name}">${u.name}</option>`);
-    }
-
-    // Resetear filtros de fecha
-    exportFilters = { day: 'all', month: 'all', year: 'all' };
-    updateExportPeriodText();
-
-    exportReportModal.style.display = 'block';
-});
-
-// Cascada Dept -> Muni
-exportDepartment.addEventListener('change', async () => {
-    exportMunicipality.innerHTML = '<option value="all">Todos los Municipios</option>';
-    if (!exportDepartment.value) return;
-
-    const { data } = await sbClient.from('municipalities').select('municipalities').eq('id', exportDepartment.value).single();
-    if (data && data.municipalities) {
-        data.municipalities.forEach(m => {
-            exportMunicipality.innerHTML += `<option value="${m}">${m}</option>`;
-        });
-    }
-});
-
-// Modal de Fechas (Auxiliar)
-btnOpenExportDateModal.addEventListener('click', () => {
-    // Poblar selectores dinámicamente
-    populateDateSelectors();
-    exportDateFilterModal.style.display = 'block';
-});
-
-function populateDateSelectors() {
-    // Día
-    exportDay.innerHTML = '<option value="all">Todos</option>';
-    for (let i = 1; i <= 31; i++) exportDay.innerHTML += `<option value="${i}">${i}</option>`;
-    
-    // Mes
-    exportMonth.innerHTML = '<option value="all">Todos</option>';
-    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    months.forEach((m, i) => exportMonth.innerHTML += `<option value="${i + 1}">${m}</option>`);
-
-    // Año
-    exportYear.innerHTML = '<option value="all">Todos</option>';
-    const currentYear = new Date().getFullYear();
-    for (let i = 2024; i <= currentYear; i++) exportYear.innerHTML += `<option value="${i}">${i}</option>`;
-
-    // Setear valores actuales
-    exportDay.value = exportFilters.day;
-    exportMonth.value = exportFilters.month;
-    exportYear.value = exportFilters.year;
-}
-
-btnApplyExportDate.addEventListener('click', () => {
-    exportFilters.day = exportDay.value;
-    exportFilters.month = exportMonth.value;
-    exportFilters.year = exportYear.value;
-    
-    updateExportPeriodText();
-    exportDateFilterModal.style.display = 'none';
-});
-
-function updateExportPeriodText() {
-    const d = exportFilters.day === 'all' ? 'Todos los días' : `Día ${exportFilters.day}`;
-    const m = exportFilters.month === 'all' ? 'todos los meses' : `Mes ${exportFilters.month}`;
-    const y = exportFilters.year === 'all' ? 'todos los años' : `Año ${exportFilters.year}`;
-    
-    if (exportFilters.day === 'all' && exportFilters.month === 'all' && exportFilters.year === 'all') {
-        exportPeriodText.innerText = "Todos los tiempos";
-    } else {
-        exportPeriodText.innerText = `${d} de ${m}, ${y}`;
-    }
-}
-
-// 2. Estrategia de Consulta y Filtrado (btnExportAction)
-
-btnExportAction.addEventListener('click', async () => {
-    btnExportAction.disabled = true;
-    btnExportAction.innerText = 'Generando...';
-
-    try {
-        // Filtros Nativos (Firestore/Supabase)
-        let query = sbClient.from('debtors').select('*');
-
-        if (exportUser.value !== 'all') {
-            query = query.eq('asesor_name', exportUser.value);
-        }
-        
-        // Si se selecciona un municipio específico
-        if (exportMunicipality.value !== 'all') {
-            query = query.eq('municipality', exportMunicipality.value);
-        }
-
-        const { data: rawDebtors, error } = await query;
-        if (error) throw error;
-
-        // Regla de Negocio Crítica: Exclusión de Saldos en Cero
-        let debtors = rawDebtors.filter(d => (Number(d.balance) || 0) !== 0);
-
-        // Filtros en Memoria (Post-Procesamiento)
-        
-        // Lógica de Departamento (Si se eligió Dept pero "Todos los Municipios")
-        if (exportDepartment.value && exportMunicipality.value === 'all') {
-            const { data: deptData } = await sbClient.from('municipalities').select('municipalities').eq('id', exportDepartment.value).single();
-            if (deptData && deptData.municipalities) {
-                const validMunis = new Set(deptData.municipalities);
-                debtors = debtors.filter(d => validMunis.has(d.municipality));
-            }
-        }
-
-        // Lógica de Fechas
-        debtors = debtors.filter(d => {
-            // Prioridad: sale_date > created_at
-            let dateObj = null;
-            if (d.sale_date) {
-                if (/^\d{2}-\d{2}-\d{4}$/.test(d.sale_date)) {
-                    const parts = d.sale_date.split('-');
-                    dateObj = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-                } else {
-                    dateObj = new Date(d.sale_date);
-                }
-            } else {
-                dateObj = new Date(d.created_at);
-            }
-
-            if (!dateObj || isNaN(dateObj.getTime())) return false;
-
-            // Comodines
-            const dayMatch = exportFilters.day === 'all' || dateObj.getDate() == exportFilters.day;
-            const monthMatch = exportFilters.month === 'all' || (dateObj.getMonth() + 1) == exportFilters.month;
-            const yearMatch = exportFilters.year === 'all' || dateObj.getFullYear() == exportFilters.year;
-
-            return dayMatch && monthMatch && yearMatch;
-        });
-
-        if (debtors.length === 0) {
-            alert('No se encontraron registros con los filtros seleccionados.');
-            btnExportAction.disabled = false;
-            btnExportAction.innerText = 'Exportar Excel';
-            return;
-        }
-
-        // 3. Lógica de Enriquecimiento de Datos (Process Debtor)
-        const processedData = await Promise.all(debtors.map(processDebtorForExport));
-
-        // 4. Generación y Estilizado del Excel
-        generateStyledExcel(processedData);
-
-    } catch (e) {
-        console.error(e);
-        alert('Error en exportación: ' + e.message);
-    } finally {
-        btnExportAction.disabled = false;
-        btnExportAction.innerText = 'Exportar Excel';
-    }
-});
-
-async function processDebtorForExport(d) {
-    // Agregación de Pagos (Cálculos Financieros)
-    
-    // Abono del Crédito (Específico)
-    const { data: creditPayments } = await sbClient.from('payments').select('payment_amount').eq('debtor_id', d.id);
-    const abonoCredito = (creditPayments || []).reduce((sum, p) => sum + (parseFloat(p.payment_amount) || 0), 0);
-
-    // Recaudo Total (Histórico por Cédula)
-    const { data: allPayments } = await sbClient.from('payments').select('payment_amount').eq('cedula', d.cedula);
-    let recaudoTotal = (allPayments || []).reduce((sum, p) => sum + (parseFloat(p.payment_amount) || 0), 0);
-
-    // Importados: Sumar histórico de 'clients'
-    if (d.imported) {
-        const { data: client } = await sbClient.from('clients').select('total_recaudo').eq('cedula', d.cedula).single();
-        if (client) {
-            recaudoTotal += (parseFloat(client.total_recaudo) || 0);
-        }
-    }
-
-    // Algoritmo de Estado (Semáforo)
-    let estado = 'GRIS';
-    
-    // Cálculo de Vencimiento
-    let dateObj = null;
-    if (d.sale_date || d.saleDate) {
-        const sDate = d.sale_date || d.saleDate;
-        if (/^\d{2}-\d{2}-\d{4}$/.test(sDate)) {
-            const [d, m, y] = sDate.split('-').map(Number);
-            dateObj = new Date(y, m - 1, d);
-        } else if (/^\d{4}-\d{2}-\d{2}$/.test(sDate)) {
-            const [y, m, d] = sDate.split('-').map(Number);
-            dateObj = new Date(y, m - 1, d);
-        } else {
-            dateObj = new Date(sDate);
-        }
-    } else {
-        dateObj = new Date(d.created_at);
-    }
-
-    if (dateObj && !isNaN(dateObj.getTime())) {
-        const numCuotas = parseInt(d.number_of_payments) || 0;
-        const term = Array.isArray(d.payment_term) ? d.payment_term[0] : d.payment_term;
-        const isWeekly = (term || '').toLowerCase().includes('semanal');
-        const daysToAdd = numCuotas * (isWeekly ? 7 : 1);
-        
-        const dueDate = new Date(dateObj);
-        dueDate.setDate(dueDate.getDate() + daysToAdd);
-        
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        dueDate.setHours(0,0,0,0);
-
-        const remaining = parseInt(d.remaining_payments) || 0;
-        const balance = parseFloat(d.balance) || 0;
-
-        // Lógica de Precedencia
-        if (dueDate < today) {
-            estado = 'ROJO'; // Vencido
-        } else if ((!isWeekly && remaining === 1) || (isWeekly && remaining === 5)) {
-            estado = 'VERDE'; // A punto de terminar
-        } else if ((!isWeekly && balance === 20000) || (isWeekly && balance === 40000)) {
-            estado = 'AMARILLO'; // Saldo bajo específico
-        }
-    }
-
-    // Mapeo de Columnas
-    return {
-        "CLIENTE": d.name,
-        "CEDULA": d.cedula,
-        "MUNICIPIO": d.municipality,
-        "ASESOR": d.asesor_name,
-        "DIRECCION": d.address || '',
-        "TELEFONO": d.phone || '',
-        "FECHA DE PRESTAMO": adjustDateForExport(d.sale_date || d.saleDate || d.created_at), // Usar dato crudo para evitar desfase
-        "CREDITO NUEVO": (d.credit_type === 'Nuevo') ? (parseFloat(d.sale_value) || 0) : 0,
-        "REPRESTE": (d.credit_type === 'Represte') ? (parseFloat(d.sale_value) || 0) : 0,
-        "CUOTA": parseInt(d.remaining_payments) || 0,
-        "VALOR-CUOTA": parseFloat(d.valor_cuota) || 0,
-        "ABONO": abonoCredito,
-        "SALDO": parseFloat(d.balance) || 0,
-        "RECAUDO TOTAL": recaudoTotal,
-        "TIPO DE PAGO": Array.isArray(d.payment_term) ? d.payment_term.join(', ') : d.payment_term,
-        "ESTADO": estado
-    };
-}
-
-function generateStyledExcel(data) {
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(data);
-
-    // Formato de Fechas y Estilos
-    // Nota: SheetJS Community (CDN) no soporta estilos visuales (colores) al escribir archivo.
-    // Sin embargo, implementamos la lógica solicitada para el objeto cell.s por si se usa una versión Pro o fork.
-    // El formato de fecha (z) sí funciona en Community.
-
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    
-    // Buscar índice de columna ESTADO y FECHA
-    const headers = data.length > 0 ? Object.keys(data[0]) : [];
-    const statusColIdx = headers.indexOf("ESTADO");
-    const dateColIdx = headers.indexOf("FECHA DE PRESTAMO");
-
-    for (let R = range.s.r + 1; R <= range.e.r; ++R) { // Saltar cabecera
-        // Formato Fecha
-        if (dateColIdx !== -1) {
-            const cellRef = XLSX.utils.encode_cell({r: R, c: dateColIdx});
-            if (ws[cellRef]) {
-                // Ajuste horario mediodía
-                if (ws[cellRef].v instanceof Date) {
-                    ws[cellRef].v.setHours(12,0,0,0);
-                }
-                ws[cellRef].z = 'dd/mm/yyyy';
-            }
-        }
-
-        // Estilos Condicionales (Lógica)
-        if (statusColIdx !== -1) {
-            const cellRef = XLSX.utils.encode_cell({r: R, c: statusColIdx});
-            const cell = ws[cellRef];
-            
-            if (cell && cell.v) {
-                let color = "BFBFBF"; // Gris default
-                if (cell.v === 'VERDE') color = "92D050";
-                if (cell.v === 'AMARILLO') color = "FFFF00";
-                if (cell.v === 'ROJO') color = "FF0000";
-
-                // Inyección de estilo (Funciona en SheetJS Pro / Forks)
-                cell.s = {
-                    fill: {
-                        patternType: "solid",
-                        fgColor: { rgb: color }
-                    },
-                    font: { bold: true }
-                };
-            }
-        }
-    }
-
-    // Ajuste de ancho de columnas
-    const wscols = headers.map(h => ({wch: h.length + 5}));
-    ws['!cols'] = wscols;
-
-    XLSX.utils.book_append_sheet(wb, ws, "Cartera Exportada");
-    XLSX.writeFile(wb, `Cartera_Avanzada_${Date.now()}.xlsx`);
-    
-    // Cerrar modal
-    exportReportModal.style.display = 'none';
 }

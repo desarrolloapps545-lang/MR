@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
     const { data: oldClient, error: fetchError } = await supabase
       .from('clients')
       .select('cedula')
-      .eq('id', client_id)
+      .eq('cedula', client_id)
       .single()
 
     if (fetchError || !oldClient) throw new Error('Cliente no encontrado')
@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     const { error: updateError } = await supabase
       .from('clients')
       .update(updates)
-      .eq('id', client_id)
+      .eq('cedula', client_id)
 
     if (updateError) throw updateError
 
@@ -84,8 +84,7 @@ Deno.serve(async (req) => {
 
     const { credit_id, updates } = await req.json()
 
-    const { error } = await supabase.from('debtors').update(updates).eq('id', credit_id)
-
+    const { error } = await supabase.from('debtors').update(updates).eq('
     if (error) throw error
 
     return new Response(JSON.stringify({ success: true }), {
