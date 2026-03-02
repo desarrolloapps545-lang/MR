@@ -266,6 +266,21 @@ document.addEventListener('DOMContentLoaded', () => {
         gnReportBox.style.display = 'block';
         btnReportGn.className = 'btn-primary';
         loadGnFilters();
+
+        // FIX: Asegurar que el encabezado de la tabla de cierres sea correcto al entrar
+        const table = gnTableBody.closest('table');
+        if (table && table.tHead && table.tHead.rows.length > 0) {
+            table.tHead.rows[0].innerHTML = `
+                <th>Asesor</th>
+                <th>Créditos</th>
+                <th>Cobros</th>
+                <th>Gastos</th>
+                <th>Base Inicial</th>
+                <th>Base Final</th>
+                <th>Inyección</th>
+                <th>Fecha</th>
+            `;
+        }
     });
 
     async function loadPgFilters() {
@@ -620,152 +635,157 @@ document.addEventListener('DOMContentLoaded', () => {
     btnGeneratePg.addEventListener('click', generatePgReport);
 
     async function generatePgReport() {
-        pgTableBody.innerHTML = '<tr><td colspan="8">Cargando...</td></tr>';
-
-        const mode = currentPgMode || 'daily';
-        const tableName = mode === 'daily' ? 'reports' : 'wreports';
-        
-        let query = sbClient.from(tableName).select('*');
-
-        // Filtro de Fechas
-        if (pgDateState.start && pgDateState.end) {
-            query = query.gte('created_at', pgDateState.start.toISOString())
-                         .lte('created_at', pgDateState.end.toISOString());
-        }
-
-        // Filtro de Usuario
-        if (pgFilterUser.value) {
-            query = query.eq('user_name', pgFilterUser.value);
-        }
-
-        const { data: reports, error } = await query;
-
-        // Actualizar encabezados de tabla P&G para eliminar columna DIA
-        const table = pgTableBody.closest('table');
-        if (table && table.tHead && table.tHead.rows.length > 0) {
-            table.tHead.rows[0].innerHTML = `
-                <th>Asesor</th>
-                <th>Créditos</th>
-                <th>Cobros</th>
-                <th>Gastos</th>
-                <th>Base Inicial</th>
-                <th>Base Final</th>
-                <th>Fecha</th>
-                <th>Acciones</th>
-            `;
-        }
-
-        if (error) {
-            pgTableBody.innerHTML = `<tr><td colspan="8">Error: ${error.message}</td></tr>`;
-            return;
-        }
-
-        currentPgReportData = reports;
-        renderPgTable(reports);
+        console.log('Generación de reporte P&G pendiente de reconstrucción.');
+        pgTableBody.innerHTML = '<tr><td colspan="8">Funcionalidad en reconstrucción...</td></tr>';
     }
 
-    function renderPgTable(reports) {
-        pgTableBody.innerHTML = '';
-        if (!reports || reports.length === 0) {
-            pgTableBody.innerHTML = '<tr><td colspan="8">No se encontraron reportes.</td></tr>';
-            return;
+    function showInputModal(title, label, initialValue, onConfirm) {
+        const modalId = 'generic-input-modal';
+        let modal = document.getElementById(modalId);
+
+        if (modal) {
+            modal.remove(); // Remove previous instance to avoid event listener issues
         }
 
-        // Ordenar por fecha descendente
-        reports.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        modal = document.createElement('div');
+        modal.id = modalId;
+        modal.className = 'modal'; // Use existing modal styles
+        modal.style.cssText = 'display:flex; justify-content:center; align-items:center; z-index: 10001;';
 
-        const fmt = (val) => '$ ' + (parseFloat(val) || 0).toLocaleString('es-CO');
-        const fmtDate = (dateStr) => {
-            if (!dateStr) return '';
-            return new Date(dateStr).toLocaleDateString();
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 400px;">
+                <span class="close-btn">&times;</span>
+                <h3 style="margin-top:0; color:#16233c;">${title}</h3>
+                <label for="generic-input-value" style="margin-top:15px;">${label}</label>
+                <input type="number" id="generic-input-value" value="${initialValue}" step="any" style="margin-top:5px;">
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button id="btn-cancel-generic-input" class="btn btn-secondary">Cancelar</button>
+                    <button id="btn-save-generic-input" class="btn btn-primary">Guardar</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const close = () => {
+            const m = document.getElementById(modalId);
+            if (m) m.style.display = 'none';
         };
 
-        reports.forEach(r => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${r.user_name || ''}</td>
-                <td>
-                    ${fmt(r.credits_report)}
-                    <button class="btn-action-small btn-primary" onclick="openReportCreditsDetails('${r.id}', '${r.user_name}', '${r.created_at}', '${currentPgMode || 'daily'}')"><i class="fas fa-eye"></i></button>
-                </td>
-                <td>
-                    ${fmt(r.payments_report)}
-                    <button class="btn-action-small btn-primary" onclick="openReportPaymentsDetails('${r.id}', '${r.user_name}', '${r.created_at}', '${currentPgMode || 'daily'}')"><i class="fas fa-eye"></i></button>
-                </td>
-                <td>
-                    ${fmt(r.expense_report)}
-                    <button class="btn-action-small btn-primary" onclick="openPgExpenses('${r.id}', '${r.user_name}', '${r.created_at}', '${currentPgMode || 'daily'}')"><i class="fas fa-pencil-alt"></i></button>
-                </td>
-                <td>
-                    ${fmt(r.initial_base)}
-                    <button class="btn-action-small btn-secondary" onclick="editInitialBase('${r.id}', '${r.initial_base}', '${currentPgMode || 'daily'}')"><i class="fas fa-pencil-alt"></i></button>
-                </td>
-                <td>
-                    ${fmt(r.final_base)}
-                    <button class="btn-action-small btn-warning" onclick="openPgInjection('${r.id}', '${r.final_base}', '${currentPgMode || 'daily'}')"><i class="fas fa-syringe"></i></button>
-                </td>
-                <td>${fmtDate(r.created_at)}</td>
-                <td>
-                    <div style="display: flex; gap: 5px;">
-                        <!-- Botones movidos a las celdas correspondientes -->
-                    </div>
-                </td>
-            `;
-            pgTableBody.appendChild(row);
-        });
+        modal.querySelector('.close-btn').onclick = close;
+        modal.querySelector('#btn-cancel-generic-input').onclick = close;
+        
+        modal.querySelector('#btn-save-generic-input').onclick = () => {
+            const inputVal = document.getElementById('generic-input-value').value;
+            const val = parseFloat(inputVal);
+            if (isNaN(val)) {
+                alert("Valor inválido. Por favor, ingrese un número.");
+                return;
+            }
+            onConfirm(val);
+            close();
+        };
     }
 
     // Funciones globales para acciones P&G
-    window.openPgInjection = async (reportId, currentFinalBase, mode) => {
-        const newBase = prompt("Ingrese el nuevo valor para la Base Final (Inyección):", currentFinalBase);
-        if (newBase === null) return;
-        
-        const val = parseFloat(newBase);
-        if (isNaN(val)) return alert("Valor inválido");
+    window.openPgInjection = async (reportId, userName, currentFinalBase, mode) => {
+        const collection = mode === 'daily' ? 'reports' : 'wreports';
 
-        const tableName = mode === 'daily' ? 'reports' : 'wreports';
-
-        const { error } = await sbClient.from(tableName).update({
-            og_final_base: parseFloat(currentFinalBase),
-            final_base: val
-        }).eq('id', reportId);
-
-        if (error) alert("Error al actualizar: " + error.message);
-        else {
-            alert("Inyección realizada correctamente.");
-            if (document.getElementById('pg-report-box').style.display === 'block') generatePgReport();
-            if (document.getElementById('gn-report-box').style.display === 'block') generateGnReport();
+        // Leer el reporte para verificar si ya existe una base original guardada.
+        const { data: report, error: reportError } = await sbClient.from(collection).select('og_final_base, final_base').eq('report_number', reportId).single();
+        if (reportError) {
+            return alert("Error al leer el reporte para inyección: " + reportError.message);
         }
+
+        showInputModal('Inyectar / Editar Base Final', 'Nuevo valor para la Base Final:', currentFinalBase, (val) => {
+            const updatePayload = {
+                final_base: val
+            };
+
+            // Si no hay una base original guardada (es la primera inyección),
+            // se guarda la base final calculada actual como la original.
+            if (report.og_final_base === null) {
+                updatePayload.og_final_base = parseFloat(report.final_base); // Usar el valor de la BD, no el del botón
+            }
+            
+            // Establecer contexto para el modal
+            currentReportContext = { reportId, collection, userName, mode };
+
+            // Llamar al modal de confirmación
+            showMandatoryUpdateModal('Inyección (Nueva Base Final)', val, val, async () => {
+                const { error } = await sbClient.from(collection).update(updatePayload).eq('report_number', reportId);
+
+                if (error) {
+                    alert("Error al actualizar: " + error.message);
+                } else {
+                    // Refrescar tablas sin alerta
+                    if (document.getElementById('pg-report-box').style.display === 'block') generatePgReport();
+                    if (document.getElementById('gn-report-box').style.display === 'block') generateGnReport();
+                }
+            });
+        });
+    };
+
+    window.editFinalBaseDirectly = async (reportId, userName, currentFinalBase, mode) => {
+        showInputModal('Editar Base Final Directamente', 'Nuevo valor para la Base Final:', currentFinalBase, (val) => {
+            const collection = mode === 'daily' ? 'reports' : 'wreports';
+            
+            // Establecer contexto para el modal
+            currentReportContext = { reportId, collection, userName, mode };
+
+            // Llamar al modal de confirmación
+            showMandatoryUpdateModal('Edición Base Final', val, val, async () => {
+                const { error } = await sbClient.from(collection).update({
+                    final_base: val
+                }).eq('report_number', reportId);
+
+                if (error) {
+                    alert("Error al actualizar: " + error.message);
+                } else {
+                    // Refrescar tablas sin alerta
+                    if (document.getElementById('gn-report-box').style.display === 'block') generateGnReport();
+                }
+            });
+        });
     };
 
     window.editInitialBase = async (reportId, currentVal, mode) => {
-        const newVal = prompt("Editar Base Inicial:", currentVal);
-        if (newVal === null) return;
-        const val = parseFloat(newVal);
-        if (isNaN(val)) return alert("Valor inválido");
+        showInputModal('Editar Base Inicial', 'Nuevo valor para la Base Inicial:', currentVal, async (val) => {
+            const collection = mode === 'daily' ? 'reports' : 'wreports';
 
-        const collection = mode === 'daily' ? 'reports' : 'wreports';
-        
-        // Obtener reporte para recalcular final_base
-        const { data: report } = await sbClient.from(collection).select('*').eq('id', reportId).single();
-        if (!report) return;
+            try {
+                // Obtener reporte para recalcular final_base y obtener contexto
+                const { data: report, error: reportError } = await sbClient.from(collection).select('*').eq('report_number', reportId).single();
+                if (reportError || !report) throw new Error(reportError?.message || "Reporte no encontrado");
 
-        const payments = parseFloat(report.payments_report) || 0;
-        const credits = parseFloat(report.credits_report) || 0;
-        const expenses = parseFloat(report.expense_report) || 0;
-        const newFinalBase = (payments + val) - (credits + expenses);
+                // Establecer contexto para el modal
+                currentReportContext = { reportId, collection, userName: report.user_name, mode };
 
-        const { error } = await sbClient.from(collection).update({
-            initial_base: val,
-            final_base: newFinalBase
-        }).eq('id', reportId);
+                const payments = parseFloat(report.payments_report) || 0;
+                const credits = parseFloat(report.credits_report) || 0;
+                const expenses = parseFloat(report.expense_report) || 0;
+                const newFinalBase = (payments + val) - (credits + expenses);
 
-        if (error) alert("Error: " + error.message);
-        else {
-            alert("Base Inicial actualizada.");
-            if (document.getElementById('pg-report-box').style.display === 'block') generatePgReport();
-            if (document.getElementById('gn-report-box').style.display === 'block') generateGnReport();
-        }
+                // Llamar al modal de confirmación
+                showMandatoryUpdateModal('Base Inicial', val, newFinalBase, async () => {
+                    const { error } = await sbClient.from(collection).update({
+                        initial_base: val,
+                        final_base: newFinalBase
+                    }).eq('report_number', reportId);
+
+                    if (error) {
+                        alert("Error al actualizar: " + error.message);
+                    } else {
+                        // Refrescar tablas sin alerta
+                        if (document.getElementById('pg-report-box').style.display === 'block') generatePgReport();
+                        if (document.getElementById('gn-report-box').style.display === 'block') generateGnReport();
+                    }
+                });
+
+            } catch (e) {
+                alert("Error preparando la actualización: " + e.message);
+            }
+        });
     };
 
     window.openPgExpenses = async (reportId, userName, dateStr, mode) => {
@@ -1296,7 +1316,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnGenerateGn.addEventListener('click', generateGnReport);
 
     async function generateGnReport() {
-        gnTableBody.innerHTML = '<tr><td colspan="7">Cargando...</td></tr>';
+        gnTableBody.innerHTML = '<tr><td colspan="8">Cargando...</td></tr>';
 
         const mode = currentGnMode || 'daily';
         const tableName = mode === 'daily' ? 'reports' : 'wreports';
@@ -1326,12 +1346,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 <th>Gastos</th>
                 <th>Base Inicial</th>
                 <th>Base Final</th>
+                <th>Inyección</th>
                 <th>Fecha</th>
             `;
         }
 
         if (error) {
-            gnTableBody.innerHTML = `<tr><td colspan="7">Error: ${error.message}</td></tr>`;
+            gnTableBody.innerHTML = `<tr><td colspan="8">Error: ${error.message}</td></tr>`;
             return;
         }
 
@@ -1339,7 +1360,7 @@ document.addEventListener('DOMContentLoaded', () => {
         gnTableBody.innerHTML = '';
 
         if (!reports || reports.length === 0) {
-            gnTableBody.innerHTML = '<tr><td colspan="7">No se encontraron registros.</td></tr>';
+            gnTableBody.innerHTML = '<tr><td colspan="8">No se encontraron registros.</td></tr>';
             return;
         }
 
@@ -1353,23 +1374,37 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         reports.forEach(r => {
+            const hasInjection = r.og_final_base !== null && r.og_final_base !== undefined;
+            const baseFinalDisplayValue = hasInjection ? r.og_final_base : r.final_base;
+            const injectionDisplayValue = hasInjection ? r.final_base : null;
+
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${r.user_name || ''}</td>
                 <td>
                     ${fmt(r.credits_report)}
-                    <button class="btn-action-small btn-primary" onclick="openReportCreditsDetails('${r.id}', '${r.user_name}', '${r.created_at}', '${currentGnMode || 'daily'}')"><i class="fas fa-eye"></i></button>
+                    <button class="btn-action-small btn-primary" onclick="openReportCreditsDetails('${r.report_number}', '${r.user_name}', '${r.created_at}', '${currentGnMode || 'daily'}')"><i class="fas fa-eye"></i></button>
                 </td>
                 <td>
                     ${fmt(r.payments_report)}
-                    <button class="btn-action-small btn-primary" onclick="openReportPaymentsDetails('${r.id}', '${r.user_name}', '${r.created_at}', '${currentGnMode || 'daily'}')"><i class="fas fa-eye"></i></button>
+                    <button class="btn-action-small btn-primary" onclick="openReportPaymentsDetails('${r.report_number}', '${r.user_name}', '${r.created_at}', '${currentGnMode || 'daily'}')"><i class="fas fa-eye"></i></button>
                 </td>
                 <td>
                     ${fmt(r.expense_report)}
-                    <button class="btn-action-small btn-primary" onclick="openPgExpenses('${r.id}', '${r.user_name}', '${r.created_at}', '${currentGnMode || 'daily'}')"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="btn-action-small btn-primary" onclick="openPgExpenses('${r.report_number}', '${r.user_name}', '${r.created_at}', '${currentGnMode || 'daily'}')"><i class="fas fa-pencil-alt"></i></button>
                 </td>
-                <td>${fmt(r.initial_base)}</td>
-                <td>${fmt(r.final_base)}</td>
+                <td>
+                    ${fmt(r.initial_base)}
+                    <button class="btn-action-small btn-secondary" onclick="editInitialBase('${r.report_number}', '${r.initial_base}', '${currentGnMode || 'daily'}')"><i class="fas fa-pencil-alt"></i></button>
+                </td>
+                <td>
+                    ${fmt(baseFinalDisplayValue)}
+                    <button class="btn-action-small btn-info" onclick="editFinalBaseDirectly('${r.report_number}', '${r.user_name}', '${r.final_base}', '${currentGnMode || 'daily'}')" title="Editar Base Final Directamente"><i class="fas fa-edit"></i></button>
+                </td>
+                <td>
+                    ${injectionDisplayValue !== null ? fmt(injectionDisplayValue) : '-'}
+                    <button class="btn-action-small btn-warning" onclick="openPgInjection('${r.report_number}', '${r.user_name}', '${r.final_base}', '${currentGnMode || 'daily'}')" title="Inyección/Guardar Original"><i class="fas fa-syringe"></i></button>
+                </td>
                 <td>${fmtDate(r.created_at)}</td>
             `;
             gnTableBody.appendChild(row);
@@ -1419,7 +1454,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 2. Marcar cambio pendiente (No actualizar reporte aún)
             pendingReportUpdate = true;
-            alert("Gastos guardados. El reporte se actualizará al cerrar esta ventana.");
 
         } catch (e) {
             alert("Error: " + e.message);
@@ -1575,7 +1609,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 2. Marcar cambio pendiente y refrescar lista
             pendingReportUpdate = true;
-            alert('Cambio guardado. El reporte se actualizará al cerrar esta ventana.');
             
             const { reportId, collection, userName, dateStr, mode } = currentCreditsContext;
             openReportCreditsDetails(reportId, userName, dateStr, mode);
@@ -1617,22 +1650,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const transferSpan = document.getElementById('report-payments-transfer');
         
         // Corrección de Encabezados
-        const table = tbody.closest('table'); // Usar closest para asegurar encontrar la tabla
+        const table = tbody.closest('table');
         if (table) {
-            const thead = table.querySelector('thead');
-            if (thead) {
-                thead.innerHTML = `
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Cliente</th>
-                        <th>Cédula</th>
-                        <th>Abono</th>
-                        <th>Método</th>
-                        <th>Municipio</th>
-                        <th>Acciones</th>
-                    </tr>
-                `;
+            let thead = table.querySelector('thead');
+            if (!thead) {
+                thead = document.createElement('thead');
+                table.insertBefore(thead, table.firstChild);
             }
+            thead.style.cssText = "position: sticky; top: 0; background: white; z-index: 1;";
+            thead.innerHTML = `
+                <tr>
+                    <th>Fecha</th>
+                    <th>Cliente</th>
+                    <th>Cédula</th>
+                    <th>Abono</th>
+                    <th>Método</th>
+                    <th>Municipio</th>
+                    <th>Acciones</th>
+                </tr>
+            `;
         }
 
         // Verificar si es una recarga
@@ -1802,7 +1838,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 2. Marcar cambio pendiente y refrescar lista
             pendingReportUpdate = true;
-            alert('Cambio guardado. El reporte se actualizará al cerrar esta ventana.');
             
             const { reportId, collection, userName, dateStr, mode } = currentCreditsContext;
             openReportPaymentsDetails(reportId, userName, dateStr, mode);
@@ -1815,45 +1850,53 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Lógica de Intercepción de Cierre y Modal Obligatorio ---
 
     function setupModalCloseInterceptor(modal, type) {
-        // 1. Botón X (Superior)
-        const closeX = modal.querySelector('.close-btn') || modal.querySelector('.close');
-        if (closeX) {
-            // Clonar para eliminar listeners anteriores
-            const newCloseX = closeX.cloneNode(true);
-            newCloseX.removeAttribute('onclick'); // Eliminar handlers inline para evitar cierre directo
-            closeX.parentNode.replaceChild(newCloseX, closeX);
+        // Buscar TODOS los botones en el modal
+        const buttons = modal.querySelectorAll('button');
+        
+        buttons.forEach(btn => {
+            const text = btn.innerText.trim().toLowerCase();
+            const onclick = btn.getAttribute('onclick') || '';
+            // Identificar botones de cierre (por texto o por acción de ocultar)
+            // Excluir botones de acción (guardar, descargar, editar, etc.)
+            const isActionBtn = text.includes('guardar') || text.includes('descargar') || btn.classList.contains('btn-success') || btn.classList.contains('btn-action-small') || btn.querySelector('i');
             
-            newCloseX.onclick = () => handleDetailModalClose(modal, type);
-        }
-
-        // 2. Botones de Pie (Cerrar/Cancelar)
-        // Buscamos botones secundarios que no sean de acción pequeña
-        const footerBtns = modal.querySelectorAll('.btn-secondary:not(.btn-action-small)');
-        footerBtns.forEach(btn => {
-            btn.innerText = "Cerrar"; // Cambiar texto a Cerrar
-            const newBtn = btn.cloneNode(true);
-            newBtn.removeAttribute('onclick');
-            btn.parentNode.replaceChild(newBtn, btn);
-            newBtn.onclick = () => handleDetailModalClose(modal, type);
+            if (!isActionBtn && (text === 'cerrar' || text === 'cancelar' || onclick.includes("display='none'") || onclick.includes('display = \'none\''))) {
+                
+                btn.innerText = "Cerrar"; // Renombrar a Cerrar
+                
+                // Reemplazar nodo para eliminar eventos inline
+                const newBtn = btn.cloneNode(true);
+                newBtn.removeAttribute('onclick'); 
+                btn.parentNode.replaceChild(newBtn, btn);
+                
+                // Asignar nuevo evento de cierre controlado
+                newBtn.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDetailModalClose(modal, type);
+                };
+            }
         });
 
-        // Interceptar clic fuera del modal (opcional, pero recomendado si el usuario cierra así)
-        // Nota: Esto puede ser invasivo si hay otros modales, usar con cuidado.
-        // Asignamos al window.onclick pero verificamos el target
-        const originalWindowClick = window.onclick;
-        window.onclick = (event) => {
-            if (event.target == modal) {
+        // Interceptar clic en el fondo (backdrop)
+        modal.onclick = (e) => {
+            if (e.target === modal) {
                 handleDetailModalClose(modal, type);
-            } else if (originalWindowClick) {
-                originalWindowClick(event);
             }
         };
     }
 
     async function handleDetailModalClose(modal, type) {
+        // Si no hay cambios pendientes, simplemente cerrar el modal.
+        if (!pendingReportUpdate) {
+            modal.style.display = 'none';
+            return;
+        }
+
         // Calcular y mostrar modal obligatorio siempre al cerrar
         try {
             const { reportId, collection, userName, dateStr, mode } = currentReportContext;
+            const reportCollection = mode === 'daily' ? 'reports' : 'wreports';
             
             // 1. Calcular nuevos totales según el tipo
             let newTotal = 0;
@@ -1901,7 +1944,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // 2. Calcular Base Final
-            const { data: report } = await sbClient.from(collection).select('*').eq('id', reportId).single();
+            const { data: report } = await sbClient.from(reportCollection).select('*').eq('report_number', reportId).single();
             if (!report) throw new Error("Reporte no encontrado");
 
             const initialBase = parseFloat(report.initial_base) || 0;
@@ -1927,7 +1970,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     updatePayload.og_final_base = finalBase;
                 }
 
-                await sbClient.from(collection).update(updatePayload).eq('id', reportId);
+                await sbClient.from(reportCollection).update(updatePayload).eq('report_number', reportId);
                 
                 alert('Reporte actualizado correctamente.');
                 pendingReportUpdate = false;
@@ -1955,15 +1998,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         const userName = currentReportContext ? currentReportContext.userName : 'USUARIO';
+        const mode = currentReportContext ? currentReportContext.mode : 'daily';
+        const nextPeriod = mode === 'daily' ? 'dia' : 'semana';
 
-        modal.innerHTML = `
-            <div style="background:white;padding:30px;border-radius:8px;text-align:center;max-width:500px;box-shadow:0 0 20px rgba(0,0,0,0.5);border: 2px solid #16233c;">
-                <h3 style="color:#16233c;margin-top:0;text-transform:uppercase;">ACTUALIZAR DATOS DE CIERRE DE ${userName}</h3>
-                <p style="font-size:1.1em;">¿Desea actualizar <strong>${type}</strong> en el cierre?</p>
-                
+        let title = `ACTUALIZAR DATOS DE CIERRE DE ${userName}`;
+        let bodyHtml = '';
+
+        const isInjection = type.toLowerCase().includes('inyección');
+        const isFinalBaseEdit = type.toLowerCase().includes('edición base final');
+
+        if (isInjection) {
+            title = `PROXIMA INYECCION A ${userName.toUpperCase()}`;
+            bodyHtml = `
                 <div style="margin:20px 0;font-size:1.1em;background:#f4f7f9;padding:15px;border-radius:5px;text-align:left;">
                     <div style="margin-bottom:10px;display:flex;justify-content:space-between;">
-                        <strong>Sumatoria nueva:</strong> 
+                        <strong>Nueva base final:</strong> 
+                        <span style="color:#28a745;font-weight:bold;">$ ${newValue.toLocaleString('es-CO')}</span>
+                    </div>
+                </div>
+                <p style="font-size:0.9em; color:#6c757d; margin-top:15px; text-align: left;">Recuerde que la inyeccion se le mostrara a el como base inicial el proximo ${nextPeriod}.</p>
+            `;
+        } else if (isFinalBaseEdit) {
+            bodyHtml = `
+                <div style="margin:20px 0;font-size:1.1em;background:#f4f7f9;padding:15px;border-radius:5px;text-align:left;">
+                    <div style="margin-bottom:10px;display:flex;justify-content:space-between;">
+                        <strong>Nueva base final:</strong> 
+                        <span style="color:#28a745;font-weight:bold;">$ ${newValue.toLocaleString('es-CO')}</span>
+                    </div>
+                </div>
+            `;
+        } else {
+            bodyHtml = `
+                <p style="font-size:1.1em; text-align:left; margin-bottom: 5px;">Cambios a realizar en el cierre:</p>
+                <div style="margin:20px 0;font-size:1.1em;background:#f4f7f9;padding:15px;border-radius:5px;text-align:left;">
+                    <div style="margin-bottom:10px;display:flex;justify-content:space-between;">
+                        <strong>${type}:</strong> 
                         <span style="color:#28a745;font-weight:bold;">$ ${newValue.toLocaleString('es-CO')}</span>
                     </div>
                     <div style="display:flex;justify-content:space-between;">
@@ -1971,7 +2040,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span style="color:#16233c;font-weight:bold;">$ ${finalBaseValue.toLocaleString('es-CO')}</span>
                     </div>
                 </div>
-                
+            `;
+        }
+
+        modal.innerHTML = `
+            <div style="background:white;padding:30px;border-radius:8px;text-align:center;max-width:500px;box-shadow:0 0 20px rgba(0,0,0,0.5);border: 2px solid #16233c;">
+                <h3 style="color:#16233c;margin-top:0;text-transform:uppercase;">${title}</h3>
+                ${bodyHtml}
                 <button id="btn-confirm-mandatory-update" class="btn btn-primary" style="width:100%;font-size:1.1em;padding:12px;">Aceptar</button>
             </div>
         `;

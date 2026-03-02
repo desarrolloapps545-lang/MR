@@ -3305,9 +3305,6 @@ async function loadDashboardData(mode, isBackground = false) {
 
         // 1. Créditos (Debtors)
         let debtorsQuery = sbClient.from('debtors').select('*');
-        if (pgFilterUser.value) debtorsQuery = debtorsQuery.eq('asesor_name', pgFilterUser.value);
-        if (pgFilterMuni.value) debtorsQuery = debtorsQuery.eq('municipality', pgFilterMuni.value);
-
         const { data: debtors, error: debtError } = await debtorsQuery;
         if (debtError) throw debtError;
 
@@ -3315,10 +3312,6 @@ async function loadDashboardData(mode, isBackground = false) {
         let paymentsQuery = sbClient.from('payments').select('*')
             .gte('created_at', startISO)
             .lte('created_at', endISO);
-
-        if (pgFilterUser.value) paymentsQuery = paymentsQuery.eq('user_name', pgFilterUser.value);
-        if (pgFilterMuni.value) paymentsQuery = paymentsQuery.eq('municipality', pgFilterMuni.value);
-
         const { data: payments, error: payError } = await paymentsQuery;
         if (payError) throw payError;
 
