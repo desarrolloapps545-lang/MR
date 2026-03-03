@@ -44,6 +44,7 @@ const crFilterMuni = document.getElementById('cr-filter-muni');
 const crFilterUser = document.getElementById('cr-filter-user');
 const btnGenerateCr = document.getElementById('btn-generate-cr');
 const btnDownloadCr = document.getElementById('btn-download-cr');
+const btnMassEditCrDate = document.getElementById('btn-mass-edit-cr-date');
 const crTableBody = document.getElementById('cr-table-body');
 const crTotalDisplay = document.getElementById('cr-total-display');
 // Referencias Informes PM (Payments Report)
@@ -59,6 +60,8 @@ const pmFilterUser = document.getElementById('pm-filter-user');
 const btnGeneratePm = document.getElementById('btn-generate-pm');
 const btnDownloadPm = document.getElementById('btn-download-pm');
 const btnMassEditPmDate = document.getElementById('btn-mass-edit-pm-date');
+const pmSearchInput = document.getElementById('pm-search-input');
+const btnPmClearSearch = document.getElementById('btn-pm-clear-search');
 const pmTableBody = document.getElementById('pm-table-body');
 const pmTotalCobroDisplay = document.getElementById('pm-total-cobro-display');
 const pmTotalRecaudoDisplay = document.getElementById('pm-total-recaudo-display');
@@ -117,6 +120,19 @@ const btnPgDateCancel = document.getElementById('btn-pg-date-cancel');
 const massEditDateModal = document.getElementById('massEditDateModal');
 const massNewDateInput = document.getElementById('mass-new-date-input');
 const btnConfirmMassDate = document.getElementById('btn-confirm-mass-date');
+// Referencias Modal Edición Individual Cobro
+const editPmModal = document.getElementById('editPmModal');
+const editPmDate = document.getElementById('edit-pm-date');
+const editPmAmount = document.getElementById('edit-pm-amount');
+const editPmMethod = document.getElementById('edit-pm-method');
+const editPmAdvisor = document.getElementById('edit-pm-advisor');
+const editPmMuni = document.getElementById('edit-pm-muni');
+const btnSavePmEdit = document.getElementById('btn-save-pm-edit');
+
+// Referencias Modal Edición Masiva Fechas (Créditos)
+const massEditCreditDateModal = document.getElementById('massEditCreditDateModal');
+const massNewCreditDateInput = document.getElementById('mass-new-credit-date-input');
+const btnConfirmMassCreditDate = document.getElementById('btn-confirm-mass-credit-date');
 
 let currentPgReportData = []; // Datos para exportar P&G
 let currentPgMode = null; // daily | weekly
@@ -125,7 +141,9 @@ let currentPbMode = null; // daily | weekly
 let currentCrReportData = []; // Datos para exportar CR
 let currentCrMode = null; // daily | weekly
 let currentPmReportData = []; // Datos para exportar PM
+let selectedCrIds = []; // IDs de créditos seleccionados para edición masiva
 let currentPmMode = null; // daily | weekly
+let currentDebtorsMap = new Map(); // Mapa global de deudores para PM
 let currentExReportData = []; // Datos para exportar EX
 let currentExMode = null; // daily | weekly
 let currentGnReportData = []; // Datos para exportar GN
@@ -137,6 +155,7 @@ let currentExpEditData = null; // Datos temporales para edición de gastos
 let pendingReportUpdate = false; // Bandera para cambios pendientes
 let currentReportContext = null; // Contexto unificado
 let selectedPmIds = []; // IDs seleccionados para edición masiva
+let currentPmEditData = null; // Datos del cobro que se está editando individualmente
 
 // Contexto global para detalles de créditos
 let currentCreditsContext = {
@@ -154,6 +173,12 @@ let pgDateState = {
     end: null,
     label: ''
 };
+
+// Helper para normalizar texto (quitar acentos y a minúsculas)
+function normalizeText(text) {
+    if (!text) return '';
+    return text.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
 
 // Helper para fechas locales (Soluciona el desfase de -1/+1 día por zona horaria)
 function getLocalDateKey(dateObj) {
@@ -975,8 +1000,10 @@ document.addEventListener('DOMContentLoaded', () => {
     btnGenerateCr.addEventListener('click', generateCreditsReport);
 
     async function generateCreditsReport() {
-        crTableBody.innerHTML = '<tr><td colspan="6">Cargando...</td></tr>';
+        crTableBody.innerHTML = '<tr><td colspan="8">Cargando...</td></tr>';
         crTotalDisplay.innerText = '$0';
+        btnMassEditCrDate.style.display = 'none';
+        document.getElementById('cr-select-all').checked = false;
 
         let query = sbClient.from('debtors').select('*');
 
@@ -999,7 +1026,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const { data: credits, error } = await query;
 
         if (error) {
-            crTableBody.innerHTML = `<tr><td colspan="6">Error: ${error.message}</td></tr>`;
+            crTableBody.innerHTML = `<tr><td colspan="8">Error: ${error.message}</td></tr>`;
             return;
         }
 
@@ -1023,29 +1050,110 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderCrTable(data) {
         crTableBody.innerHTML = '';
         let total = 0;
+
         if (!data || data.length === 0) {
-            crTableBody.innerHTML = '<tr><td colspan="6">No se encontraron registros.</td></tr>';
+            crTableBody.innerHTML = '<tr><td colspan="8">No se encontraron registros.</td></tr>';
+            crTotalDisplay.innerText = '$0';
+            btnMassEditCrDate.style.display = 'none';
             return;
         }
+
+        btnMassEditCrDate.style.display = 'inline-block';
 
         data.forEach(c => {
             const val = parseFloat(c.sale_value) || 0;
             total += val;
             const isNew = (c.credit_type || '').toLowerCase().includes('nuevo');
+            const debtorId = c.debtor_number;
             
             const row = document.createElement('tr');
             row.innerHTML = `
+                <td style="text-align: center;"><input type="checkbox" class="cr-row-checkbox" value="${debtorId}"></td>
                 <td>${c.name || ''}</td>
                 <td>${new Date(c.created_at).toLocaleDateString()}</td>
                 <td>${c.asesor_name || ''}</td>
                 <td>${c.municipality || ''}</td>
                 <td>${isNew ? '$' + val.toLocaleString() : '-'}</td>
                 <td>${!isNew ? '$' + val.toLocaleString() : '-'}</td>
+                <td>
+                    <button class="btn-action-small btn-primary" onclick="openSingleCrDateEdit('${debtorId}')" title="Editar Fecha"><i class="fas fa-pencil-alt"></i></button>
+                </td>
             `;
             crTableBody.appendChild(row);
         });
         crTotalDisplay.innerText = '$' + total.toLocaleString();
+
+        // Re-asignar eventos de checkboxes
+        document.querySelectorAll('.cr-row-checkbox').forEach(cb => {
+            cb.addEventListener('change', updateCrSelectionState);
+        });
     }
+
+    // Lógica de edición para Créditos (CR)
+    document.getElementById('cr-select-all').addEventListener('change', (e) => {
+        const checked = e.target.checked;
+        document.querySelectorAll('.cr-row-checkbox').forEach(cb => cb.checked = checked);
+        updateCrSelectionState();
+    });
+
+    function updateCrSelectionState() {
+        const selected = document.querySelectorAll('.cr-row-checkbox:checked');
+        selectedCrIds = Array.from(selected).map(cb => cb.value);
+        btnMassEditCrDate.innerText = selectedCrIds.length > 0 ? `Editar Fechas (${selectedCrIds.length})` : 'Editar Fechas';
+    }
+
+    btnMassEditCrDate.addEventListener('click', () => {
+        if (selectedCrIds.length === 0) return alert('Seleccione al menos un crédito.');
+        massNewCreditDateInput.value = '';
+        massEditCreditDateModal.style.display = 'block';
+    });
+
+    window.openSingleCrDateEdit = (debtorId) => {
+        selectedCrIds = [debtorId];
+        massNewCreditDateInput.value = '';
+        massEditCreditDateModal.style.display = 'block';
+    };
+
+    btnConfirmMassCreditDate.addEventListener('click', async () => {
+        const newDateVal = massNewCreditDateInput.value;
+        if (!newDateVal) return alert('Seleccione una fecha válida.');
+        
+        if (!confirm(`¿Está seguro de cambiar la fecha de ${selectedCrIds.length} créditos a ${newDateVal}?`)) return;
+
+        btnConfirmMassCreditDate.disabled = true;
+        btnConfirmMassCreditDate.innerText = 'Actualizando...';
+
+        try {
+            const [y, m, d] = newDateVal.split('-').map(Number);
+            const newDateObj = new Date(y, m - 1, d, 12, 0, 0);
+            const newDateISO = newDateObj.toISOString();
+            
+            const dayStr = String(d).padStart(2, '0');
+            const monthStr = String(m).padStart(2, '0');
+            const newSaleDateText = `${dayStr}-${monthStr}-${y}`;
+
+            const { error } = await sbClient
+                .from('debtors')
+                .update({ 
+                    sale_date: newSaleDateText,
+                    created_at: newDateISO 
+                })
+                .in('debtor_number', selectedCrIds);
+
+            if (error) throw error;
+
+            alert('Fechas de créditos actualizadas correctamente.');
+            massEditCreditDateModal.style.display = 'none';
+            generateCreditsReport();
+
+        } catch (err) {
+            console.error(err);
+            alert('Error al actualizar: ' + err.message);
+        } finally {
+            btnConfirmMassCreditDate.disabled = false;
+            btnConfirmMassCreditDate.innerText = 'Guardar Cambios';
+        }
+    });
 
     btnDownloadCr.addEventListener('click', () => {
         alert('Descarga en reconstrucción.');
@@ -1108,11 +1216,14 @@ document.addEventListener('DOMContentLoaded', () => {
     btnGeneratePm.addEventListener('click', generatePmReport);
 
     async function generatePmReport() {
-        pmTableBody.innerHTML = '<tr><td colspan="8">Cargando...</td></tr>';
+        pmTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Cargando...</td></tr>';
         pmTotalCobroDisplay.innerText = '$0';
         pmTotalRecaudoDisplay.innerText = '$0';
         btnMassEditPmDate.style.display = 'none';
         document.getElementById('pm-select-all').checked = false;
+        pmSearchInput.value = '';
+        btnPmClearSearch.style.display = 'none';
+
 
         let query = sbClient.from('payments').select('*');
 
@@ -1135,24 +1246,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const { data: payments, error } = await query;
 
         if (error) {
-            pmTableBody.innerHTML = `<tr><td colspan="8">Error: ${error.message}</td></tr>`;
+            pmTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:red;">Error: ${error.message}</td></tr>`;
             return;
         }
 
         if (!payments || payments.length === 0) {
-            pmTableBody.innerHTML = '<tr><td colspan="8">No se encontraron registros.</td></tr>';
+            pmTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No se encontraron registros.</td></tr>';
             return;
         }
 
         // Obtener valor cuota y tipo de pago de los deudores asociados
         const debtorNumbers = [...new Set(payments.map(p => p.debtor_number).filter(n => n))];
-        let debtorsMap = new Map();
+        currentDebtorsMap.clear();
         if (debtorNumbers.length > 0) {
-            const { data: debtors } = await sbClient.from('debtors').select('debtor_number, valor_cuota, payment_term').in('debtor_number', debtorNumbers);
+            const { data: debtors } = await sbClient.from('debtors').select('debtor_number, valor_cuota, payment_term, cedula').in('debtor_number', debtorNumbers);
             if (debtors) {
-                debtors.forEach(d => debtorsMap.set(d.debtor_number, {
+                debtors.forEach(d => currentDebtorsMap.set(d.debtor_number, {
                     valor_cuota: d.valor_cuota,
-                    payment_term: d.payment_term
+                    payment_term: d.payment_term,
+                    cedula: d.cedula
                 }));
             }
         }
@@ -1162,7 +1274,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetTerm = isWeekly ? 'SEMANAL' : 'DIARIO';
 
         const filteredPayments = payments.filter(p => {
-            const debtorInfo = debtorsMap.get(p.debtor_number);
+            const debtorInfo = currentDebtorsMap.get(p.debtor_number);
             if (!debtorInfo || !debtorInfo.payment_term) return false;
 
             const term = debtorInfo.payment_term;
@@ -1172,20 +1284,34 @@ document.addEventListener('DOMContentLoaded', () => {
             return String(term).toUpperCase() === targetTerm;
         });
 
+        // Enriquecer datos para búsqueda (asegurar cédula)
+        filteredPayments.forEach(p => {
+            const info = currentDebtorsMap.get(p.debtor_number);
+            if (info && !p.cedula) p.cedula = info.cedula;
+        });
+
         currentPmReportData = filteredPayments;
+        renderPmTable(currentPmReportData);
+    }
+
+    function renderPmTable(paymentsToRender) {
         pmTableBody.innerHTML = '';
         
         let totalCobro = 0; 
         let totalRecaudo = 0;
 
+        if (!paymentsToRender || paymentsToRender.length === 0) {
+            pmTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No se encontraron registros con los filtros aplicados.</td></tr>';
+            return;
+        }
         // Mostrar botón de edición masiva si hay datos
-        if (filteredPayments.length > 0) {
+        if (paymentsToRender.length > 0) {
             btnMassEditPmDate.style.display = 'inline-block';
         }
 
-        filteredPayments.forEach(p => {
+        paymentsToRender.forEach(p => {
             const abono = parseFloat(p.payment_amount) || 0;
-            const debtorInfo = debtorsMap.get(p.debtor_number);
+            const debtorInfo = currentDebtorsMap.get(p.debtor_number);
             const cuota = debtorInfo ? (parseFloat(debtorInfo.valor_cuota) || 0) : 0;
             
             totalRecaudo += abono;
@@ -1204,7 +1330,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>$${cuota.toLocaleString()}</td>
                 <td>$${abono.toLocaleString()}</td>
                 <td>
-                    <button class="btn-action-small btn-primary" onclick="openSinglePmDateEdit('${payId}')" title="Editar Fecha"><i class="fas fa-pencil-alt"></i></button>
+                    <div style="display: flex; gap: 5px; justify-content: center;">
+                        <button class="btn-action-small btn-primary" onclick="openPmEditModal('${payId}')" title="Editar Cobro"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="btn-action-small btn-danger" onclick="deletePmPayment('${payId}')" title="Eliminar Cobro"><i class="fas fa-trash"></i></button>
+                    </div>
                 </td>
             `;
             pmTableBody.appendChild(row);
@@ -1217,6 +1346,23 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.pm-row-checkbox').forEach(cb => {
             cb.addEventListener('change', updatePmSelectionState);
         });
+    }
+
+    // Lógica de Búsqueda en PM
+    pmSearchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') performPmSearch();
+    });
+
+    function performPmSearch() {
+        const searchTerm = normalizeText(pmSearchInput.value);
+        if (!searchTerm) return;
+
+        const filteredData = currentPmReportData.filter(p => 
+            normalizeText(p.debtor_name).includes(searchTerm) || 
+            (p.cedula && p.cedula.includes(searchTerm))
+        );
+        renderPmTable(filteredData);
+        btnPmClearSearch.style.display = 'inline-block';
     }
 
     // Evento Seleccionar Todos
@@ -1245,6 +1391,135 @@ document.addEventListener('DOMContentLoaded', () => {
         massNewDateInput.value = '';
         massEditDateModal.style.display = 'block';
     };
+
+    // Abrir modal para edición individual completa
+    window.openPmEditModal = async (paymentId) => {
+        const { data: payment, error } = await sbClient
+            .from('payments')
+            .select('*')
+            .eq('payment_number', paymentId)
+            .single();
+
+        if (error || !payment) {
+            return alert('Error al cargar el cobro: ' + (error?.message || 'No encontrado.'));
+        }
+
+        currentPmEditData = payment;
+
+        // Formatear fecha para el input type="date" (YYYY-MM-DD)
+        const dateObj = parseDateValue(payment.created_at);
+        editPmDate.value = dateObj ? getLocalDateKey(dateObj) : '';
+        
+        editPmAmount.value = payment.payment_amount;
+        editPmMethod.value = payment.payment_method || 'Efectivo';
+
+        // --- NEW LOGIC ---
+        // 1. Populate Advisors
+        editPmAdvisor.innerHTML = '<option value="">Cargando...</option>';
+        const { data: users } = await sbClient.from('users').select('name')
+            .neq('role', 'Administrador')
+            .neq('role', 'Administrador maestro')
+            .neq('role', 'Desarrollador');
+        editPmAdvisor.innerHTML = '<option value="">Seleccione Asesor</option>';
+        if (users) {
+            users.forEach(u => {
+                const selected = u.name === payment.user_name ? 'selected' : '';
+                editPmAdvisor.innerHTML += `<option value="${u.name}" ${selected}>${u.name}</option>`;
+            });
+        }
+
+        // 2. Populate Municipalities
+        editPmMuni.innerHTML = '<option value="">Cargando...</option>';
+        const { data: deptsData } = await sbClient.from('municipalities').select('id, municipalities');
+        editPmMuni.innerHTML = '<option value="">Seleccione Municipio</option>';
+        if (deptsData) {
+            deptsData.forEach(dept => {
+                dept.municipalities.forEach(muni => {
+                    const selected = muni === payment.municipality ? 'selected' : '';
+                    editPmMuni.innerHTML += `<option value="${muni}" ${selected}>${muni}</option>`;
+                });
+            });
+        }
+
+        editPmModal.style.display = 'flex';
+    };
+
+    // Eliminar cobro individual
+    window.deletePmPayment = async (paymentId) => {
+        const payment = currentPmReportData.find(p => p.payment_number === paymentId);
+        if (!payment) return;
+
+        if (!confirm('¿Está seguro de eliminar este cobro? El saldo del crédito aumentará.')) return;
+
+        try {
+            const amount = parseFloat(payment.payment_amount) || 0;
+            const debtorNumber = payment.debtor_number;
+
+            // 1. Eliminar pago
+            const { error: delError } = await sbClient.from('payments').delete().eq('payment_number', paymentId);
+            if (delError) throw delError;
+
+            // 2. Reversión de Saldo y Cuotas en Deudores
+            const { data: debtor } = await sbClient.from('debtors').select('balance, remaining_payments').eq('debtor_number', debtorNumber).single();
+            
+            if (debtor) {
+                const newBalance = (parseFloat(debtor.balance) || 0) + amount;
+                const newRemaining = (parseInt(debtor.remaining_payments) || 0) + 1;
+                await sbClient.from('debtors').update({ balance: newBalance, remaining_payments: newRemaining }).eq('debtor_number', debtorNumber);
+            }
+
+            alert('Cobro eliminado correctamente.');
+            generatePmReport(); // Recargar tabla
+        } catch (err) {
+            alert('Error al eliminar: ' + err.message);
+        }
+    };
+
+    // Guardar edición individual
+    btnSavePmEdit.addEventListener('click', async () => {
+        if (!currentPmEditData) return;
+
+        const newDate = editPmDate.value; // YYYY-MM-DD
+        const newAmount = parseFloat(editPmAmount.value);
+        const newMethod = editPmMethod.value;
+        const newAdvisor = editPmAdvisor.value;
+        const newMuni = editPmMuni.value;
+
+        if (!newDate || isNaN(newAmount) || !newAdvisor || !newMuni) {
+            return alert('Todos los campos (Fecha, Abono, Asesor, Municipio) son obligatorios y deben ser válidos.');
+        }
+
+        if (!confirm('¿Está seguro de guardar estos cambios? Esto afectará el saldo del crédito asociado.')) return;
+
+        btnSavePmEdit.disabled = true;
+        btnSavePmEdit.innerText = 'Guardando...';
+
+        try {
+            const { error } = await sbClient.functions.invoke('update-payment', {
+                body: {
+                    payment_number: currentPmEditData.payment_number,
+                    debtor_number: currentPmEditData.debtor_number,
+                    old_amount: currentPmEditData.payment_amount,
+                    new_amount: newAmount,
+                    new_method: newMethod,
+                    new_date: newDate, // Enviamos la fecha en formato YYYY-MM-DD
+                    new_advisor: newAdvisor,
+                    new_municipality: newMuni
+                }
+            });
+
+            if (error) throw new Error(error.message || JSON.stringify(error));
+
+            alert('Cobro actualizado correctamente.');
+            editPmModal.style.display = 'none';
+            generatePmReport(); // Recargar
+        } catch (err) {
+            alert('Error al actualizar: ' + err.message);
+        } finally {
+            btnSavePmEdit.disabled = false;
+            btnSavePmEdit.innerText = 'Guardar Cambios';
+        }
+    });
 
     // Confirmar cambio de fecha
     btnConfirmMassDate.addEventListener('click', async () => {
@@ -1289,6 +1564,12 @@ document.addEventListener('DOMContentLoaded', () => {
             btnConfirmMassDate.disabled = false;
             btnConfirmMassDate.innerText = 'Guardar Cambios';
         }
+    });
+
+    btnPmClearSearch.addEventListener('click', () => {
+        pmSearchInput.value = '';
+        btnPmClearSearch.style.display = 'none';
+        renderPmTable(currentPmReportData);
     });
 
     btnDownloadPm.addEventListener('click', () => {

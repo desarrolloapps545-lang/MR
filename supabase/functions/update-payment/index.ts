@@ -41,6 +41,9 @@ Deno.serve(async (req) => {
       old_amount,
       new_amount,
       new_method,
+      new_date, // Opcional: 'YYYY-MM-DD'
+      new_advisor, // Opcional
+      new_municipality, // Opcional
     } = await req.json()
 
     // Validación robusta de parámetros.
@@ -61,18 +64,29 @@ Deno.serve(async (req) => {
       throw new Error('Los montos (nuevo y anterior) deben ser números válidos.')
     }
 
-    // 2. Generar la fecha actual en el servidor (Zona Horaria Colombia UTC-5).
-    const now = new Date();
-    const offset = -5; // Colombia UTC-5
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const colTime = new Date(utc + (3600000 * offset));
-    
-    const year = colTime.getFullYear();
-    const month = String(colTime.getMonth() + 1).padStart(2, '0');
-    const day = String(colTime.getDate()).padStart(2, '0');
-    
-    const new_date_iso = `${year}-${month}-${day}`; // YYYY-MM-DD para getDayName
-    const formatted_date = `${day}-${month}-${year}`; // DD-MM-YYYY para la BD
+    // 2. Determinar la fecha a usar.
+    let formatted_date: string;
+    let new_date_iso: string;
+
+    if (new_date && /^\d{4}-\d{2}-\d{2}$/.test(new_date)) {
+      // Usar la fecha proporcionada por el cliente.
+      new_date_iso = new_date;
+      const [y, m, d] = new_date.split('-');
+      formatted_date = `${d}-${m}-${y}`; // Formato DD-MM-YYYY para la BD
+    } else {
+      // Si no se proporciona fecha, generar la actual (comportamiento anterior).
+      const now = new Date();
+      const offset = -5; // Colombia UTC-5
+      const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const colTime = new Date(utc + (3600000 * offset));
+      
+      const year = colTime.getFullYear();
+      const month = String(colTime.getMonth() + 1).padStart(2, '0');
+      const day = String(colTime.getDate()).padStart(2, '0');
+      
+      new_date_iso = `${year}-${month}-${day}`; // YYYY-MM-DD para getDayName
+      formatted_date = `${day}-${month}-${year}`; // DD-MM-YYYY para la BD
+    }
 
     // 3. Calcular el día de la semana.
     const new_day = getDayName(new_date_iso);
@@ -92,6 +106,27 @@ Deno.serve(async (req) => {
       // La función de la base de datos lanzará una excepción en caso de fallo, que se captura aquí.
       console.error('Error en la llamada RPC a la base de datos:', rpcError)
       throw new Error(`Error en la base de datos: ${rpcError.message}`)
+    }
+
+    // 5. Actualizar datos no financieros si se proporcionaron (asesor, municipio).
+    // Esto se hace después del RPC para asegurar que la transacción financiera crítica se complete primero.
+    const nonFinancialUpdates: { user_name?: string; municipality?: string } = {}
+    if (new_advisor) {
+      nonFinancialUpdates.user_name = new_advisor
+    }
+    if (new_municipality) {
+      nonFinancialUpdates.municipality = new_municipality
+    }
+
+    if (Object.keys(nonFinancialUpdates).length > 0) {
+      const { error: updateError } = await supabase
+        .from('payments')
+        .update(nonFinancialUpdates)
+        .eq('payment_number', payment_number)
+
+      if (updateError) {
+        console.warn(`RPC para el pago ${payment_number} tuvo éxito, pero la actualización de datos adicionales falló: ${updateError.message}`)
+      }
     }
 
     return new Response(JSON.stringify({ success: true }), {
