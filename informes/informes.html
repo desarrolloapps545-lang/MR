@@ -142,8 +142,10 @@
                     <select id="cr-filter-muni"><option value="">Todos los Municipios</option></select>
                     <select id="cr-filter-user"><option value="">Todos los Asesores</option></select>
                     <button id="btn-generate-cr" class="btn-primary">Consultar</button>
-                    <button id="btn-mass-edit-cr-date" class="btn-warning" style="display:none;">Editar Fechas</button>
                     <button id="btn-download-cr" class="btn-primary">Informe Excel</button>
+                    <button id="btn-mass-edit-cr-date" class="btn-warning" style="display:none;">Editar Fechas</button>
+                    <input type="text" id="cr-search-input" placeholder="Ingrese nombre o cedula del cliente" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    <button id="btn-cr-clear-search" class="btn-secondary" style="display:none;">Limpiar</button>
                 </div>
             </div>
 
@@ -196,10 +198,10 @@
                     <select id="pm-filter-muni"><option value="">Todos los Municipios</option></select>
                     <select id="pm-filter-user"><option value="">Todos los Asesores</option></select>
                     <button id="btn-generate-pm" class="btn-primary">Consultar</button>
-                    <button id="btn-download-pm" class="btn-primary">Infrome Excel</button>
-                    <input type="text" id="pm-search-input" placeholder="Ingrese nombre o cedula a buscar" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 250px;">
-                    <button id="btn-pm-clear-search" class="btn-secondary" style="display:none;">Limpiar</button>
+                    <button id="btn-download-pm" class="btn-primary">Informe Excel</button>
                     <button id="btn-mass-edit-pm-date" class="btn-warning" style="display:none;">Editar Fechas</button>
+                    <input type="text" id="pm-search-input" placeholder="Ingrese nombre o cedula del cliente" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    <button id="btn-pm-clear-search" class="btn-secondary" style="display:none;">Limpiar</button>
                 </div>
             </div>
 
@@ -411,8 +413,8 @@
     </div>
 
     <!-- Modal Edición Individual de Cobro (PM) -->
-    <div id="editPmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 3600; align-items: center; justify-content: center;">
-        <div style="background:white; margin: 0; padding:20px; width:350px; display:flex; flex-direction:column; gap:15px; border-radius: 8px;">
+    <div id="editPmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 3600;">
+        <div style="background:white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding:20px; width:350px; display:flex; flex-direction:column; gap:15px; border-radius: 8px; max-height: 90vh; overflow-y: auto;">
             <h3>Editar Cobro</h3>
             <label>Fecha:</label>
             <input type="date" id="edit-pm-date" style="width: 100%; padding: 8px; box-sizing: border-box;">
@@ -423,12 +425,45 @@
                 <option value="Efectivo">Efectivo</option>
                 <option value="Transferencia">Transferencia</option>
             </select>
+            <label>Municipio:</label>
+            <select id="edit-pm-municipality" style="width: 100%; padding: 8px; box-sizing: border-box;"></select>
             <label>Asesor:</label>
             <select id="edit-pm-advisor" style="width: 100%; padding: 8px; box-sizing: border-box;"></select>
-            <label>Municipio:</label>
-            <select id="edit-pm-muni" style="width: 100%; padding: 8px; box-sizing: border-box;"></select>
             <button id="btn-save-pm-edit" class="btn-primary">Guardar Cambios</button>
             <button onclick="document.getElementById('editPmModal').style.display='none'" class="btn-secondary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Edición Individual de Crédito (CR) -->
+    <div id="editCrModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 3600;">
+        <div style="background:white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding:20px; width:350px; display:flex; flex-direction:column; gap:15px; border-radius: 8px; max-height: 90vh; overflow-y: auto;">
+            <h3>Editar Crédito</h3>
+            <label>Fecha Venta:</label>
+            <input type="date" id="edit-cr-date" style="width: 100%; padding: 8px; box-sizing: border-box;">
+            <label>Valor Venta:</label>
+            <input type="number" id="edit-cr-value" style="width: 100%; padding: 8px; box-sizing: border-box;">
+            <label>Intereses:</label>
+            <input type="number" id="edit-cr-interests" style="width: 100%; padding: 8px; box-sizing: border-box;">
+            <label>Cuota:</label>
+            <input type="number" id="edit-cr-quota" style="width: 100%; padding: 8px; box-sizing: border-box;">
+            <label>Saldo:</label>
+            <input type="number" id="edit-cr-balance" style="width: 100%; padding: 8px; box-sizing: border-box;">
+            <label>Tipo:</label>
+            <select id="edit-cr-type" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                <option value="Nuevo">Nuevo</option>
+                <option value="Represte">Represte</option>
+            </select>
+            <label>Frecuencia:</label>
+            <select id="edit-cr-term" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                <option value="Diario">Diario</option>
+                <option value="Semanal">Semanal</option>
+            </select>
+            <label>Municipio:</label>
+            <select id="edit-cr-municipality" style="width: 100%; padding: 8px; box-sizing: border-box;"></select>
+            <label>Asesor:</label>
+            <select id="edit-cr-advisor" style="width: 100%; padding: 8px; box-sizing: border-box;"></select>
+            <button id="btn-save-cr-edit" class="btn-primary">Guardar Cambios</button>
+            <button onclick="document.getElementById('editCrModal').style.display='none'" class="btn-secondary">Cancelar</button>
         </div>
     </div>
 
@@ -437,20 +472,9 @@
         <div style="background:white; margin:15% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:15px; border-radius: 8px;">
             <h3>Editar Fecha de Pago</h3>
             <p>Seleccione la nueva fecha para los pagos seleccionados:</p>
-            <input type="date" id="mass-new-date-input" style="width: 100%; padding: 8px;">
+            <input type="date" id="mass-new-date-input" style="width: auto; padding: 8px; align-self: center;">
             <button id="btn-confirm-mass-date" class="btn-primary">Guardar Cambios</button>
             <button onclick="document.getElementById('massEditDateModal').style.display='none'" class="btn-secondary">Cancelar</button>
-        </div>
-    </div>
-
-    <!-- Modal Edición Masiva de Fechas (Créditos) -->
-    <div id="massEditCreditDateModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 3550;">
-        <div style="background:white; margin:15% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:15px; border-radius: 8px;">
-            <h3>Editar Fecha de Crédito</h3>
-            <p>Seleccione la nueva fecha para los créditos seleccionados:</p>
-            <input type="date" id="mass-new-credit-date-input" style="width: 100%; padding: 8px;">
-            <button id="btn-confirm-mass-credit-date" class="btn-primary">Guardar Cambios</button>
-            <button onclick="document.getElementById('massEditCreditDateModal').style.display='none'" class="btn-secondary">Cancelar</button>
         </div>
     </div>
 

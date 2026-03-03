@@ -47,6 +47,8 @@ const btnDownloadCr = document.getElementById('btn-download-cr');
 const btnMassEditCrDate = document.getElementById('btn-mass-edit-cr-date');
 const crTableBody = document.getElementById('cr-table-body');
 const crTotalDisplay = document.getElementById('cr-total-display');
+const crSearchInput = document.getElementById('cr-search-input');
+const btnCrClearSearch = document.getElementById('btn-cr-clear-search');
 // Referencias Informes PM (Payments Report)
 const btnReportPm = document.getElementById('btn-report-pm');
 const pmReportBox = document.getElementById('pm-report-box');
@@ -125,14 +127,21 @@ const editPmModal = document.getElementById('editPmModal');
 const editPmDate = document.getElementById('edit-pm-date');
 const editPmAmount = document.getElementById('edit-pm-amount');
 const editPmMethod = document.getElementById('edit-pm-method');
+const editPmMunicipality = document.getElementById('edit-pm-municipality');
 const editPmAdvisor = document.getElementById('edit-pm-advisor');
-const editPmMuni = document.getElementById('edit-pm-muni');
 const btnSavePmEdit = document.getElementById('btn-save-pm-edit');
-
-// Referencias Modal Edición Masiva Fechas (Créditos)
-const massEditCreditDateModal = document.getElementById('massEditCreditDateModal');
-const massNewCreditDateInput = document.getElementById('mass-new-credit-date-input');
-const btnConfirmMassCreditDate = document.getElementById('btn-confirm-mass-credit-date');
+// Referencias Modal Edición Individual Crédito
+const editCrModal = document.getElementById('editCrModal');
+const editCrDate = document.getElementById('edit-cr-date');
+const editCrValue = document.getElementById('edit-cr-value');
+const editCrInterests = document.getElementById('edit-cr-interests');
+const editCrQuota = document.getElementById('edit-cr-quota');
+const editCrBalance = document.getElementById('edit-cr-balance');
+const editCrType = document.getElementById('edit-cr-type');
+const editCrTerm = document.getElementById('edit-cr-term');
+const editCrMunicipality = document.getElementById('edit-cr-municipality');
+const editCrAdvisor = document.getElementById('edit-cr-advisor');
+const btnSaveCrEdit = document.getElementById('btn-save-cr-edit');
 
 let currentPgReportData = []; // Datos para exportar P&G
 let currentPgMode = null; // daily | weekly
@@ -141,9 +150,8 @@ let currentPbMode = null; // daily | weekly
 let currentCrReportData = []; // Datos para exportar CR
 let currentCrMode = null; // daily | weekly
 let currentPmReportData = []; // Datos para exportar PM
-let selectedCrIds = []; // IDs de créditos seleccionados para edición masiva
 let currentPmMode = null; // daily | weekly
-let currentDebtorsMap = new Map(); // Mapa global de deudores para PM
+let currentPmDebtorsMap = new Map(); // Mapa global para info de deudores en PM
 let currentExReportData = []; // Datos para exportar EX
 let currentExMode = null; // daily | weekly
 let currentGnReportData = []; // Datos para exportar GN
@@ -156,6 +164,9 @@ let pendingReportUpdate = false; // Bandera para cambios pendientes
 let currentReportContext = null; // Contexto unificado
 let selectedPmIds = []; // IDs seleccionados para edición masiva
 let currentPmEditData = null; // Datos del cobro que se está editando individualmente
+let selectedCrIds = []; // IDs seleccionados para edición masiva de créditos
+let currentCrEditData = null; // Datos del crédito que se está editando individualmente
+let massEditContext = 'pm'; // 'pm' | 'cr' - Contexto para el modal de edición masiva
 
 // Contexto global para detalles de créditos
 let currentCreditsContext = {
@@ -211,6 +222,26 @@ function parseDateValue(value) {
 
     const d = new Date(value);
     return isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * Calcula el nombre del día de la semana en español a partir de una fecha en formato 'YYYY-MM-DD'.
+ * @param {string} dateString La fecha en formato 'YYYY-MM-DD'.
+ * @returns {string} El nombre del día ('Lunes', 'Martes', etc.).
+ */
+function getDayName(dateString) { // dateString is YYYY-MM-DD
+    try {
+        // Separar en partes para evitar problemas de zona horaria de new Date('YYYY-MM-DD')
+        const parts = dateString.split('-').map(Number);
+        // new Date(año, mes (0-11), día) crea una fecha en la zona horaria local.
+        const date = new Date(parts[0], parts[1] - 1, parts[2]);
+        if (isNaN(date.getTime())) throw new Error('Valor de fecha inválido.');
+
+        const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        return days[date.getDay()];
+    } catch (e) {
+        throw new Error(`Error al procesar la fecha '${dateString}': ${e.message}`);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1000,10 +1031,12 @@ document.addEventListener('DOMContentLoaded', () => {
     btnGenerateCr.addEventListener('click', generateCreditsReport);
 
     async function generateCreditsReport() {
-        crTableBody.innerHTML = '<tr><td colspan="8">Cargando...</td></tr>';
+        crTableBody.innerHTML = '<tr><td colspan="6">Cargando...</td></tr>';
         crTotalDisplay.innerText = '$0';
         btnMassEditCrDate.style.display = 'none';
         document.getElementById('cr-select-all').checked = false;
+        crSearchInput.value = '';
+        btnCrClearSearch.style.display = 'none';
 
         let query = sbClient.from('debtors').select('*');
 
@@ -1026,7 +1059,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const { data: credits, error } = await query;
 
         if (error) {
-            crTableBody.innerHTML = `<tr><td colspan="8">Error: ${error.message}</td></tr>`;
+            crTableBody.innerHTML = `<tr><td colspan="6">Error: ${error.message}</td></tr>`;
             return;
         }
 
@@ -1053,12 +1086,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!data || data.length === 0) {
             crTableBody.innerHTML = '<tr><td colspan="8">No se encontraron registros.</td></tr>';
-            crTotalDisplay.innerText = '$0';
-            btnMassEditCrDate.style.display = 'none';
             return;
         }
 
-        btnMassEditCrDate.style.display = 'inline-block';
+        if (data.length > 0) {
+            btnMassEditCrDate.style.display = 'inline-block';
+        }
 
         data.forEach(c => {
             const val = parseFloat(c.sale_value) || 0;
@@ -1076,20 +1109,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${isNew ? '$' + val.toLocaleString() : '-'}</td>
                 <td>${!isNew ? '$' + val.toLocaleString() : '-'}</td>
                 <td>
-                    <button class="btn-action-small btn-primary" onclick="openSingleCrDateEdit('${debtorId}')" title="Editar Fecha"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="btn-action-small btn-primary" onclick="openCrEditModal('${debtorId}')" title="Editar Crédito"><i class="fas fa-pencil-alt"></i></button>
                 </td>
             `;
             crTableBody.appendChild(row);
         });
         crTotalDisplay.innerText = '$' + total.toLocaleString();
 
-        // Re-asignar eventos de checkboxes
+        // Eventos checkboxes
         document.querySelectorAll('.cr-row-checkbox').forEach(cb => {
             cb.addEventListener('change', updateCrSelectionState);
         });
     }
 
-    // Lógica de edición para Créditos (CR)
+    // Lógica de Búsqueda en CR
+    crSearchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') performCrSearch();
+    });
+
+    function performCrSearch() {
+        const searchTerm = normalizeText(crSearchInput.value);
+        if (!searchTerm) return;
+
+        const filteredData = currentCrReportData.filter(c => 
+            (c.name && normalizeText(c.name).includes(searchTerm)) || 
+            (c.cedula && String(c.cedula).includes(searchTerm))
+        );
+        renderCrTable(filteredData);
+        btnCrClearSearch.style.display = 'inline-block';
+    }
+
+    btnCrClearSearch.addEventListener('click', () => {
+        crSearchInput.value = '';
+        btnCrClearSearch.style.display = 'none';
+        renderCrTable(currentCrReportData);
+    });
+
+    // Evento Seleccionar Todos CR
     document.getElementById('cr-select-all').addEventListener('change', (e) => {
         const checked = e.target.checked;
         document.querySelectorAll('.cr-row-checkbox').forEach(cb => cb.checked = checked);
@@ -1102,58 +1158,73 @@ document.addEventListener('DOMContentLoaded', () => {
         btnMassEditCrDate.innerText = selectedCrIds.length > 0 ? `Editar Fechas (${selectedCrIds.length})` : 'Editar Fechas';
     }
 
+    // Abrir modal edición masiva CR
     btnMassEditCrDate.addEventListener('click', () => {
         if (selectedCrIds.length === 0) return alert('Seleccione al menos un crédito.');
-        massNewCreditDateInput.value = '';
-        massEditCreditDateModal.style.display = 'block';
+        massEditContext = 'cr'; // Establecer contexto
+        massNewDateInput.value = '';
+        massEditDateModal.style.display = 'block';
     });
 
-    window.openSingleCrDateEdit = (debtorId) => {
-        selectedCrIds = [debtorId];
-        massNewCreditDateInput.value = '';
-        massEditCreditDateModal.style.display = 'block';
-    };
-
-    btnConfirmMassCreditDate.addEventListener('click', async () => {
-        const newDateVal = massNewCreditDateInput.value;
-        if (!newDateVal) return alert('Seleccione una fecha válida.');
+    // Abrir modal edición individual CR
+    window.openCrEditModal = async (debtorNumber) => {
+        const { data: credit, error } = await sbClient.from('debtors').select('*').eq('debtor_number', debtorNumber).single();
         
-        if (!confirm(`¿Está seguro de cambiar la fecha de ${selectedCrIds.length} créditos a ${newDateVal}?`)) return;
+        if (error || !credit) return alert('Error al cargar crédito: ' + (error?.message || 'No encontrado'));
 
-        btnConfirmMassCreditDate.disabled = true;
-        btnConfirmMassCreditDate.innerText = 'Actualizando...';
+        currentCrEditData = credit;
 
-        try {
-            const [y, m, d] = newDateVal.split('-').map(Number);
-            const newDateObj = new Date(y, m - 1, d, 12, 0, 0);
-            const newDateISO = newDateObj.toISOString();
-            
-            const dayStr = String(d).padStart(2, '0');
-            const monthStr = String(m).padStart(2, '0');
-            const newSaleDateText = `${dayStr}-${monthStr}-${y}`;
+        // Pre-llenar campos
+        const dateObj = parseDateValue(credit.sale_date || credit.created_at);
+        editCrDate.value = dateObj ? getLocalDateKey(dateObj) : '';
+        
+        editCrValue.value = credit.sale_value;
+        editCrInterests.value = credit.interests;
+        editCrQuota.value = credit.valor_cuota;
+        editCrBalance.value = credit.balance;
+        editCrType.value = credit.credit_type || 'Nuevo';
+        editCrTerm.value = (Array.isArray(credit.payment_term) ? credit.payment_term[0] : credit.payment_term) || 'Diario';
 
-            const { error } = await sbClient
-                .from('debtors')
-                .update({ 
-                    sale_date: newSaleDateText,
-                    created_at: newDateISO 
-                })
-                .in('debtor_number', selectedCrIds);
+        // Cargar municipios y asesores
+        const loadLocationData = async () => {
+            const { data: deptsData } = await sbClient.from('municipalities').select('municipalities');
+            const allMunis = deptsData ? deptsData.flatMap(d => d.municipalities) : [];
+            allMunis.sort();
 
-            if (error) throw error;
+            editCrMunicipality.innerHTML = '<option value="">Seleccione...</option>';
+            allMunis.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = m;
+                editCrMunicipality.appendChild(opt);
+            });
+            if (credit.municipality) editCrMunicipality.value = credit.municipality;
 
-            alert('Fechas de créditos actualizadas correctamente.');
-            massEditCreditDateModal.style.display = 'none';
-            generateCreditsReport();
+            const loadAdvisors = async (muni) => {
+                editCrAdvisor.innerHTML = '<option value="">Cargando...</option>';
+                if (!muni) return;
+                const { data: advisors } = await sbClient.from('users').select('name').contains('assigned_municipality', [muni])
+                    .not('role', 'in', '("Administrador", "Administrador maestro", "Desarrollador")');
+                
+                editCrAdvisor.innerHTML = '<option value="">Seleccione asesor</option>';
+                if (advisors) {
+                    advisors.forEach(adv => {
+                        const opt = document.createElement('option');
+                        opt.value = adv.name;
+                        opt.textContent = adv.name;
+                        editCrAdvisor.appendChild(opt);
+                    });
+                }
+                if (credit.asesor_name) editCrAdvisor.value = credit.asesor_name;
+            };
 
-        } catch (err) {
-            console.error(err);
-            alert('Error al actualizar: ' + err.message);
-        } finally {
-            btnConfirmMassCreditDate.disabled = false;
-            btnConfirmMassCreditDate.innerText = 'Guardar Cambios';
-        }
-    });
+            await loadAdvisors(credit.municipality);
+            editCrMunicipality.onchange = () => loadAdvisors(editCrMunicipality.value);
+        };
+
+        await loadLocationData();
+        editCrModal.style.display = 'block';
+    };
 
     btnDownloadCr.addEventListener('click', () => {
         alert('Descarga en reconstrucción.');
@@ -1257,14 +1328,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Obtener valor cuota y tipo de pago de los deudores asociados
         const debtorNumbers = [...new Set(payments.map(p => p.debtor_number).filter(n => n))];
-        currentDebtorsMap.clear();
+        currentPmDebtorsMap.clear(); // Limpiar mapa global
         if (debtorNumbers.length > 0) {
-            const { data: debtors } = await sbClient.from('debtors').select('debtor_number, valor_cuota, payment_term, cedula').in('debtor_number', debtorNumbers);
+            const { data: debtors } = await sbClient.from('debtors').select('debtor_number, valor_cuota, payment_term').in('debtor_number', debtorNumbers);
             if (debtors) {
-                debtors.forEach(d => currentDebtorsMap.set(d.debtor_number, {
+                debtors.forEach(d => currentPmDebtorsMap.set(d.debtor_number, {
                     valor_cuota: d.valor_cuota,
-                    payment_term: d.payment_term,
-                    cedula: d.cedula
+                    payment_term: d.payment_term
                 }));
             }
         }
@@ -1274,7 +1344,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetTerm = isWeekly ? 'SEMANAL' : 'DIARIO';
 
         const filteredPayments = payments.filter(p => {
-            const debtorInfo = currentDebtorsMap.get(p.debtor_number);
+            const debtorInfo = currentPmDebtorsMap.get(p.debtor_number);
             if (!debtorInfo || !debtorInfo.payment_term) return false;
 
             const term = debtorInfo.payment_term;
@@ -1282,12 +1352,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return term.some(t => String(t).toUpperCase() === targetTerm);
             }
             return String(term).toUpperCase() === targetTerm;
-        });
-
-        // Enriquecer datos para búsqueda (asegurar cédula)
-        filteredPayments.forEach(p => {
-            const info = currentDebtorsMap.get(p.debtor_number);
-            if (info && !p.cedula) p.cedula = info.cedula;
         });
 
         currentPmReportData = filteredPayments;
@@ -1311,7 +1375,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         paymentsToRender.forEach(p => {
             const abono = parseFloat(p.payment_amount) || 0;
-            const debtorInfo = currentDebtorsMap.get(p.debtor_number);
+            const debtorInfo = currentPmDebtorsMap.get(p.debtor_number);
             const cuota = debtorInfo ? (parseFloat(debtorInfo.valor_cuota) || 0) : 0;
             
             totalRecaudo += abono;
@@ -1332,7 +1396,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>
                     <div style="display: flex; gap: 5px; justify-content: center;">
                         <button class="btn-action-small btn-primary" onclick="openPmEditModal('${payId}')" title="Editar Cobro"><i class="fas fa-pencil-alt"></i></button>
-                        <button class="btn-action-small btn-danger" onclick="deletePmPayment('${payId}')" title="Eliminar Cobro"><i class="fas fa-trash"></i></button>
+                        <button class="btn-action-small btn-danger" onclick="deletePmPayment('${payId}', ${abono}, '${p.debtor_number}')" title="Eliminar Cobro"><i class="fas fa-trash"></i></button>
                     </div>
                 </td>
             `;
@@ -1381,6 +1445,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Abrir modal para edición masiva
     btnMassEditPmDate.addEventListener('click', () => {
         if (selectedPmIds.length === 0) return alert('Seleccione al menos un pago.');
+        massEditContext = 'pm'; // Establecer contexto
         massNewDateInput.value = '';
         massEditDateModal.style.display = 'block';
     });
@@ -1413,57 +1478,81 @@ document.addEventListener('DOMContentLoaded', () => {
         editPmAmount.value = payment.payment_amount;
         editPmMethod.value = payment.payment_method || 'Efectivo';
 
-        // --- NEW LOGIC ---
-        // 1. Populate Advisors
-        editPmAdvisor.innerHTML = '<option value="">Cargando...</option>';
-        const { data: users } = await sbClient.from('users').select('name')
-            .neq('role', 'Administrador')
-            .neq('role', 'Administrador maestro')
-            .neq('role', 'Desarrollador');
-        editPmAdvisor.innerHTML = '<option value="">Seleccione Asesor</option>';
-        if (users) {
-            users.forEach(u => {
-                const selected = u.name === payment.user_name ? 'selected' : '';
-                editPmAdvisor.innerHTML += `<option value="${u.name}" ${selected}>${u.name}</option>`;
-            });
-        }
+        // Cargar y seleccionar municipio/asesor
+        const loadLocationData = async () => {
+            // 1. Cargar todos los municipios de todos los departamentos
+            const { data: deptsData } = await sbClient.from('municipalities').select('municipalities');
+            const allMunis = deptsData ? deptsData.flatMap(d => d.municipalities) : [];
+            allMunis.sort();
 
-        // 2. Populate Municipalities
-        editPmMuni.innerHTML = '<option value="">Cargando...</option>';
-        const { data: deptsData } = await sbClient.from('municipalities').select('id, municipalities');
-        editPmMuni.innerHTML = '<option value="">Seleccione Municipio</option>';
-        if (deptsData) {
-            deptsData.forEach(dept => {
-                dept.municipalities.forEach(muni => {
-                    const selected = muni === payment.municipality ? 'selected' : '';
-                    editPmMuni.innerHTML += `<option value="${muni}" ${selected}>${muni}</option>`;
-                });
+            editPmMunicipality.innerHTML = '<option value="">Seleccione...</option>';
+            allMunis.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = m;
+                editPmMunicipality.appendChild(opt);
             });
-        }
 
-        editPmModal.style.display = 'flex';
+            // 2. Pre-seleccionar municipio actual
+            if (payment.municipality) {
+                editPmMunicipality.value = payment.municipality;
+            }
+
+            // 3. Función para cargar asesores según el municipio
+            const loadAdvisors = async (muni) => {
+                editPmAdvisor.innerHTML = '<option value="">Cargando...</option>';
+                if (!muni) {
+                    editPmAdvisor.innerHTML = '<option value="">Seleccione municipio</option>';
+                    return;
+                }
+
+                const { data: advisors } = await sbClient.from('users')
+                    .select('name')
+                    .contains('assigned_municipality', [muni])
+                    .not('role', 'in', '("Administrador", "Administrador maestro", "Desarrollador")');
+
+                editPmAdvisor.innerHTML = '<option value="">Seleccione asesor</option>';
+                if (advisors) {
+                    advisors.forEach(adv => {
+                        const opt = document.createElement('option');
+                        opt.value = adv.name;
+                        opt.textContent = adv.name;
+                        editPmAdvisor.appendChild(opt);
+                    });
+                }
+                // Pre-seleccionar asesor actual si existe en la lista
+                if (payment.user_name && Array.from(editPmAdvisor.options).some(o => o.value === payment.user_name)) {
+                    editPmAdvisor.value = payment.user_name;
+                }
+            };
+
+            // 4. Cargar asesores iniciales y configurar evento de cambio
+            await loadAdvisors(payment.municipality);
+            editPmMunicipality.onchange = () => loadAdvisors(editPmMunicipality.value);
+        };
+
+        await loadLocationData();
+        editPmModal.style.display = 'block';
     };
 
-    // Eliminar cobro individual
-    window.deletePmPayment = async (paymentId) => {
-        const payment = currentPmReportData.find(p => p.payment_number === paymentId);
-        if (!payment) return;
-
+    // Nueva función para eliminar cobro desde el informe
+    window.deletePmPayment = async (paymentId, amount, debtorNumber) => {
         if (!confirm('¿Está seguro de eliminar este cobro? El saldo del crédito aumentará.')) return;
 
         try {
-            const amount = parseFloat(payment.payment_amount) || 0;
-            const debtorNumber = payment.debtor_number;
+            // 1. Eliminar el pago
+            const { error: deleteError } = await sbClient
+                .from('payments')
+                .delete()
+                .eq('payment_number', paymentId);
 
-            // 1. Eliminar pago
-            const { error: delError } = await sbClient.from('payments').delete().eq('payment_number', paymentId);
-            if (delError) throw delError;
+            if (deleteError) throw new Error('Error al eliminar el pago: ' + deleteError.message);
 
-            // 2. Reversión de Saldo y Cuotas en Deudores
+            // 2. Actualizar el deudor (Revertir saldo)
             const { data: debtor } = await sbClient.from('debtors').select('balance, remaining_payments').eq('debtor_number', debtorNumber).single();
             
             if (debtor) {
-                const newBalance = (parseFloat(debtor.balance) || 0) + amount;
+                const newBalance = (parseFloat(debtor.balance) || 0) + parseFloat(amount);
                 const newRemaining = (parseInt(debtor.remaining_payments) || 0) + 1;
                 await sbClient.from('debtors').update({ balance: newBalance, remaining_payments: newRemaining }).eq('debtor_number', debtorNumber);
             }
@@ -1471,22 +1560,22 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Cobro eliminado correctamente.');
             generatePmReport(); // Recargar tabla
         } catch (err) {
-            alert('Error al eliminar: ' + err.message);
+            alert(err.message);
         }
     };
 
     // Guardar edición individual
-    btnSavePmEdit.addEventListener('click', async () => {
+    btnSavePmEdit.addEventListener('click', async () => { // MODIFICADO: Usa JS en lugar de Edge Function
         if (!currentPmEditData) return;
 
         const newDate = editPmDate.value; // YYYY-MM-DD
         const newAmount = parseFloat(editPmAmount.value);
         const newMethod = editPmMethod.value;
+        const newMunicipality = editPmMunicipality.value;
         const newAdvisor = editPmAdvisor.value;
-        const newMuni = editPmMuni.value;
 
-        if (!newDate || isNaN(newAmount) || !newAdvisor || !newMuni) {
-            return alert('Todos los campos (Fecha, Abono, Asesor, Municipio) son obligatorios y deben ser válidos.');
+        if (!newDate || isNaN(newAmount) || newAmount < 0 || !newMunicipality || !newAdvisor) {
+            return alert('Todos los campos (Fecha, Abono, Municipio, Asesor) son obligatorios y deben ser válidos.');
         }
 
         if (!confirm('¿Está seguro de guardar estos cambios? Esto afectará el saldo del crédito asociado.')) return;
@@ -1495,20 +1584,52 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSavePmEdit.innerText = 'Guardando...';
 
         try {
-            const { error } = await sbClient.functions.invoke('update-payment', {
-                body: {
-                    payment_number: currentPmEditData.payment_number,
-                    debtor_number: currentPmEditData.debtor_number,
-                    old_amount: currentPmEditData.payment_amount,
-                    new_amount: newAmount,
-                    new_method: newMethod,
-                    new_date: newDate, // Enviamos la fecha en formato YYYY-MM-DD
-                    new_advisor: newAdvisor,
-                    new_municipality: newMuni
-                }
-            });
+            const oldAmount = parseFloat(currentPmEditData.payment_amount) || 0;
+            const debtorNumber = currentPmEditData.debtor_number;
+            const paymentNumber = currentPmEditData.payment_number;
 
-            if (error) throw new Error(error.message || JSON.stringify(error));
+            // 1. Calcular diferencia de monto y nuevo saldo
+            const amountDifference = newAmount - oldAmount;
+
+            const { data: debtor, error: debtorError } = await sbClient
+                .from('debtors')
+                .select('balance')
+                .eq('debtor_number', debtorNumber)
+                .single();
+
+            if (debtorError) throw new Error('No se pudo encontrar el crédito asociado: ' + debtorError.message);
+
+            const currentBalance = parseFloat(debtor.balance) || 0;
+            const newBalance = currentBalance - amountDifference;
+
+            // 2. Preparar datos de fecha
+            const [y, m, d] = newDate.split('-').map(Number);
+            const newDateObj = new Date(y, m - 1, d, 12, 0, 0); // Hora 12 para evitar saltos de TZ
+            const newDateISO = newDateObj.toISOString();
+            const dayStr = String(d).padStart(2, '0');
+            const monthStr = String(m).padStart(2, '0');
+            const newDateText = `${dayStr}-${monthStr}-${y}`; // DD-MM-YYYY
+            const newDayName = getDayName(newDate);
+
+            // 3. Actualizar el pago
+            const { error: paymentUpdateError } = await sbClient
+                .from('payments')
+                .update({
+                    payment_amount: newAmount,
+                    payment_method: newMethod,
+                    payment_date: newDateText,
+                    created_at: newDateISO,
+                    payment_day: newDayName,
+                    municipality: newMunicipality,
+                    user_name: newAdvisor
+                })
+                .eq('payment_number', paymentNumber);
+
+            if (paymentUpdateError) throw new Error('Error al actualizar el pago: ' + paymentUpdateError.message);
+
+            // 4. Actualizar el saldo del deudor
+            const { error: debtorUpdateError } = await sbClient.from('debtors').update({ balance: newBalance }).eq('debtor_number', debtorNumber);
+            if (debtorUpdateError) throw new Error('Error al actualizar el saldo del crédito: ' + debtorUpdateError.message);
 
             alert('Cobro actualizado correctamente.');
             editPmModal.style.display = 'none';
@@ -1521,12 +1642,58 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Guardar edición individual CR (Edge Function)
+    btnSaveCrEdit.addEventListener('click', async () => {
+        if (!currentCrEditData) return;
+
+        // Preparar fecha DD-MM-YYYY
+        let saleDateText = null;
+        let saleDateISO = null;
+        if (editCrDate.value) {
+            const [y, m, d] = editCrDate.value.split('-');
+            saleDateText = `${d}-${m}-${y}`;
+            const dateObj = new Date(y, m - 1, d, 12, 0, 0);
+            saleDateISO = dateObj.toISOString();
+        }
+
+        const updates = {
+            sale_date: saleDateText,
+            created_at: saleDateISO, // Actualizar timestamp también para reportes
+            sale_value: editCrValue.value,
+            interests: editCrInterests.value,
+            valor_cuota: editCrQuota.value,
+            balance: editCrBalance.value,
+            credit_type: editCrType.value,
+            payment_term: [editCrTerm.value],
+            municipality: editCrMunicipality.value,
+            asesor_name: editCrAdvisor.value
+        };
+
+        btnSaveCrEdit.disabled = true;
+        btnSaveCrEdit.innerText = 'Guardando...';
+
+        const { data: { session } } = await sbClient.auth.getSession();
+        const { error } = await sbClient.functions.invoke('update-credit', {
+            body: { credit_id: currentCrEditData.debtor_number, updates: updates },
+            headers: { Authorization: `Bearer ${session?.access_token}` }
+        });
+
+        btnSaveCrEdit.disabled = false;
+        btnSaveCrEdit.innerText = 'Guardar Cambios';
+
+        if (error) return alert('Error al actualizar crédito: ' + error.message);
+        alert('Crédito actualizado correctamente.');
+        editCrModal.style.display = 'none';
+        generateCreditsReport();
+    });
+
     // Confirmar cambio de fecha
     btnConfirmMassDate.addEventListener('click', async () => {
         const newDateVal = massNewDateInput.value;
         if (!newDateVal) return alert('Seleccione una fecha válida.');
         
-        if (!confirm(`¿Está seguro de cambiar la fecha de ${selectedPmIds.length} pagos a ${newDateVal}?`)) return;
+        const count = massEditContext === 'pm' ? selectedPmIds.length : selectedCrIds.length;
+        if (!confirm(`¿Está seguro de cambiar la fecha de ${count} registros a ${newDateVal}?`)) return;
 
         btnConfirmMassDate.disabled = true;
         btnConfirmMassDate.innerText = 'Actualizando...';
@@ -1542,20 +1709,31 @@ document.addEventListener('DOMContentLoaded', () => {
             const monthStr = String(m).padStart(2, '0');
             const newDateText = `${dayStr}-${monthStr}-${y}`;
 
-            // Actualizar en Supabase
-            const { error } = await sbClient
-                .from('payments')
-                .update({ 
-                    payment_date: newDateText,
-                    created_at: newDateISO 
-                })
-                .in('payment_number', selectedPmIds);
+            let error = null;
+
+            if (massEditContext === 'pm') {
+                // Actualizar Pagos
+                const res = await sbClient
+                    .from('payments')
+                    .update({ payment_date: newDateText, created_at: newDateISO })
+                    .in('payment_number', selectedPmIds);
+                error = res.error;
+            } else if (massEditContext === 'cr') {
+                // Actualizar Créditos
+                const res = await sbClient
+                    .from('debtors')
+                    .update({ sale_date: newDateText, created_at: newDateISO })
+                    .in('debtor_number', selectedCrIds);
+                error = res.error;
+            }
 
             if (error) throw error;
 
             alert('Fechas actualizadas correctamente.');
             massEditDateModal.style.display = 'none';
-            generatePmReport(); // Recargar tabla
+            
+            if (massEditContext === 'pm') generatePmReport();
+            else generateCreditsReport();
 
         } catch (err) {
             console.error(err);

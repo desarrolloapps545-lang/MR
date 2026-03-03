@@ -42,8 +42,6 @@ Deno.serve(async (req) => {
       new_amount,
       new_method,
       new_date, // Opcional: 'YYYY-MM-DD'
-      new_advisor, // Opcional
-      new_municipality, // Opcional
     } = await req.json()
 
     // Validación robusta de parámetros.
@@ -106,27 +104,6 @@ Deno.serve(async (req) => {
       // La función de la base de datos lanzará una excepción en caso de fallo, que se captura aquí.
       console.error('Error en la llamada RPC a la base de datos:', rpcError)
       throw new Error(`Error en la base de datos: ${rpcError.message}`)
-    }
-
-    // 5. Actualizar datos no financieros si se proporcionaron (asesor, municipio).
-    // Esto se hace después del RPC para asegurar que la transacción financiera crítica se complete primero.
-    const nonFinancialUpdates: { user_name?: string; municipality?: string } = {}
-    if (new_advisor) {
-      nonFinancialUpdates.user_name = new_advisor
-    }
-    if (new_municipality) {
-      nonFinancialUpdates.municipality = new_municipality
-    }
-
-    if (Object.keys(nonFinancialUpdates).length > 0) {
-      const { error: updateError } = await supabase
-        .from('payments')
-        .update(nonFinancialUpdates)
-        .eq('payment_number', payment_number)
-
-      if (updateError) {
-        console.warn(`RPC para el pago ${payment_number} tuvo éxito, pero la actualización de datos adicionales falló: ${updateError.message}`)
-      }
     }
 
     return new Response(JSON.stringify({ success: true }), {
