@@ -655,8 +655,8 @@
             <label>Departamento:</label>
             <select id="export-department"></select>
             
-            <label>Municipio:</label>
-            <select id="export-municipality"></select>
+            <label>Municipio(s):</label>
+            <input type="text" id="export-municipality-text" readonly placeholder="Seleccionar municipios..." style="cursor: pointer; padding: 8px; background-color: white; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box;">
             
             <label>Asesor:</label>
             <select id="export-user"></select>
@@ -669,6 +669,20 @@
 
             <button id="btn-export-action" class="btn-primary">Exportar</button>
             <button onclick="document.getElementById('export-report-modal').style.display='none'" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Selección de Municipios para Exportar -->
+    <div id="export-muni-selection-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 4050;">
+        <div style="background:white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding:20px; width:320px; max-height: 70vh; display:flex; flex-direction:column; gap:10px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+            <h2>Seleccionar Municipios para Exportar</h2>
+            <div id="export-muni-container" style="border: 1px solid #ccc; padding: 10px; overflow-y: auto;">
+                <!-- Checkboxes will be populated here -->
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button id="btn-confirm-export-muni" class="btn-primary" style="flex:1;">Confirmar</button>
+                <button onclick="document.getElementById('export-muni-selection-modal').style.display='none'" class="btn-secondary" style="flex:1;">Cancelar</button>
+            </div>
         </div>
     </div>
 

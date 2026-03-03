@@ -229,7 +229,10 @@ const viewExpTotal = document.getElementById('view-exp-total');
 const btnOpenExportModal = document.getElementById('btn-export-menu');
 const exportReportModal = document.getElementById('export-report-modal');
 const exportDepartment = document.getElementById('export-department');
-const exportMunicipality = document.getElementById('export-municipality');
+const exportMunicipalityText = document.getElementById('export-municipality-text');
+const exportMuniSelectionModal = document.getElementById('export-muni-selection-modal');
+const exportMuniContainer = document.getElementById('export-muni-container');
+const btnConfirmExportMuni = document.getElementById('btn-confirm-export-muni');
 const exportUser = document.getElementById('export-user');
 const exportPeriodText = document.getElementById('export-period-text');
 const btnOpenExportDateModal = document.getElementById('btn-open-export-date-modal');
@@ -304,6 +307,7 @@ let currentSecondPaymentActionId = null; // ID de la alerta de segundo pago
 // Estado Exportación
 let dashboardInterval = null;
 let currentDashboardMode = 'daily';
+let exportSelectedMunis = ['all']; // Para selección múltiple de municipios
 
 // Referencias Modales Nuevos
 const linkProvisionModal = document.getElementById('linkProvisionModal');
@@ -2161,13 +2165,17 @@ if (btnExportMenu) {
         // Lógica para abrir el modal de exportación
         populateDateSelectors();
         updateExportPeriodText();
+
+        // Resetear selección de municipios
+        exportSelectedMunis = ['all'];
+        if (exportMunicipalityText) exportMunicipalityText.value = 'Todos los municipios';
         
         // Cargar Departamentos
         if (exportDepartment) {
             exportDepartment.innerHTML = '<option value="">Cargando...</option>';
             try {
                 const { data: deptsData } = await sbClient.from('municipalities').select('id, municipalities');
-                exportDepartment.innerHTML = '<option value="">Seleccione Departamento</option>';
+                exportDepartment.innerHTML = '<option value="">Todos los Departamentos</option>';
                 if (deptsData) {
                     deptsData.forEach(dept => {
                         const option = document.createElement('option');
@@ -2178,18 +2186,9 @@ if (btnExportMenu) {
                     
                     // Evento cambio departamento
                     exportDepartment.onchange = () => {
-                        if (exportMunicipality) {
-                            exportMunicipality.innerHTML = '<option value="all">Todos los Municipios</option>';
-                            const selected = deptsData.find(d => d.id === exportDepartment.value);
-                            if (selected && selected.municipalities) {
-                                selected.municipalities.forEach(m => {
-                                    const opt = document.createElement('option');
-                                    opt.value = m;
-                                    opt.textContent = m;
-                                    exportMunicipality.appendChild(opt);
-                                });
-                            }
-                        }
+                        // Resetear selección de municipios al cambiar de depto
+                        exportSelectedMunis = ['all'];
+                        exportMunicipalityText.value = 'Todos los municipios';
                     };
                 }
             } catch (e) { console.error(e); }
@@ -2208,12 +2207,119 @@ if (btnExportMenu) {
                         exportUser.appendChild(opt);
                     });
                 }
+                // Evento cambio usuario
+                exportUser.onchange = () => {
+                    // Resetear selección de municipios al cambiar de usuario
+                    exportSelectedMunis = ['all'];
+                    exportMunicipalityText.value = 'Todos los municipios';
+                };
             } catch (e) { console.error(e); }
         }
 
         if (exportReportModal) exportReportModal.style.display = 'block';
     });
 }
+
+// --- Lógica Modal Selección de Municipios para Exportar ---
+exportMunicipalityText?.addEventListener('click', async () => {
+    exportMuniContainer.innerHTML = 'Cargando...';
+    exportMuniSelectionModal.style.display = 'block';
+
+    let availableMunis = [];
+    const selectedUser = exportUser.value;
+    const selectedDept = exportDepartment.value;
+
+    try {
+        if (selectedUser && selectedUser !== 'all') {
+            // User is selected, get their municipalities
+            const { data: userData, error } = await sbClient.from('users').select('assigned_municipality').eq('name', selectedUser).single();
+            if (error) throw error;
+            if (userData && userData.assigned_municipality) {
+                availableMunis = userData.assigned_municipality;
+            }
+        } else if (selectedDept) {
+            // No user selected, but department is. Get munis from department.
+            const { data: deptData, error } = await sbClient.from('municipalities').select('municipalities').eq('id', selectedDept).single();
+            if (error) throw error;
+            if (deptData && deptData.municipalities) {
+                availableMunis = deptData.municipalities;
+            }
+        } else {
+            // No user, no department. Get all municipalities.
+            const { data: allMunisData, error } = await sbClient.from('municipalities').select('municipalities');
+            if (error) throw error;
+            if (allMunisData) {
+                availableMunis = allMunisData.flatMap(d => d.municipalities);
+            }
+        }
+
+        availableMunis.sort();
+        exportMuniContainer.innerHTML = '';
+
+        // Add "Select All" checkbox
+        const selectAllLabel = document.createElement('label');
+        selectAllLabel.style.cssText = 'display: block; font-weight: bold; padding-bottom: 10px; border-bottom: 1px solid #ccc; cursor: pointer;';
+        const selectAllCheckbox = document.createElement('input');
+        selectAllCheckbox.type = 'checkbox';
+        selectAllCheckbox.id = 'export-muni-select-all';
+        selectAllCheckbox.style.marginRight = '8px';
+        selectAllCheckbox.onchange = (e) => {
+            exportMuniContainer.querySelectorAll('input.export-muni-cb').forEach(cb => {
+                cb.checked = e.target.checked;
+            });
+        };
+        selectAllLabel.appendChild(selectAllCheckbox);
+        selectAllLabel.appendChild(document.createTextNode('Seleccionar Todos'));
+        exportMuniContainer.appendChild(selectAllLabel);
+
+        // Add individual municipality checkboxes
+        availableMunis.forEach(muni => {
+            const label = document.createElement('label');
+            label.style.cssText = 'display: block; padding: 5px 0; cursor: pointer;';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'export-muni-cb';
+            checkbox.value = muni;
+            checkbox.style.marginRight = '8px';
+            if (exportSelectedMunis.includes('all') || exportSelectedMunis.includes(muni)) {
+                checkbox.checked = true;
+            }
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(' ' + muni));
+            exportMuniContainer.appendChild(label);
+        });
+
+        // Check "Select All" if all are checked
+        const allMuniCheckboxes = exportMuniContainer.querySelectorAll('.export-muni-cb');
+        if (allMuniCheckboxes.length > 0) {
+            const allAreChecked = Array.from(allMuniCheckboxes).every(cb => cb.checked);
+            selectAllCheckbox.checked = allAreChecked;
+        }
+
+    } catch (err) {
+        exportMuniContainer.innerHTML = `<span style="color:red">Error: ${err.message}</span>`;
+    }
+});
+
+btnConfirmExportMuni?.addEventListener('click', () => {
+    const selectedCheckboxes = exportMuniContainer.querySelectorAll('.export-muni-cb:checked');
+    const allCheckboxes = exportMuniContainer.querySelectorAll('.export-muni-cb');
+
+    if (selectedCheckboxes.length === allCheckboxes.length && allCheckboxes.length > 0) {
+        exportSelectedMunis = ['all'];
+        exportMunicipalityText.value = 'Todos los municipios';
+    } else {
+        exportSelectedMunis = Array.from(selectedCheckboxes).map(cb => cb.value);
+        if (exportSelectedMunis.length === 0) {
+            exportMunicipalityText.value = 'Ningún municipio seleccionado';
+        } else if (exportSelectedMunis.length === 1) {
+            exportMunicipalityText.value = exportSelectedMunis[0];
+        } else {
+            exportMunicipalityText.value = `${exportSelectedMunis.length} municipios seleccionados`;
+        }
+    }
+    exportMuniSelectionModal.style.display = 'none';
+});
 
 // Cerrar modal de exportación
 const closeExportModalBtn = document.getElementById('close-export-modal-btn');
@@ -2306,15 +2412,18 @@ if (btnExportAction) {
                 query = query.eq('asesor_name', exportUser.value);
             }
 
-            // Filtro Municipio/Departamento
-            if (exportMunicipality.value && exportMunicipality.value !== 'all') {
-                query = query.eq('municipality', exportMunicipality.value);
+            // Filtro Municipio/Departamento (NUEVA LÓGICA)
+            if (exportSelectedMunis.length > 0 && !exportSelectedMunis.includes('all')) {
+                // El usuario seleccionó municipios específicos
+                query = query.in('municipality', exportSelectedMunis);
             } else if (exportDepartment.value) {
+                // Se seleccionó "Todos los municipios" pero dentro de un departamento específico
                 const { data: deptData } = await sbClient.from('municipalities').select('municipalities').eq('id', exportDepartment.value).single();
                 if (deptData && deptData.municipalities) {
                     query = query.in('municipality', deptData.municipalities);
                 }
             }
+            // Si no se selecciona departamento y se elige "Todos los municipios", no se aplica filtro de municipio, lo cual es correcto.
 
             const { data: debtors, error } = await query;
             if (error) throw error;
