@@ -194,6 +194,7 @@
                     <select id="pm-filter-user"><option value="">Todos los Asesores</option></select>
                     <button id="btn-generate-pm" class="btn-primary">Consultar</button>
                     <button id="btn-download-pm" class="btn-primary">Infrome Excel</button>
+                    <button id="btn-mass-edit-pm-date" class="btn-warning" style="display:none;">Editar Fechas</button>
                 </div>
             </div>
 
@@ -207,12 +208,14 @@
                 <table border="1" style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
                     <thead style="background-color: #343a40; color: white;">
                         <tr>
+                            <th style="width: 40px; text-align: center;"><input type="checkbox" id="pm-select-all"></th>
                             <th>CLIENTE</th>
                             <th>FECHA</th>
                             <th>ASESOR</th>
                             <th>MUNICIPIO</th>
                             <th>CUOTA</th>
                             <th>ABONO</th>
+                            <th>ACCIONES</th>
                         </tr>
                     </thead>
                     <tbody id="pm-table-body"></tbody>
@@ -399,6 +402,17 @@
             </div>
             <button id="btn-save-exp-changes" class="btn-primary">Guardar y Recalcular</button>
             <button onclick="document.getElementById('editExpensesModal').style.display='none'" class="btn-primary">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal Edición Masiva de Fechas (Pagos) -->
+    <div id="massEditDateModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 3500;">
+        <div style="background:white; margin:15% auto; padding:20px; width:300px; display:flex; flex-direction:column; gap:15px; border-radius: 8px;">
+            <h3>Editar Fecha de Pago</h3>
+            <p>Seleccione la nueva fecha para los pagos seleccionados:</p>
+            <input type="date" id="mass-new-date-input" style="width: 100%; padding: 8px;">
+            <button id="btn-confirm-mass-date" class="btn-primary">Guardar Cambios</button>
+            <button onclick="document.getElementById('massEditDateModal').style.display='none'" class="btn-secondary">Cancelar</button>
         </div>
     </div>
 

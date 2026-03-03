@@ -58,6 +58,7 @@ const pmFilterMuni = document.getElementById('pm-filter-muni');
 const pmFilterUser = document.getElementById('pm-filter-user');
 const btnGeneratePm = document.getElementById('btn-generate-pm');
 const btnDownloadPm = document.getElementById('btn-download-pm');
+const btnMassEditPmDate = document.getElementById('btn-mass-edit-pm-date');
 const pmTableBody = document.getElementById('pm-table-body');
 const pmTotalCobroDisplay = document.getElementById('pm-total-cobro-display');
 const pmTotalRecaudoDisplay = document.getElementById('pm-total-recaudo-display');
@@ -112,6 +113,10 @@ const pgModalDateInputsContainer = document.getElementById('pg-modal-date-inputs
 const pgDatePreview = document.getElementById('pg-date-preview');
 const btnPgDateAccept = document.getElementById('btn-pg-date-accept');
 const btnPgDateCancel = document.getElementById('btn-pg-date-cancel');
+// Referencias Modal Edición Masiva Fechas
+const massEditDateModal = document.getElementById('massEditDateModal');
+const massNewDateInput = document.getElementById('mass-new-date-input');
+const btnConfirmMassDate = document.getElementById('btn-confirm-mass-date');
 
 let currentPgReportData = []; // Datos para exportar P&G
 let currentPgMode = null; // daily | weekly
@@ -131,6 +136,7 @@ let currentDownloadDate = null;
 let currentExpEditData = null; // Datos temporales para edición de gastos
 let pendingReportUpdate = false; // Bandera para cambios pendientes
 let currentReportContext = null; // Contexto unificado
+let selectedPmIds = []; // IDs seleccionados para edición masiva
 
 // Contexto global para detalles de créditos
 let currentCreditsContext = {
@@ -1102,9 +1108,11 @@ document.addEventListener('DOMContentLoaded', () => {
     btnGeneratePm.addEventListener('click', generatePmReport);
 
     async function generatePmReport() {
-        pmTableBody.innerHTML = '<tr><td colspan="6">Cargando...</td></tr>';
+        pmTableBody.innerHTML = '<tr><td colspan="8">Cargando...</td></tr>';
         pmTotalCobroDisplay.innerText = '$0';
         pmTotalRecaudoDisplay.innerText = '$0';
+        btnMassEditPmDate.style.display = 'none';
+        document.getElementById('pm-select-all').checked = false;
 
         let query = sbClient.from('payments').select('*');
 
@@ -1127,12 +1135,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const { data: payments, error } = await query;
 
         if (error) {
-            pmTableBody.innerHTML = `<tr><td colspan="6">Error: ${error.message}</td></tr>`;
+            pmTableBody.innerHTML = `<tr><td colspan="8">Error: ${error.message}</td></tr>`;
             return;
         }
 
         if (!payments || payments.length === 0) {
-            pmTableBody.innerHTML = '<tr><td colspan="6">No se encontraron registros.</td></tr>';
+            pmTableBody.innerHTML = '<tr><td colspan="8">No se encontraron registros.</td></tr>';
             return;
         }
 
@@ -1170,6 +1178,11 @@ document.addEventListener('DOMContentLoaded', () => {
         let totalCobro = 0; 
         let totalRecaudo = 0;
 
+        // Mostrar botón de edición masiva si hay datos
+        if (filteredPayments.length > 0) {
+            btnMassEditPmDate.style.display = 'inline-block';
+        }
+
         filteredPayments.forEach(p => {
             const abono = parseFloat(p.payment_amount) || 0;
             const debtorInfo = debtorsMap.get(p.debtor_number);
@@ -1178,21 +1191,105 @@ document.addEventListener('DOMContentLoaded', () => {
             totalRecaudo += abono;
             totalCobro += cuota;
 
+            // Usar payment_number como ID único
+            const payId = p.payment_number;
+
             const row = document.createElement('tr');
             row.innerHTML = `
+                <td style="text-align: center;"><input type="checkbox" class="pm-row-checkbox" value="${payId}"></td>
                 <td>${p.debtor_name || ''}</td>
                 <td>${new Date(p.created_at).toLocaleDateString()}</td>
                 <td>${p.user_name || ''}</td>
                 <td>${p.municipality || ''}</td>
                 <td>$${cuota.toLocaleString()}</td>
                 <td>$${abono.toLocaleString()}</td>
+                <td>
+                    <button class="btn-action-small btn-primary" onclick="openSinglePmDateEdit('${payId}')" title="Editar Fecha"><i class="fas fa-pencil-alt"></i></button>
+                </td>
             `;
             pmTableBody.appendChild(row);
         });
 
         pmTotalCobroDisplay.innerText = '$' + totalCobro.toLocaleString();
         pmTotalRecaudoDisplay.innerText = '$' + totalRecaudo.toLocaleString();
+
+        // Re-asignar eventos de checkboxes
+        document.querySelectorAll('.pm-row-checkbox').forEach(cb => {
+            cb.addEventListener('change', updatePmSelectionState);
+        });
     }
+
+    // Evento Seleccionar Todos
+    document.getElementById('pm-select-all').addEventListener('change', (e) => {
+        const checked = e.target.checked;
+        document.querySelectorAll('.pm-row-checkbox').forEach(cb => cb.checked = checked);
+        updatePmSelectionState();
+    });
+
+    function updatePmSelectionState() {
+        const selected = document.querySelectorAll('.pm-row-checkbox:checked');
+        selectedPmIds = Array.from(selected).map(cb => cb.value);
+        btnMassEditPmDate.innerText = selectedPmIds.length > 0 ? `Editar Fechas (${selectedPmIds.length})` : 'Editar Fechas';
+    }
+
+    // Abrir modal para edición masiva
+    btnMassEditPmDate.addEventListener('click', () => {
+        if (selectedPmIds.length === 0) return alert('Seleccione al menos un pago.');
+        massNewDateInput.value = '';
+        massEditDateModal.style.display = 'block';
+    });
+
+    // Abrir modal para edición individual (reutiliza lógica masiva con 1 ID)
+    window.openSinglePmDateEdit = (paymentId) => {
+        selectedPmIds = [paymentId];
+        massNewDateInput.value = '';
+        massEditDateModal.style.display = 'block';
+    };
+
+    // Confirmar cambio de fecha
+    btnConfirmMassDate.addEventListener('click', async () => {
+        const newDateVal = massNewDateInput.value;
+        if (!newDateVal) return alert('Seleccione una fecha válida.');
+        
+        if (!confirm(`¿Está seguro de cambiar la fecha de ${selectedPmIds.length} pagos a ${newDateVal}?`)) return;
+
+        btnConfirmMassDate.disabled = true;
+        btnConfirmMassDate.innerText = 'Actualizando...';
+
+        try {
+            // Construir fecha ISO (manteniendo hora 12:00 para evitar saltos de zona horaria)
+            const [y, m, d] = newDateVal.split('-').map(Number);
+            const newDateObj = new Date(y, m - 1, d, 12, 0, 0);
+            const newDateISO = newDateObj.toISOString();
+            
+            // Formato texto DD-MM-YYYY para payment_date
+            const dayStr = String(d).padStart(2, '0');
+            const monthStr = String(m).padStart(2, '0');
+            const newDateText = `${dayStr}-${monthStr}-${y}`;
+
+            // Actualizar en Supabase
+            const { error } = await sbClient
+                .from('payments')
+                .update({ 
+                    payment_date: newDateText,
+                    created_at: newDateISO 
+                })
+                .in('payment_number', selectedPmIds);
+
+            if (error) throw error;
+
+            alert('Fechas actualizadas correctamente.');
+            massEditDateModal.style.display = 'none';
+            generatePmReport(); // Recargar tabla
+
+        } catch (err) {
+            console.error(err);
+            alert('Error al actualizar: ' + err.message);
+        } finally {
+            btnConfirmMassDate.disabled = false;
+            btnConfirmMassDate.innerText = 'Guardar Cambios';
+        }
+    });
 
     btnDownloadPm.addEventListener('click', () => {
         alert('Descarga en reconstrucción.');

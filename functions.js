@@ -3835,7 +3835,7 @@ async function loadCreditPayments(debtorNumber, isBackground = false) {
     
     const { data: payments, error } = await sbClient
         .from('payments')
-        .select('*')
+        .select('*, payment_number')
         .eq('debtor_number', debtorNumber)
         .order('created_at', { ascending: false });
 
@@ -3851,16 +3851,17 @@ async function loadCreditPayments(debtorNumber, isBackground = false) {
         // Mapeo de campos: Fecha, Día, Abono, Método
         // Mostrar tal cual viene de la BD (texto)
         const dateStr = p.payment_date || p.created_at || '';
+        const amount = parseFloat(p.payment_amount) || 0;
         
         row.innerHTML = `
             <td class="payment-date-cell" data-val="${dateStr}">${dateStr}</td>
             <td class="payment-day-cell">${p.payment_day || ''}</td>
-            <td class="payment-amount-cell" data-val="${p.payment_amount}">$${parseFloat(p.payment_amount).toLocaleString()}</td>
+            <td class="payment-amount-cell" data-val="${amount}">$${amount.toLocaleString()}</td>
             <td class="payment-method-cell" data-val="${p.payment_method || 'Efectivo'}">${p.payment_method || 'Efectivo'}</td>
             <td>
                 <div style="display: flex; gap: 5px; justify-content: center;">
-                    <button class="btn-edit-payment btn-action-payment" data-id="${p.id}" data-amount="${p.payment_amount}" data-date="${dateStr}" data-method="${p.payment_method || 'Efectivo'}">✏️</button>
-                    <button class="btn-delete-payment btn-action-payment" data-id="${p.id}" data-amount="${p.payment_amount}">🗑️</button>
+                    <button class="btn-edit-payment btn-action-payment" data-payment-number="${p.payment_number}" data-amount="${amount}" data-date="${dateStr}" data-method="${p.payment_method || 'Efectivo'}">✏️</button>
+                    <button class="btn-delete-payment btn-action-payment" data-payment-number="${p.payment_number}" data-amount="${amount}">🗑️</button>
                 </div>
             </td>
         `;
@@ -3870,7 +3871,7 @@ async function loadCreditPayments(debtorNumber, isBackground = false) {
 
 creditPaymentsBody.addEventListener('click', async (e) => {
     const target = e.target;
-    const paymentId = target.dataset.id;
+    const paymentNumber = target.dataset.paymentNumber;
     const amount = parseFloat(target.dataset.amount);
 
     // Editar Pago en Línea
@@ -3906,8 +3907,8 @@ creditPaymentsBody.addEventListener('click', async (e) => {
         
         // Mover botón guardar a la celda de acciones
         cellActions.innerHTML = `
-            <button class="btn-save-payment btn-action-payment" data-id="${paymentId}" data-old="${amount}">💾</button>
-            <button class="btn-delete-payment btn-action-payment" data-id="${paymentId}" data-amount="${amount}">🗑️</button>
+            <button class="btn-save-payment btn-action-payment" data-payment-number="${paymentNumber}" data-old="${amount}">💾</button>
+            <button class="btn-delete-payment btn-action-payment" data-payment-number="${paymentNumber}" data-amount="${amount}">🗑️</button>
         `;
     }
 
@@ -3915,44 +3916,44 @@ creditPaymentsBody.addEventListener('click', async (e) => {
     if (target.classList.contains('btn-save-payment')) {
         const row = target.closest('tr');
         const inputAmount = row.querySelector('.input-edit-amount');
-        const inputDate = row.querySelector('.input-edit-date');
         const inputMethod = row.querySelector('.input-edit-method');
         
         const newAmount = parseFloat(inputAmount.value);
-        const newDateInput = inputDate.value; // YYYY-MM-DD
         const newMethod = inputMethod.value;
+
         const oldAmount = parseFloat(target.dataset.old);
 
         if (isNaN(newAmount)) return alert('Monto inválido');
 
-        // Calcular nuevo día de la semana
-        const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-        const d = new Date(newDateInput);
-        // Ajuste zona horaria simple para obtener día correcto
-        d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
-        const newDayName = days[d.getDay()];
-
-        // Convertir a formato dd-MM-yyyy para guardar
-        let newDateText = newDateInput;
-        const parts = newDateInput.split('-');
-        if (parts.length === 3) {
-            newDateText = `${parts[2]}-${parts[1]}-${parts[0]}`;
-        }
-
-        const updates = { 
-            payment_amount: newAmount,
-            payment_date: newDateText,
-            payment_day: newDayName,
-            payment_method: newMethod
+        // La fecha y el día se generan ahora exclusivamente en la Edge Function.
+        const payload = {
+            payment_number: paymentNumber,
+            debtor_number: currentCreditPaymentsNumber,
+            old_amount: oldAmount,
+            new_amount: newAmount,
+            new_method: newMethod
         };
+
+        console.log("Enviando payload a 'update-payment':", payload);
 
         const { data: { session } } = await sbClient.auth.getSession();
         const { error } = await sbClient.functions.invoke('update-payment', {
-            body: { payment_id: paymentId, updates: updates, old_amount: oldAmount, debtor_number: currentCreditPaymentsNumber },
+            body: payload,
             headers: { Authorization: `Bearer ${session?.access_token}` }
         });
         
-        if (error) return alert('Error al actualizar pago: ' + error.message);
+        if (error) {
+            let errorMessage = 'Error al actualizar pago: ' + error.message; // Mensaje genérico
+            // El error real de la Edge Function viene en el contexto.
+            if (error.context && typeof error.context.error === 'string') {
+                // Si la función devuelve { error: "mensaje" }
+                errorMessage += `\n\nDetalle del servidor: ${error.context.error}`;
+            } else if (error.context) {
+                // Si la función devuelve otra cosa, mostrar todo el contexto.
+                errorMessage += `\n\nContexto del servidor: ${JSON.stringify(error.context, null, 2)}`;
+            }
+            return alert(errorMessage);
+        }
 
         loadCreditPayments(currentCreditPaymentsNumber); // Recargar tabla
     }
@@ -3961,7 +3962,7 @@ creditPaymentsBody.addEventListener('click', async (e) => {
     if (target.classList.contains('btn-delete-payment')) {
         if (confirm('¿Eliminar este pago? El saldo del crédito aumentará.')) {
             // 1. Eliminar pago
-            const { error } = await sbClient.from('payments').delete().eq('id', paymentId);
+            const { error } = await sbClient.from('payments').delete().eq('payment_number', paymentNumber);
             
             if (error) return alert('Error al eliminar pago');
 
