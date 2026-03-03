@@ -415,7 +415,7 @@
     <!-- Modal Edición Individual de Cobro (PM) -->
     <div id="editPmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 3600;">
         <div style="background:white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding:20px; width:350px; display:flex; flex-direction:column; gap:15px; border-radius: 8px; max-height: 90vh; overflow-y: auto;">
-            <h3>Editar Cobro</h3>
+            <h3 id="edit-pm-modal-title">Editar Cobro</h3>
             <label>Fecha:</label>
             <input type="date" id="edit-pm-date" style="width: 100%; padding: 8px; box-sizing: border-box;">
             <label>Abono:</label>
@@ -436,8 +436,8 @@
 
     <!-- Modal Edición Individual de Crédito (CR) -->
     <div id="editCrModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index: 3600;">
-        <div style="background:white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding:20px; width:350px; display:flex; flex-direction:column; gap:15px; border-radius: 8px; max-height: 90vh; overflow-y: auto;">
-            <h3>Editar Crédito</h3>
+        <div style="background:white; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding:20px; width:350px; display:flex; flex-direction:column; gap:15px; border-radius: 8px; max-height: 80vh; overflow-y: auto;">
+            <h3 id="edit-cr-modal-title">Editar Crédito</h3>
             <label>Fecha Venta:</label>
             <input type="date" id="edit-cr-date" style="width: 100%; padding: 8px; box-sizing: border-box;">
             <label>Valor Venta:</label>

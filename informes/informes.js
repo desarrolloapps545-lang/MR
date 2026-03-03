@@ -1173,6 +1173,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (error || !credit) return alert('Error al cargar crédito: ' + (error?.message || 'No encontrado'));
 
         currentCrEditData = credit;
+        document.getElementById('edit-cr-modal-title').innerText = `Edicion (credito) de ${credit.name || 'N/A'}`;
 
         // Pre-llenar campos
         const dateObj = parseDateValue(credit.sale_date || credit.created_at);
@@ -1470,6 +1471,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         currentPmEditData = payment;
+        document.getElementById('edit-pm-modal-title').innerText = `Edicion (cobro) de ${payment.debtor_name || 'N/A'}`;
 
         // Formatear fecha para el input type="date" (YYYY-MM-DD)
         const dateObj = parseDateValue(payment.created_at);
@@ -1633,7 +1635,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             alert('Cobro actualizado correctamente.');
             editPmModal.style.display = 'none';
-            generatePmReport(); // Recargar
+            
+            // Si estamos en la vista de Cierres (GN), refrescar el modal de detalles.
+            // Si no, refrescar la tabla de Cobros (PM).
+            if (gnReportBox.style.display === 'block' && currentReportContext.reportId) {
+                openReportPaymentsDetails(currentReportContext.reportId, currentReportContext.userName, currentReportContext.dateStr, currentReportContext.mode);
+            } else {
+                generatePmReport(); // Recargar
+            }
         } catch (err) {
             alert('Error al actualizar: ' + err.message);
         } finally {
@@ -1684,7 +1693,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (error) return alert('Error al actualizar crédito: ' + error.message);
         alert('Crédito actualizado correctamente.');
         editCrModal.style.display = 'none';
-        generateCreditsReport();
+        
+        // Si estamos en la vista de Cierres (GN), refrescar el modal de detalles.
+        // Si no, refrescar la tabla de Créditos (CR).
+        if (gnReportBox.style.display === 'block' && currentCreditsContext.reportId) {
+            openReportCreditsDetails(currentCreditsContext.reportId, currentCreditsContext.userName, currentCreditsContext.dateStr, currentCreditsContext.mode);
+        } else {
+            generateCreditsReport();
+        }
     });
 
     // Confirmar cambio de fecha
@@ -2099,14 +2115,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     row.innerHTML = `
                         <td>${c.name || ''}</td>
                         <td>${c.cedula || ''}</td>
-                        <td>
-                            <span class="view-mode">$ ${(parseFloat(c.sale_value)||0).toLocaleString()}</span>
-                            <input type="number" class="edit-mode edit-credit-val" value="${c.sale_value}" style="display:none; width: 80px;">
-                        </td>
-                        <td>
-                            <span class="view-mode">$ ${(parseFloat(c.interests)||0).toLocaleString()}</span>
-                            <input type="number" class="edit-mode edit-credit-int" value="${c.interests}" style="display:none; width: 80px;">
-                        </td>
+                        <td>$ ${(parseFloat(c.sale_value)||0).toLocaleString()}</td>
+                        <td>$ ${(parseFloat(c.interests)||0).toLocaleString()}</td>
                         <td>$ ${(parseFloat(c.total_credit_value)||0).toLocaleString()}</td>
                         <td>${c.number_of_payments || ''}</td>
                         <td>$ ${(parseFloat(c.valor_cuota)||0).toLocaleString()}</td>
@@ -2114,11 +2124,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${c.payment_term || ''}</td>
                         <td>${c.municipality || ''}</td>
                         <td>
-                            <button class="btn-action-small btn-primary view-mode" onclick="toggleEditCreditDetail(this)"><i class="fas fa-pencil-alt"></i></button>
-                            <div class="edit-mode" style="display:none; gap:5px;">
-                                <button class="btn-action-small btn-success" onclick="saveCreditDetail('${c.debtor_number}', this)"><i class="fas fa-save"></i></button>
-                                <button class="btn-action-small btn-secondary" onclick="toggleEditCreditDetail(this)"><i class="fas fa-times"></i></button>
-                            </div>
+                            <button class="btn-action-small btn-primary" onclick="openCrEditModal('${c.debtor_number}')" title="Editar Crédito"><i class="fas fa-pencil-alt"></i></button>
                         </td>
                     `;
                     tbody.appendChild(row);
@@ -2129,48 +2135,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {
             console.error(e);
             tbody.innerHTML = `<tr><td colspan="12" style="color:red;">Error: ${e.message}</td></tr>`;
-        }
-    };
-
-    // Alternar modo edición
-    window.toggleEditCreditDetail = (btn) => {
-        const row = btn.closest('tr');
-        const viewElements = row.querySelectorAll('.view-mode');
-        const editElements = row.querySelectorAll('.edit-mode');
-        
-        if (editElements[0].style.display === 'none') {
-            viewElements.forEach(el => el.style.display = 'none');
-            editElements.forEach(el => el.style.display = '');
-        } else {
-            viewElements.forEach(el => el.style.display = '');
-            editElements.forEach(el => el.style.display = 'none');
-        }
-    };
-
-    // Guardar cambios en detalle de crédito
-    window.saveCreditDetail = async (debtorNumber, btn) => {
-        const row = btn.closest('tr');
-        const newVal = parseFloat(row.querySelector('.edit-credit-val').value) || 0;
-        const newInt = parseFloat(row.querySelector('.edit-credit-int').value) || 0;
-        const newTotalCreditValue = newVal + newInt;
-        
-        try {
-            // 1. Actualizar Deudor en Base de Datos
-            const { error: updateError } = await sbClient
-                .from('debtors')
-                .update({ sale_value: newVal, interests: newInt, total_credit_value: newTotalCreditValue })
-                .eq('debtor_number', debtorNumber);
-
-            if (updateError) throw updateError;
-
-            // 2. Marcar cambio pendiente y refrescar lista
-            pendingReportUpdate = true;
-            
-            const { reportId, collection, userName, dateStr, mode } = currentCreditsContext;
-            openReportCreditsDetails(reportId, userName, dateStr, mode);
-
-        } catch (e) {
-            alert('Error: ' + e.message);
         }
     };
 
@@ -2328,24 +2292,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${dateDisplay}</td>
                         <td>${p.debtor_name || ''}</td>
                         <td>${p.cedula || ''}</td>
-                        <td>
-                            <span class="view-mode">$ ${amount.toLocaleString()}</span>
-                            <input type="number" class="edit-mode edit-payment-val" value="${amount}" style="display:none; width: 100px;">
-                        </td>
-                        <td>
-                            <span class="view-mode">${p.payment_method || 'Efectivo'}</span>
-                            <select class="edit-mode edit-payment-method" style="display:none;">
-                                <option value="Efectivo" ${p.payment_method !== 'Transferencia' ? 'selected' : ''}>Efectivo</option>
-                                <option value="Transferencia" ${p.payment_method === 'Transferencia' ? 'selected' : ''}>Transferencia</option>
-                            </select>
-                        </td>
+                        <td>$ ${amount.toLocaleString()}</td>
+                        <td>${p.payment_method || 'Efectivo'}</td>
                         <td>${p.municipality || ''}</td>
                         <td>
-                            <button class="btn-action-small btn-primary view-mode" onclick="toggleEditPaymentDetail(this)"><i class="fas fa-pencil-alt"></i></button>
-                            <div class="edit-mode" style="display:none; gap:5px;">
-                                <button class="btn-action-small btn-success" onclick="savePaymentDetail('${p.created_at}', this)"><i class="fas fa-save"></i></button>
-                                <button class="btn-action-small btn-secondary" onclick="toggleEditPaymentDetail(this)"><i class="fas fa-times"></i></button>
-                            </div>
+                            <button class="btn-action-small btn-primary" onclick="openPmEditModal('${p.payment_number}')" title="Editar Cobro"><i class="fas fa-pencil-alt"></i></button>
                         </td>
                     `;
                     tbody.appendChild(row);
@@ -2358,48 +2309,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {
             console.error(e);
             tbody.innerHTML = `<tr><td colspan="7" style="color:red;">Error: ${e.message}</td></tr>`;
-        }
-    };
-
-    // Alternar modo edición en detalle de cobros
-    window.toggleEditPaymentDetail = (btn) => {
-        const row = btn.closest('tr');
-        const viewElements = row.querySelectorAll('.view-mode');
-        const editElements = row.querySelectorAll('.edit-mode');
-        
-        if (editElements[0].style.display === 'none') {
-            viewElements.forEach(el => el.style.display = 'none');
-            editElements.forEach(el => el.style.display = '');
-        } else {
-            viewElements.forEach(el => el.style.display = '');
-            editElements.forEach(el => el.style.display = 'none');
-        }
-    };
-
-    // Guardar cambios en detalle de cobro
-    window.savePaymentDetail = async (paymentCreatedAt, btn) => {
-        const row = btn.closest('tr');
-        const newAmount = parseFloat(row.querySelector('.edit-payment-val').value) || 0;
-        const newMethod = row.querySelector('.edit-payment-method').value;
-        
-        try {
-            // 1. Actualizar el pago en Base de Datos
-            // Usamos created_at como identificador ya que id no existe
-            const { error: updateError } = await sbClient
-                .from('payments')
-                .update({ payment_amount: newAmount, payment_method: newMethod })
-                .eq('created_at', paymentCreatedAt);
-
-            if (updateError) throw updateError;
-
-            // 2. Marcar cambio pendiente y refrescar lista
-            pendingReportUpdate = true;
-            
-            const { reportId, collection, userName, dateStr, mode } = currentCreditsContext;
-            openReportPaymentsDetails(reportId, userName, dateStr, mode);
-
-        } catch (e) {
-            alert('Error: ' + e.message);
         }
     };
 
