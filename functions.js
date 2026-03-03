@@ -3755,8 +3755,32 @@ clientCreditsTableBody.addEventListener('click', async (e) => {
             editCreditTerm.value = (Array.isArray(credit.payment_term) ? credit.payment_term[0] : credit.payment_term) || 'Diario';
             editCreditRemaining.value = credit.remaining_payments || 0;
             editCreditMuni.value = credit.municipality || '';
-            editCreditAdvisor.value = credit.asesor_name || '';
-            
+
+            // --- Lógica para desplegable de Asesor ---
+            const { data: advisors, error: advisorsError } = await sbClient
+                .from('users')
+                .select('name')
+                .eq('role', 'Usuario');
+
+            if (advisorsError) {
+                alert('Error al cargar la lista de asesores.');
+                console.error(advisorsError);
+                editCreditAdvisor.innerHTML = '<option value="">Error al cargar</option>';
+            } else {
+                editCreditAdvisor.innerHTML = '<option value="" disabled selected>Seleccione un usuario</option>';
+                advisors.forEach(advisor => {
+                    const option = document.createElement('option');
+                    option.value = advisor.name;
+                    option.textContent = advisor.name;
+                    editCreditAdvisor.appendChild(option);
+                });
+                
+                if (credit.asesor_name) {
+                    editCreditAdvisor.value = credit.asesor_name;
+                }
+            }
+            // --- Fin Lógica Asesor ---
+
             editCreditModal.style.display = 'block';
         }
     }
@@ -3809,19 +3833,50 @@ btnSaveEditCredit?.addEventListener('click', async () => {
         asesor_name: editCreditAdvisor.value
     };
 
-    const { data: { session } } = await sbClient.auth.getSession();
-    const { error } = await sbClient.functions.invoke('update-credit', {
-        body: { credit_id: currentCreditEditNumber, updates: updates },
-        headers: { Authorization: `Bearer ${session?.access_token}` }
-    });
+    btnSaveEditCredit.disabled = true;
+    btnSaveEditCredit.innerText = 'Guardando...';
 
-    if (error) {
-        alert('Error al actualizar crédito: ' + error.message);
-    } else {
-        alert('Crédito actualizado.');
+    try {
+        const { data: { session } } = await sbClient.auth.getSession();
+        
+        // 1. Actualizar Crédito (Edge Function)
+        const { error } = await sbClient.functions.invoke('update-credit', {
+            body: { credit_id: currentCreditEditNumber, updates: updates },
+            headers: { Authorization: `Bearer ${session?.access_token}` }
+        });
+
+        if (error) throw new Error(error.message);
+
+        // 2. Actualizar Pagos Asociados (Sincronizar datos)
+        let clientInfo = {};
+        if (currentViewingClientCedula) {
+             const { data: cData } = await sbClient.from('clients').select('name, cedula, address, phone').eq('cedula', currentViewingClientCedula).single();
+             if (cData) clientInfo = cData;
+        }
+
+        const paymentUpdates = {
+            user_name: editCreditAdvisor.value,
+            municipality: editCreditMuni.value,
+            debtor_name: clientInfo.name,
+            cedula: clientInfo.cedula,
+            address: clientInfo.address,
+            phone: clientInfo.phone
+        };
+        // Limpiar undefined
+        Object.keys(paymentUpdates).forEach(key => paymentUpdates[key] === undefined && delete paymentUpdates[key]);
+
+        const { error: payError } = await sbClient.from('payments').update(paymentUpdates).eq('debtor_number', currentCreditEditNumber);
+        if (payError) console.warn('Error actualizando pagos:', payError);
+
+        alert('Crédito y pagos asociados actualizados correctamente.');
         editCreditModal.style.display = 'none';
-        // Recargar el modal de detalles del cliente para ver el cambio.
         if (currentViewingClientCedula) openClientDetails(currentViewingClientCedula);
+
+    } catch (err) {
+        alert('Error al actualizar crédito: ' + err.message);
+    } finally {
+        btnSaveEditCredit.disabled = false;
+        btnSaveEditCredit.innerText = 'Guardar Cambios';
     }
 });
 

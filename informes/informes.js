@@ -2124,7 +2124,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${c.payment_term || ''}</td>
                         <td>${c.municipality || ''}</td>
                         <td>
-                            <button class="btn-action-small btn-primary" onclick="openCrEditModal('${c.debtor_number}')" title="Editar Crédito"><i class="fas fa-pencil-alt"></i></button>
+                            <div style="display: flex; gap: 5px; justify-content: center;">
+                                <button class="btn-action-small btn-primary" onclick="openCrEditModal('${c.debtor_number}')" title="Editar Crédito"><i class="fas fa-pencil-alt"></i></button>
+                                <button class="btn-action-small btn-danger" onclick="deleteCreditFromDetails('${c.debtor_number}')" title="Eliminar Crédito"><i class="fas fa-trash"></i></button>
+                            </div>
                         </td>
                     `;
                     tbody.appendChild(row);
@@ -2135,6 +2138,31 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {
             console.error(e);
             tbody.innerHTML = `<tr><td colspan="12" style="color:red;">Error: ${e.message}</td></tr>`;
+        }
+    };
+
+    // Nueva función para eliminar crédito desde detalles de cierre
+    window.deleteCreditFromDetails = async (debtorNumber) => {
+        if (!confirm('¿Está seguro de eliminar este crédito y TODOS sus pagos asociados? Esta acción es irreversible y afectará el cierre.')) return;
+
+        try {
+            // 1. Eliminar pagos asociados
+            await sbClient.from('payments').delete().eq('debtor_number', debtorNumber);
+
+            // 2. Eliminar el crédito
+            const { error: deleteError } = await sbClient.from('debtors').delete().eq('debtor_number', debtorNumber);
+            if (deleteError) throw deleteError;
+
+            // 3. Marcar cambio pendiente y refrescar
+            pendingReportUpdate = true;
+            alert('Crédito eliminado. Cierre el modal para recalcular el reporte.');
+
+            // Refrescar la vista del modal
+            const { reportId, userName, dateStr, mode } = currentCreditsContext;
+            openReportCreditsDetails(reportId, userName, dateStr, mode);
+
+        } catch (e) {
+            alert('Error al eliminar el crédito: ' + e.message);
         }
     };
 
@@ -2296,7 +2324,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${p.payment_method || 'Efectivo'}</td>
                         <td>${p.municipality || ''}</td>
                         <td>
-                            <button class="btn-action-small btn-primary" onclick="openPmEditModal('${p.payment_number}')" title="Editar Cobro"><i class="fas fa-pencil-alt"></i></button>
+                            <div style="display: flex; gap: 5px; justify-content: center;">
+                                <button class="btn-action-small btn-primary" onclick="openPmEditModal('${p.payment_number}')" title="Editar Cobro"><i class="fas fa-pencil-alt"></i></button>
+                                <button class="btn-action-small btn-danger" onclick="deletePaymentFromDetails('${p.payment_number}', ${amount}, '${p.debtor_number}')" title="Eliminar Cobro"><i class="fas fa-trash"></i></button>
+                            </div>
                         </td>
                     `;
                     tbody.appendChild(row);
@@ -2309,6 +2340,38 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {
             console.error(e);
             tbody.innerHTML = `<tr><td colspan="7" style="color:red;">Error: ${e.message}</td></tr>`;
+        }
+    };
+
+    // Nueva función para eliminar cobro desde detalles de cierre
+    window.deletePaymentFromDetails = async (paymentId, amount, debtorNumber) => {
+        if (!confirm('¿Está seguro de eliminar este cobro? El saldo del crédito aumentará y se afectará el cierre.')) return;
+
+        try {
+            // 1. Eliminar el pago
+            const { error: deleteError } = await sbClient.from('payments').delete().eq('payment_number', paymentId);
+            if (deleteError) throw new Error('Error al eliminar el pago: ' + deleteError.message);
+
+            // 2. Revertir saldo en el deudor
+            if (debtorNumber) {
+                const { data: debtor } = await sbClient.from('debtors').select('balance, remaining_payments').eq('debtor_number', debtorNumber).single();
+                if (debtor) {
+                    const newBalance = (parseFloat(debtor.balance) || 0) + parseFloat(amount);
+                    const newRemaining = (parseInt(debtor.remaining_payments) || 0) + 1;
+                    await sbClient.from('debtors').update({ balance: newBalance, remaining_payments: newRemaining }).eq('debtor_number', debtorNumber);
+                }
+            }
+
+            // 3. Marcar cambio pendiente y refrescar
+            pendingReportUpdate = true;
+            alert('Cobro eliminado. Cierre el modal para recalcular el reporte.');
+
+            // Refrescar la vista del modal
+            const { reportId, userName, dateStr, mode } = currentCreditsContext;
+            openReportPaymentsDetails(reportId, userName, dateStr, mode);
+
+        } catch (err) {
+            alert(err.message);
         }
     };
 
