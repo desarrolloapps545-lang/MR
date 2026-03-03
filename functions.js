@@ -2167,8 +2167,8 @@ if (btnExportMenu) {
         updateExportPeriodText();
 
         // Resetear selección de municipios
-        exportSelectedMunis = ['all'];
-        if (exportMunicipalityText) exportMunicipalityText.value = 'Todos los municipios';
+        exportSelectedMunis = [];
+        if (exportMunicipalityText) exportMunicipalityText.value = 'Ningún municipio seleccionado';
         
         // Cargar Departamentos
         if (exportDepartment) {
@@ -2187,8 +2187,8 @@ if (btnExportMenu) {
                     // Evento cambio departamento
                     exportDepartment.onchange = () => {
                         // Resetear selección de municipios al cambiar de depto
-                        exportSelectedMunis = ['all'];
-                        exportMunicipalityText.value = 'Todos los municipios';
+                        exportSelectedMunis = [];
+                        exportMunicipalityText.value = 'Ningún municipio seleccionado';
                     };
                 }
             } catch (e) { console.error(e); }
@@ -2210,8 +2210,8 @@ if (btnExportMenu) {
                 // Evento cambio usuario
                 exportUser.onchange = () => {
                     // Resetear selección de municipios al cambiar de usuario
-                    exportSelectedMunis = ['all'];
-                    exportMunicipalityText.value = 'Todos los municipios';
+                    exportSelectedMunis = [];
+                    exportMunicipalityText.value = 'Ningún municipio seleccionado';
                 };
             } catch (e) { console.error(e); }
         }
@@ -2400,6 +2400,12 @@ function updateExportPeriodText() {
 // --- Lógica Principal de Exportación ---
 if (btnExportAction) {
     btnExportAction.addEventListener('click', async () => {
+        // Validar que se haya seleccionado al menos un municipio, a menos que se haya elegido "Todos"
+        if (exportSelectedMunis.length === 0) {
+            alert('Por favor, seleccione al menos un municipio para exportar.');
+            return;
+        }
+
         btnExportAction.disabled = true;
         btnExportAction.innerText = 'Generando...';
 
