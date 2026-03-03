@@ -2321,6 +2321,9 @@ if (btnExportAction) {
 
             // 2. Filtrado por Fecha en Memoria
             const filteredDebtors = debtors.filter(d => {
+                // Excluir créditos con saldo 0 (ya cerrados)
+                if ((parseFloat(d.balance) || 0) === 0) return false;
+
                 const dateVal = d.sale_date || d.created_at;
                 const dateObj = parseDateValue(dateVal);
                 
