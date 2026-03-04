@@ -262,6 +262,16 @@ const approveSecondPaymentModal = document.getElementById('approveSecondPaymentM
 const btnConfirmSecondPayment = document.getElementById('btn-confirm-second-payment');
 const btnRejectSecondPayment = document.getElementById('btn-reject-second-payment');
 
+// Referencias Modal Unificado y Badges
+const unifiedAlertModal = document.getElementById('unified-alert-modal');
+const unifiedReprestSection = document.getElementById('unified-represt-section');
+const unifiedSecondPaymentSection = document.getElementById('unified-second-payment-section');
+const unifiedReprestList = document.getElementById('unified-represt-list');
+const unifiedSecondPaymentList = document.getElementById('unified-second-payment-list');
+const btnUnifiedViewClients = document.getElementById('btn-unified-view-clients');
+const badgeClientsSb = document.getElementById('badge-clients-sb');
+const badgeClientsMain = document.getElementById('badge-clients-main');
+
 // Referencias Modal Fechas P&G
 const pgDateSelectionModal = document.getElementById('pg-date-selection-modal');
 const pgModalDateType = document.getElementById('pg-modal-date-type');
@@ -544,6 +554,9 @@ async function initializeSession(userId, email = null, password = null) {
 
                 // Configurar listeners de tiempo real
                 setupRealtimeListeners();
+                
+                // Chequeo inicial de alertas
+                checkAndNotifyAlerts();
             } else {
                 if (statusMessage) statusMessage.innerText = 'Acceso denegado: No tienes permisos de administrador.';
                 await sbClient.auth.signOut(); // Expulsar si no cumple requisitos
@@ -583,16 +596,121 @@ function setupRealtimeListeners() {
         if (creditPaymentsModal.style.display === 'flex' && currentCreditPaymentsNumber) {
             loadCreditPayments(currentCreditPaymentsNumber);
         }
+        
+        // Chequear alertas en cada cambio relevante
+        checkAndNotifyAlerts();
     }, 2000);
 
     // Un solo canal para escuchar todos los cambios en el esquema público
     sbClient.channel('public-db-changes')
       .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
           console.log('Change detected on table:', payload.table);
-          debouncedRefresh();
+          
+          // Escucha atenta a debtors (cambios de estado/cierre), payments_alerts y alerts_represt
+          if (['debtors', 'payments_alerts', 'alerts_represt', 'clients'].includes(payload.table)) {
+              // Si es debtors y hubo un UPDATE, verificamos si implica un cierre (balance 0 o cambio en closed si existiera)
+              if (payload.table === 'debtors' && payload.eventType === 'UPDATE') {
+                  console.log('Actualización en deudores detectada (posible cierre de crédito).');
+              }
+              // Disparar refresco y chequeo de alertas
+              debouncedRefresh();
+          } else {
+              debouncedRefresh();
+          }
       })
       .subscribe((status) => { if (status === 'SUBSCRIBED') console.log('¡Conectado al canal de tiempo real!'); });
 }
+
+// --- Función Centralizada de Notificaciones ---
+async function checkAndNotifyAlerts() {
+    // Definir rango para hoy (para segundo pago)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startOfToday = today.toISOString();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const startOfTomorrow = tomorrow.toISOString();
+
+    // Consultar alertas pendientes
+    const [represtResult, secondPaymentResult] = await Promise.all([
+        sbClient.from('alerts_represt').select('*').eq('represt', false), // Pendientes de represte
+        sbClient.from('payments_alerts').select('*').is('pay', null) // Pendientes de segundo pago
+            .gte('created_at', startOfToday)
+            .lt('created_at', startOfTomorrow)
+    ]);
+
+    const represtAlerts = represtResult.data || [];
+    const secondPaymentAlerts = secondPaymentResult.data || [];
+    const totalAlerts = represtAlerts.length + secondPaymentAlerts.length;
+
+    // 1. Actualizar Badges (Punto Rojo)
+    const updateBadge = (badgeElement) => {
+        if (totalAlerts > 0) {
+            badgeElement.style.display = 'inline-block';
+            badgeElement.innerText = totalAlerts;
+        } else {
+            badgeElement.style.display = 'none';
+        }
+    };
+    if (badgeClientsSb) updateBadge(badgeClientsSb);
+    if (badgeClientsMain) updateBadge(badgeClientsMain);
+
+    // 2. Mostrar Modal Unificado si estamos en la vista de Clientes y hay alertas nuevas
+    // Solo mostramos si hay alertas y el contenedor de clientes está visible
+    if (totalAlerts > 0 && clientsContainer.style.display === 'block') {
+        showUnifiedAlertModal(represtAlerts, secondPaymentAlerts);
+    }
+}
+
+function showUnifiedAlertModal(represtAlerts, secondPaymentAlerts) {
+    // Limpiar listas
+    unifiedReprestList.innerHTML = '';
+    unifiedSecondPaymentList.innerHTML = '';
+
+    // Configurar visualización de secciones (Mitad y Mitad si ambas existen)
+    const hasReprest = represtAlerts.length > 0;
+    const hasSecond = secondPaymentAlerts.length > 0;
+
+    unifiedReprestSection.style.display = hasReprest ? 'block' : 'none';
+    unifiedSecondPaymentSection.style.display = hasSecond ? 'block' : 'none';
+
+    // Ajustar alturas si comparten espacio
+    if (hasReprest && hasSecond) {
+        unifiedReprestSection.style.height = '50%';
+        unifiedSecondPaymentSection.style.height = '50%';
+        unifiedReprestSection.style.borderBottom = '2px solid #ccc';
+    } else {
+        unifiedReprestSection.style.height = 'auto';
+        unifiedSecondPaymentSection.style.height = 'auto';
+        unifiedReprestSection.style.borderBottom = 'none';
+    }
+
+    // Helper para renderizar items
+    const renderItem = (alert, container, type) => {
+        const div = document.createElement('div');
+        div.style.padding = '10px';
+        div.style.borderBottom = '1px solid #eee';
+        div.innerHTML = `
+            <strong>Asesor:</strong> ${alert.user_name || alert.asesor_name || 'N/A'}<br>
+            <strong>Cédula:</strong> ${alert.cedula || alert.debtor_number || 'N/A'}<br>
+            <small>${new Date(alert.created_at).toLocaleString()}</small>
+        `;
+        container.appendChild(div);
+    };
+
+    represtAlerts.forEach(a => renderItem(a, unifiedReprestList, 'represt'));
+    secondPaymentAlerts.forEach(a => renderItem(a, unifiedSecondPaymentList, 'second'));
+
+    unifiedAlertModal.style.display = 'flex';
+}
+
+btnUnifiedViewClients?.addEventListener('click', () => {
+    unifiedAlertModal.style.display = 'none';
+    // Al cerrar, recargamos la tabla para que el usuario vea los botones de acción en las filas
+    loadClientsTable(true);
+});
+
+// --- Fin Lógica Notificaciones ---
 
 // --- Navegación del Menú Principal ---
 
@@ -853,6 +971,9 @@ async function loadClientsTable(isRefresh = false) {
     currentAlertsData = alertsResult.data || [];
     currentSecondPaymentAlerts = secondPaymentResult.data || [];
 
+    // Actualizar badges también al cargar la tabla manualmente
+    checkAndNotifyAlerts();
+
     // Mapa auxiliar para encontrar cédula por debtor_number (si la alerta no tiene cédula)
     const debtorNumberToCedula = new Map();
     const debtorInfoMap = new Map(); // Mapa para enriquecer datos (Asesor, Municipio)
@@ -867,66 +988,8 @@ async function loadClientsTable(isRefresh = false) {
     const cedulaToName = new Map();
     allClientsData.forEach(c => cedulaToName.set(c.cedula, c.name));
 
-    // Notificación Masiva si hay alertas pendientes (represt === false)
-    const pendingAlerts = currentAlertsData.filter(a => a.represt === false);
-    if (pendingAlerts.length > 0) {
-        represtAlertsList.innerHTML = '';
-        pendingAlerts.forEach(a => {
-            // Asegurar cédula
-            const dNum = a.debtor_number ? String(a.debtor_number) : null;
-            if (!a.cedula && dNum) a.cedula = debtorNumberToCedula.get(dNum);
-            
-            // Enriquecer datos faltantes (Asesor, Municipio, Nombre)
-            const debtor = dNum ? debtorInfoMap.get(dNum) : null;
-            const client = a.cedula ? allClientsData.find(c => c.cedula === a.cedula) : null;
-
-            const clientName = client ? client.name : (debtor ? debtor.name : (cedulaToName.get(a.cedula) || 'Cliente Desconocido'));
-            const advisorName = a.user_name || a.asesor_name || (debtor ? debtor.asesor_name : (client ? client.asesor_name : 'N/A'));
-            const muniName = a.municipality || (debtor ? debtor.municipality : (client ? client.municipality : 'N/A'));
-
-            const div = document.createElement('div');
-            div.style.marginBottom = '8px';
-            div.style.paddingBottom = '8px';
-            div.style.borderBottom = '1px solid #eee';
-            div.innerHTML = `
-                <strong>Asesor:</strong> ${advisorName}<br>
-                <strong>Cliente:</strong> ${clientName}<br>
-                <strong>Municipio:</strong> ${muniName}
-            `;
-            represtAlertsList.appendChild(div);
-        });
-        alertReprestNotificationModal.style.display = 'block';
-    }
-
-    // Notificación Masiva Segundo Pago
-    if (currentSecondPaymentAlerts.length > 0) {
-        secondPaymentAlertsList.innerHTML = '';
-        currentSecondPaymentAlerts.forEach(a => {
-            // Asegurar cédula
-            const dNum = a.debtor_number ? String(a.debtor_number) : null;
-            if (!a.cedula && dNum) a.cedula = debtorNumberToCedula.get(dNum);
-
-            // Enriquecer datos faltantes
-            const debtor = dNum ? debtorInfoMap.get(dNum) : null;
-            const client = a.cedula ? allClientsData.find(c => c.cedula === a.cedula) : null;
-
-            const clientName = client ? client.name : (debtor ? debtor.name : (cedulaToName.get(a.cedula) || 'Cliente Desconocido'));
-            const advisorName = a.user_name || a.asesor_name || (debtor ? debtor.asesor_name : (client ? client.asesor_name : 'N/A'));
-            const muniName = a.municipality || (debtor ? debtor.municipality : (client ? client.municipality : 'N/A'));
-
-            const div = document.createElement('div');
-            div.style.marginBottom = '8px';
-            div.style.paddingBottom = '8px';
-            div.style.borderBottom = '1px solid #eee';
-            div.innerHTML = `
-                <strong>Asesor:</strong> ${advisorName}<br>
-                <strong>Cliente:</strong> ${clientName}<br>
-                <strong>Municipio:</strong> ${muniName}
-            `;
-            secondPaymentAlertsList.appendChild(div);
-        });
-        alertSecondPaymentNotificationModal.style.display = 'block';
-    }
+    // NOTA: Se ha eliminado la lógica antigua de modales separados (alertReprestNotificationModal y alertSecondPaymentNotificationModal)
+    // para usar el nuevo checkAndNotifyAlerts() que maneja el modal unificado.
 
     if (!isRefresh) {
         clientsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Realice una búsqueda de clientes por favor</td></tr>';
@@ -1309,7 +1372,7 @@ btnConfirmReprest?.addEventListener('click', async () => {
             capsule.classList.remove('status-alert');
             capsule.classList.add('status-open');
         }
-        setTimeout(() => loadClientsTable(true), 1500); // Esperar transición antes de recargar
+        // Se elimina recarga inmediata para permitir gestión en lote. El listener realtime refrescará al terminar.
     }
 });
 
@@ -1330,7 +1393,6 @@ btnRejectReprest?.addEventListener('click', async () => {
             capsule.classList.remove('status-alert');
             capsule.classList.add('status-open');
         }
-        setTimeout(() => loadClientsTable(true), 1500);
     }
 });
 
@@ -1364,7 +1426,6 @@ btnConfirmSecondPayment?.addEventListener('click', async () => {
             capsule.classList.remove('status-second-payment');
             capsule.classList.add('status-open');
         }
-        setTimeout(() => loadClientsTable(true), 1500);
     }
 });
 
@@ -1389,7 +1450,6 @@ btnRejectSecondPayment?.addEventListener('click', async () => {
             capsule.classList.add('status-open');
             capsule.style.cursor = 'default'; // Asegurar que el cursor no sea de puntero
         }
-        setTimeout(() => loadClientsTable(true), 1500);
     }
 });
 
@@ -1411,7 +1471,6 @@ btnConfirmReactivate?.addEventListener('click', async () => {
             capsule.classList.remove('status-closed');
             capsule.classList.add('status-free');
         }
-        setTimeout(() => loadClientsTable(true), 1500);
     }
 });
 
@@ -1433,7 +1492,6 @@ btnConfirmCloseCredit?.addEventListener('click', async () => {
             capsule.classList.remove('status-free');
             capsule.classList.add('status-closed');
         }
-        setTimeout(() => loadClientsTable(true), 1500);
     }
 });
 
