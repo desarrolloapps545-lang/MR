@@ -2872,7 +2872,7 @@ if (importExcelInput) {
                 console.log(`Procesados ${processedCount} de ${rawData.length} registros...`);
             }
 
-            alert('Importación completada exitosamente.');
+            alert(`Importación completada exitosamente. Se procesaron ${processedCount} registros.`);
             loadClientsTable();
 
         } catch (error) {
@@ -3013,6 +3013,7 @@ async function processImportBatch(chunk, dbMunicipalities, usersList, isCollecto
         const nroCuotas = Number(normalizedRow['CUOTA']) || Number(normalizedRow['NRO CUOTAS']) || 0;
         const creditoNuevo = Number(normalizedRow['CREDITO NUEVO']) || 0;
         const represte = Number(normalizedRow['REPRESTE']) || 0;
+        const interests = Number(normalizedRow['INTERESES']) || 0;
         
         // Fechas
         const fechaPrestamo = parseExcelDate(normalizedRow['FECHA DE PRESTAMO']);
@@ -3024,7 +3025,7 @@ async function processImportBatch(chunk, dbMunicipalities, usersList, isCollecto
         // Guardar datos procesados
         const rowData = {
             cedula, nombre, telefono, direccion, municipio, asesor, tipoPago,
-            recaudoTotal, abono, saldo, valorCuota, nroCuotas, creditoNuevo, represte, fechaPrestamo,
+            recaudoTotal, abono, saldo, valorCuota, nroCuotas, creditoNuevo, represte, interests, fechaPrestamo,
             fechaPrestamoClean,
             fechaAbono,
             fechaAbonoClean

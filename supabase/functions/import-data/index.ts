@@ -76,6 +76,7 @@ Deno.serve(async (req) => {
                 credit_type: isNew ? 'Nuevo' : 'Represte',
                 balance: r.saldo,
                 sale_value: saleValue,
+                interests: r.interests,
                 valor_cuota: r.valorCuota,
                 number_of_payments: r.nroCuotas,
                 remaining_payments: r.nroCuotas,
@@ -139,6 +140,18 @@ Deno.serve(async (req) => {
             // Find debtor_number: 1st priority is a new credit from this batch, 2nd is the most recent existing one.
             const debtorNumber = newDebtorMap.get(r.cedula) || existingDebtorMap.get(r.cedula) || null
 
+            let createdAt = r.fechaAbono
+            let paymentDate = r.fechaAbonoClean
+
+            if (!createdAt) {
+                const now = new Date()
+                createdAt = now.toISOString()
+                const day = String(now.getUTCDate()).padStart(2, '0')
+                const month = String(now.getUTCMonth() + 1).padStart(2, '0')
+                const year = now.getUTCFullYear()
+                paymentDate = `${day}-${month}-${year}`
+            }
+
             paymentsToInsert.push({
                 payment_number: nextPaymentNum, // Assign sequential number
                 debtor_number: debtorNumber, // Link using debtor_number
@@ -147,10 +160,11 @@ Deno.serve(async (req) => {
                 phone: r.telefono,
                 valor_cuota: r.valorCuota,
                 payment_amount: r.abono,
-                payment_date: r.fechaAbonoClean, // Use FECHA ABONO clean date
+                payment_date: paymentDate, // Use FECHA ABONO clean date
                 municipality: r.municipio,
                 user_name: r.asesor,
-                created_at: r.fechaAbono || new Date().toISOString(), // Use FECHA ABONO for timestamp or now
+                created_at: createdAt, // Use FECHA ABONO for timestamp or now
+                payment_method: 'Efectivo',
                 imported: true
             })
             nextPaymentNum++ // Increment for the next one
