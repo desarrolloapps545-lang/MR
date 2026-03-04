@@ -14,7 +14,25 @@ Deno.serve(async (req) => {
 
     if (!rows || !Array.isArray(rows)) throw new Error('Datos inválidos')
 
-    // 1. Preparar Upsert de Clientes (Deduplicar por cédula en el lote)
+    // Get latest numbers to ensure sequential IDs
+    const { data: maxDebtorData } = await supabase
+      .from('debtors')
+      .select('debtor_number')
+      .order('debtor_number', { ascending: false })
+      .limit(1)
+      .single()
+
+    const { data: maxPaymentData } = await supabase
+      .from('payments')
+      .select('payment_number')
+      .order('payment_number', { ascending: false })
+      .limit(1)
+      .single()
+
+    let nextDebtorNum = (maxDebtorData?.debtor_number || 0) + 1
+    let nextPaymentNum = (maxPaymentData?.payment_number || 0) + 1
+
+    // 1. Upsert Clients
     const clientsMap = new Map()
     rows.forEach((r: any) => {
         if (r.cedula) {
@@ -28,7 +46,6 @@ Deno.serve(async (req) => {
                 payment_term: [r.tipoPago],
                 total_recaudo: r.recaudoTotal,
                 imported: true
-                // created_at se maneja por default en BD o se puede añadir si es crítico
             })
         }
     })
@@ -39,17 +56,17 @@ Deno.serve(async (req) => {
         if (clientError) throw clientError
     }
 
-    // 2. Preparar Inserción de Créditos (Debtors)
-    // Necesitamos mapear el índice de la fila con el crédito insertado para vincular el pago
+    // 2. Insert Debtors (Credits)
     const debtorsToInsert: any[] = []
-    const rowIndicesWithCredit: number[] = []
+    const cedulasWithNewCredit = new Set()
 
-    rows.forEach((r: any, index: number) => {
+    rows.forEach((r: any) => {
         if (r.creditoNuevo > 0 || r.represte > 0) {
             const isNew = r.creditoNuevo > 0
             const saleValue = isNew ? r.creditoNuevo : r.represte
             
             debtorsToInsert.push({
+                debtor_number: nextDebtorNum, // Assign sequential number
                 cedula: r.cedula,
                 name: r.nombre,
                 phone: r.telefono,
@@ -64,46 +81,79 @@ Deno.serve(async (req) => {
                 remaining_payments: r.nroCuotas,
                 payment_term: [r.tipoPago],
                 imported: true,
-                created_at: r.fechaPrestamo,
+                created_at: r.fechaPrestamo || new Date().toISOString(), // Use FECHA PRESTAMO or now
                 sale_date: r.fechaPrestamoClean
             })
-            rowIndicesWithCredit.push(index)
+            cedulasWithNewCredit.add(r.cedula)
+            nextDebtorNum++ // Increment for the next one
         }
     })
 
     let createdDebtors: any[] = []
     if (debtorsToInsert.length > 0) {
-        // Insertar y devolver IDs para vincular pagos
-        const { data, error: debtorError } = await supabase.from('debtors').insert(debtorsToInsert).select('id')
+        const { data, error: debtorError } = await supabase
+            .from('debtors')
+            .insert(debtorsToInsert)
+            .select('debtor_number, cedula') // Select number and cedula for linking
         if (debtorError) throw debtorError
         createdDebtors = data
     }
 
-    // 3. Preparar Inserción de Pagos (Payments)
+    // Create a map for quick lookup: cedula -> debtor_number
+    const newDebtorMap = new Map()
+    createdDebtors.forEach(d => newDebtorMap.set(d.cedula, d.debtor_number))
+
+    // --- ENHANCED PAYMENT LINKING ---
+    // 1. Get all cedulas that have a payment in the import file.
+    const cedulasWithPayment = rows
+      .filter((r: any) => r.abono > 0 && r.cedula)
+      .map((r: any) => r.cedula)
+    const uniqueCedulas = [...new Set(cedulasWithPayment)]
+
+    // 2. Fetch all existing debtors for these cedulas to find the most recent credit.
+    let existingDebtors: any[] = []
+    if (uniqueCedulas.length > 0) {
+        const { data } = await supabase
+          .from('debtors')
+          .select('cedula, debtor_number, created_at')
+          .in('cedula', uniqueCedulas)
+        existingDebtors = data || []
+    }
+
+    // 3. Create a map of cedula -> most recent debtor_number for existing credits.
+    const existingDebtorMap = new Map()
+    if (existingDebtors) {
+      existingDebtors.forEach(d => {
+        const existing = existingDebtorMap.get(d.cedula)
+        if (!existing || new Date(d.created_at) > new Date(existing.created_at)) {
+          existingDebtorMap.set(d.cedula, d.debtor_number)
+        }
+      })
+    }
+
+    // 3. Insert Payments
     const paymentsToInsert: any[] = []
     
-    rows.forEach((r: any, index: number) => {
+    rows.forEach((r: any) => {
         if (r.abono > 0) {
-            // Verificar si esta fila creó un crédito para vincularlo
-            const creditIndex = rowIndicesWithCredit.indexOf(index)
-            let debtorId = null
-            
-            if (creditIndex !== -1 && createdDebtors[creditIndex]) {
-                debtorId = createdDebtors[creditIndex].id
-            }
+            // Find debtor_number: 1st priority is a new credit from this batch, 2nd is the most recent existing one.
+            const debtorNumber = newDebtorMap.get(r.cedula) || existingDebtorMap.get(r.cedula) || null
 
             paymentsToInsert.push({
-                debtor_id: debtorId,
+                payment_number: nextPaymentNum, // Assign sequential number
+                debtor_number: debtorNumber, // Link using debtor_number
                 cedula: r.cedula,
                 debtor_name: r.nombre,
+                phone: r.telefono,
+                valor_cuota: r.valorCuota,
                 payment_amount: r.abono,
-                payment_date: r.fechaPrestamoClean,
+                payment_date: r.fechaAbonoClean, // Use FECHA ABONO clean date
                 municipality: r.municipio,
                 user_name: r.asesor,
-                // CORRECCIÓN: valor_cuota ELIMINADO de payments
-                created_at: r.fechaPrestamo,
+                created_at: r.fechaAbono || new Date().toISOString(), // Use FECHA ABONO for timestamp or now
                 imported: true
             })
+            nextPaymentNum++ // Increment for the next one
         }
     })
 

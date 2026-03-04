@@ -606,6 +606,11 @@ function setupRealtimeListeners() {
       .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
           console.log('Change detected on table:', payload.table);
           
+          // Prioridad Alta: Alertas inmediatas (Sin debounce) para respuesta rápida
+          if (['payments_alerts', 'alerts_represt'].includes(payload.table)) {
+              checkAndNotifyAlerts();
+          }
+
           // Escucha atenta a debtors (cambios de estado/cierre), payments_alerts y alerts_represt
           if (['debtors', 'payments_alerts', 'alerts_represt', 'clients'].includes(payload.table)) {
               // Si es debtors y hubo un UPDATE, verificamos si implica un cierre (balance 0 o cambio en closed si existiera)
@@ -642,6 +647,10 @@ async function checkAndNotifyAlerts() {
     const represtAlerts = represtResult.data || [];
     const secondPaymentAlerts = secondPaymentResult.data || [];
     const totalAlerts = represtAlerts.length + secondPaymentAlerts.length;
+
+    // Actualizar variables globales para que el filtrado funcione correctamente sin recargar
+    currentAlertsData = represtAlerts;
+    currentSecondPaymentAlerts = secondPaymentAlerts;
 
     // 1. Actualizar Badges (Punto Rojo)
     const updateBadge = (badgeElement) => {
@@ -706,8 +715,40 @@ function showUnifiedAlertModal(represtAlerts, secondPaymentAlerts) {
 
 btnUnifiedViewClients?.addEventListener('click', () => {
     unifiedAlertModal.style.display = 'none';
-    // Al cerrar, recargamos la tabla para que el usuario vea los botones de acción en las filas
-    loadClientsTable(true);
+    // Al cerrar, filtramos la tabla para mostrar solo los clientes con alertas pendientes.
+
+    // 1. Crear un Set para almacenar las cédulas de los clientes con alertas.
+    const clientsWithAlertsCedulas = new Set();
+
+    // 2. Recorrer las alertas de represte y agregar las cédulas.
+    currentAlertsData.forEach(alert => {
+        if (alert.represt === false) { // Solo las pendientes
+            let cedula = alert.cedula;
+            // Si la alerta no tiene cédula, buscarla en los deudores por debtor_number
+            if (!cedula && alert.debtor_number) {
+                const debtor = allDebtorsData.find(d => String(d.debtor_number) === String(alert.debtor_number));
+                if (debtor) cedula = debtor.cedula;
+            }
+            if (cedula) clientsWithAlertsCedulas.add(cedula);
+        }
+    });
+
+    // 3. Recorrer las alertas de segundo pago y agregar las cédulas.
+    currentSecondPaymentAlerts.forEach(alert => {
+        let cedula = alert.cedula;
+        // Si la alerta no tiene cédula, buscarla en los deudores por debtor_number
+        if (!cedula && alert.debtor_number) {
+            const debtor = allDebtorsData.find(d => String(d.debtor_number) === String(alert.debtor_number));
+            if (debtor) cedula = debtor.cedula;
+        }
+        if (cedula) clientsWithAlertsCedulas.add(cedula);
+    });
+
+    // 4. Filtrar la lista completa de clientes (`allClientsData`) para mostrar solo los que están en el Set.
+    const filteredClients = allClientsData.filter(client => clientsWithAlertsCedulas.has(client.cedula));
+
+    // 5. Renderizar la tabla con la lista filtrada.
+    renderClientsTable(filteredClients);
 });
 
 // --- Fin Lógica Notificaciones ---
@@ -765,6 +806,7 @@ btnClientsMgmt?.addEventListener('click', () => {
         loadClientsTable();
     } else {
         // Si ya hay datos, mantener la vista actual (no limpiar)
+        checkAndNotifyAlerts();
     }
 });
 
@@ -810,6 +852,8 @@ if(sbBtnClients) sbBtnClients?.addEventListener('click', () => {
     // Persistencia: Solo cargar si está vacío
     if (allClientsData.length === 0) {
         loadClientsTable();
+    } else {
+        checkAndNotifyAlerts();
     }
 });
 if(sbBtnMunis) sbBtnMunis?.addEventListener('click', () => { setActiveSidebar(sbBtnMunis); openWorkspace(municipalitiesContainer); populateDeptSelects(); });
@@ -2861,16 +2905,19 @@ function toTitleCase(str) {
 
 // Función Auxiliar: Parsear Fechas Excel
 function parseExcelDate(value) {
-    if (!value) return new Date().toISOString(); // Fallback a hoy si no hay fecha
+    if (!value) return null; // Return null if no value
 
     // Si es número (Serial Excel)
     if (typeof value === 'number') {
         // Ajuste fecha Excel (1900 epoch) a JS
         const date = new Date(Math.round((value - 25569) * 86400 * 1000));
         // Validar validez de fecha antes de usar métodos
-        if (isNaN(date.getTime())) return new Date().toISOString();
+        if (isNaN(date.getTime())) return null;
         // Validar año
-        if (date.getFullYear() < 2000) return new Date().toISOString();
+        if (date.getFullYear() < 2000) {
+            // Handle Excel's 1900 leap year bug if necessary, or just return as is for now.
+            return date.toISOString();
+        }
         return date.toISOString();
     }
 
@@ -2881,7 +2928,8 @@ function parseExcelDate(value) {
             const parts = value.split('/');
             if (parts.length === 3) {
                 // Asumimos dd/mm/yyyy
-                const d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                // Forzar UTC para evitar problemas de zona horaria
+                const d = new Date(Date.UTC(parts[2], parts[1] - 1, parts[0]));
                 if (!isNaN(d.getTime())) return d.toISOString();
             }
         }
@@ -2890,7 +2938,7 @@ function parseExcelDate(value) {
         if (!isNaN(d.getTime())) return d.toISOString();
     }
 
-    return new Date().toISOString(); // Fallback final
+    return null; // Fallback final
 }
 
 // Función Auxiliar: Formatear fecha a DD-MM-YYYY limpio
@@ -2968,14 +3016,18 @@ async function processImportBatch(chunk, dbMunicipalities, usersList, isCollecto
         
         // Fechas
         const fechaPrestamo = parseExcelDate(normalizedRow['FECHA DE PRESTAMO']);
+        const fechaAbono = parseExcelDate(normalizedRow['FECHA ABONO']);
         // Convertir a formato limpio DD-MM-YYYY para guardar en campos de texto
         const fechaPrestamoClean = formatDateToDDMMYYYY(fechaPrestamo);
+        const fechaAbonoClean = formatDateToDDMMYYYY(fechaAbono);
 
         // Guardar datos procesados
         const rowData = {
             cedula, nombre, telefono, direccion, municipio, asesor, tipoPago,
             recaudoTotal, abono, saldo, valorCuota, nroCuotas, creditoNuevo, represte, fechaPrestamo,
-            fechaPrestamoClean
+            fechaPrestamoClean,
+            fechaAbono,
+            fechaAbonoClean
         };
         rowsData.push(rowData);
     });
