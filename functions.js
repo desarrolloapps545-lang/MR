@@ -303,7 +303,7 @@ let currentAlertActionId = null; // ID de la alerta a aprobar/rechazar
 let currentReactivateClientCedula = null; // Cédula del cliente a reactivar
 let currentCloseClientCedula = null; // Cédula del cliente a cerrar crédito
 let currentSecondPaymentAlerts = []; // Almacena alertas de segundo pago
-let currentSecondPaymentActionId = null; // ID de la alerta de segundo pago
+let currentSecondPaymentAction = null; // Datos de la alerta de segundo pago
 // Estado Exportación
 let dashboardInterval = null;
 let currentDashboardMode = 'daily';
@@ -823,11 +823,23 @@ async function loadClientsTable(isRefresh = false) {
     
     // Cargar datos en paralelo (Clientes, Deudores, Alertas) para tener el panorama completo
     // Se elimina el límite y se ordena por nombre para coincidir con la lógica de guia.html
+
+    // Definir el rango de fechas para "hoy" para las alertas de segundo pago
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startOfToday = today.toISOString();
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const startOfTomorrow = tomorrow.toISOString();
+
     const [clientsResult, debtorsResult, alertsResult, secondPaymentResult] = await Promise.all([
         sbClient.from('clients').select('*').order('name', { ascending: true }),
         sbClient.from('debtors').select('*'),
         sbClient.from('alerts_represt').select('*'),
-        sbClient.from('payments_alerts').select('*').is('pay', null)
+        sbClient.from('payments_alerts').select('*').is('pay', null) // Solo las no resueltas
+            .gte('created_at', startOfToday) // Y que sean de hoy
+            .lt('created_at', startOfTomorrow)
     ]);
 
     if (clientsResult.error) {
@@ -982,7 +994,7 @@ async function renderClientsTable(clients) {
         } 
         // 1.1 Prioridad Alta: Alerta Segundo Pago
         else if (secondPaymentInfo) {
-            statusHtml = `<div class="status-capsule status-second-payment" data-id="${secondPaymentInfo.id}" style="background-color: orange; cursor: pointer;">Intento de segundo pago</div>`;
+            statusHtml = `<div class="status-capsule status-second-payment" data-debtor-number="${secondPaymentInfo.debtor_number}" data-created-at="${secondPaymentInfo.created_at}" style="background-color: orange; cursor: pointer;">Intento de segundo pago</div>`;
         }
         // 2. Prioridad Alta: Crédito Cerrado
         else if (client.closed === true) {
@@ -1071,7 +1083,6 @@ btnFilterSecondPaymentClients.addEventListener('click', () => {
 // Manejo de eventos en la tabla (Delegación de eventos)
 clientsTableBody.addEventListener('click', async (e) => {
     const target = e.target;
-    const alertId = target.dataset.id; // Para alertas (usan ID propio)
     const clientCedula = target.dataset.cedula; // Para clientes (usan Cédula)
 
     // --- Lógica Botones de Estado ---
@@ -1085,8 +1096,12 @@ clientsTableBody.addEventListener('click', async (e) => {
 
     // Botón Naranja: Alerta Segundo Pago
     if (target.classList.contains('status-second-payment')) {
-        currentSecondPaymentActionId = alertId;
-        approveSecondPaymentModal.style.display = 'block';
+        const debtorNumber = target.dataset.debtorNumber;
+        const createdAt = target.dataset.createdAt;
+        if (debtorNumber && createdAt) {
+            currentSecondPaymentAction = { debtor_number: debtorNumber, created_at: createdAt };
+            approveSecondPaymentModal.style.display = 'block';
+        }
         return;
     }
 
@@ -1310,15 +1325,21 @@ btnRejectReprest?.addEventListener('click', async () => {
 
 // --- Lógica Modal Aprobar Segundo Pago ---
 btnConfirmSecondPayment?.addEventListener('click', async () => {
-    if (!currentSecondPaymentActionId) return;
+    if (!currentSecondPaymentAction) return;
     
     // Actualizar estado del cliente a abierto (closed = false)
-    const alertObj = currentSecondPaymentAlerts.find(a => a.id == currentSecondPaymentActionId);
+    const alertObj = currentSecondPaymentAlerts.find(a => 
+        a.debtor_number == currentSecondPaymentAction.debtor_number && 
+        a.created_at == currentSecondPaymentAction.created_at
+    );
     if (alertObj && alertObj.cedula) {
         await sbClient.from('clients').update({ closed: false }).eq('cedula', alertObj.cedula);
     }
 
-    const { error } = await sbClient.from('payments_alerts').update({ pay: true }).eq('id', currentSecondPaymentActionId);
+    const { error } = await sbClient.from('payments_alerts')
+        .update({ pay: true })
+        .eq('debtor_number', currentSecondPaymentAction.debtor_number)
+        .eq('created_at', currentSecondPaymentAction.created_at);
     
     if (error) alert('Error al aprobar: ' + error.message);
     else {
@@ -1329,9 +1350,12 @@ btnConfirmSecondPayment?.addEventListener('click', async () => {
 });
 
 btnRejectSecondPayment?.addEventListener('click', async () => {
-    if (!currentSecondPaymentActionId) return;
+    if (!currentSecondPaymentAction) return;
     
-    const { error } = await sbClient.from('payments_alerts').update({ pay: false }).eq('id', currentSecondPaymentActionId);
+    const { error } = await sbClient.from('payments_alerts')
+        .update({ pay: false })
+        .eq('debtor_number', currentSecondPaymentAction.debtor_number)
+        .eq('created_at', currentSecondPaymentAction.created_at);
     
     if (error) alert('Error al rechazar: ' + error.message);
     else {
