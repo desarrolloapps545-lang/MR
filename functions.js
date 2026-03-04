@@ -1321,10 +1321,16 @@ btnRejectReprest?.addEventListener('click', async () => {
     
     if (error) alert('Error al rechazar: ' + error.message);
     else {
-        alert('Solicitud rechazada y eliminada.');
         approveReprestModal.style.display = 'none';
-        const btn = document.querySelector(`.status-alert[data-cedula="${currentAlertActionId}"]`);
-        if(btn) btn.remove();
+        const capsule = document.querySelector(`.status-alert[data-cedula="${currentAlertActionId}"]`);
+        if (capsule) {
+            capsule.style.transition = 'background-color 1.5s ease';
+            capsule.style.backgroundColor = '#e74c3c'; // Rojo (Crédito Abierto)
+            capsule.innerText = 'Crédito Abierto';
+            capsule.classList.remove('status-alert');
+            capsule.classList.add('status-open');
+        }
+        setTimeout(() => loadClientsTable(true), 1500);
     }
 });
 
@@ -1372,9 +1378,18 @@ btnRejectSecondPayment?.addEventListener('click', async () => {
     
     if (error) alert('Error al rechazar: ' + error.message);
     else {
-        alert('Segundo pago rechazado.');
         approveSecondPaymentModal.style.display = 'none';
-        loadClientsTable(true);
+        
+        const capsule = document.querySelector(`.status-second-payment[data-debtor-number="${currentSecondPaymentAction.debtor_number}"][data-created-at="${currentSecondPaymentAction.created_at}"]`);
+        if (capsule) {
+            capsule.style.transition = 'background-color 1.5s ease';
+            capsule.style.backgroundColor = '#e74c3c'; // Rojo (Crédito Abierto)
+            capsule.innerText = 'Crédito Abierto';
+            capsule.classList.remove('status-second-payment');
+            capsule.classList.add('status-open');
+            capsule.style.cursor = 'default'; // Asegurar que el cursor no sea de puntero
+        }
+        setTimeout(() => loadClientsTable(true), 1500);
     }
 });
 
