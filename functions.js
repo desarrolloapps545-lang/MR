@@ -1299,12 +1299,17 @@ btnConfirmReprest?.addEventListener('click', async () => {
     
     if (error) alert('Error al autorizar: ' + error.message);
     else {
-        alert('Pago represte autorizado.');
         approveReprestModal.style.display = 'none';
-        // Actualizar estado visual sin recargar todo si es posible, o recargar silenciosamente
-        const btn = document.querySelector(`.status-alert[data-cedula="${currentAlertActionId}"]`);
-        if(btn) btn.parentElement.innerHTML = '<div class="status-capsule status-open">Crédito Abierto</div>';
-        loadClientsTable(true); // Recargar para sincronizar estado
+        
+        const capsule = document.querySelector(`.status-alert[data-cedula="${currentAlertActionId}"]`);
+        if (capsule) {
+            capsule.style.transition = 'background-color 1.5s ease';
+            capsule.style.backgroundColor = '#e74c3c'; // Rojo (Crédito Abierto)
+            capsule.innerText = 'Crédito Abierto';
+            capsule.classList.remove('status-alert');
+            capsule.classList.add('status-open');
+        }
+        setTimeout(() => loadClientsTable(true), 1500); // Esperar transición antes de recargar
     }
 });
 
@@ -1343,9 +1348,17 @@ btnConfirmSecondPayment?.addEventListener('click', async () => {
     
     if (error) alert('Error al aprobar: ' + error.message);
     else {
-        alert('Segundo pago aprobado.');
         approveSecondPaymentModal.style.display = 'none';
-        loadClientsTable(true);
+        
+        const capsule = document.querySelector(`.status-second-payment[data-debtor-number="${currentSecondPaymentAction.debtor_number}"][data-created-at="${currentSecondPaymentAction.created_at}"]`);
+        if (capsule) {
+            capsule.style.transition = 'background-color 1.5s ease';
+            capsule.style.backgroundColor = '#e74c3c'; // Rojo (Crédito Abierto)
+            capsule.innerText = 'Crédito Abierto';
+            capsule.classList.remove('status-second-payment');
+            capsule.classList.add('status-open');
+        }
+        setTimeout(() => loadClientsTable(true), 1500);
     }
 });
 
@@ -1373,10 +1386,17 @@ btnConfirmReactivate?.addEventListener('click', async () => {
     
     if (error) alert('Error al reactivar: ' + error.message);
     else {
-        alert('Crédito reactivado exitosamente.');
         reactivateCreditModal.style.display = 'none';
-        const btn = document.querySelector(`.status-closed[data-cedula="${currentReactivateClientCedula}"]`);
-        if(btn) btn.parentElement.innerHTML = '<div class="status-capsule status-open">Crédito Abierto</div>';
+        
+        const capsule = document.querySelector(`.status-closed[data-cedula="${currentReactivateClientCedula}"]`);
+        if (capsule) {
+            capsule.style.transition = 'background-color 1.5s ease';
+            capsule.style.backgroundColor = '#2ecc71'; // Verde (Sin Crédito)
+            capsule.innerText = 'Sin Crédito';
+            capsule.classList.remove('status-closed');
+            capsule.classList.add('status-free');
+        }
+        setTimeout(() => loadClientsTable(true), 1500);
     }
 });
 
@@ -1388,10 +1408,17 @@ btnConfirmCloseCredit?.addEventListener('click', async () => {
     
     if (error) alert('Error al cerrar crédito: ' + error.message);
     else {
-        alert('Crédito cerrado exitosamente.');
         closeCreditModal.style.display = 'none';
-        // Actualizar visualmente o recargar tabla
-        loadClientsTable(true);
+        
+        const capsule = document.querySelector(`.status-free[data-cedula="${currentCloseClientCedula}"]`);
+        if (capsule) {
+            capsule.style.transition = 'background-color 1.5s ease';
+            capsule.style.backgroundColor = '#95a5a6'; // Gris (Cerrado)
+            capsule.innerText = 'Crédito cerrado';
+            capsule.classList.remove('status-free');
+            capsule.classList.add('status-closed');
+        }
+        setTimeout(() => loadClientsTable(true), 1500);
     }
 });
 
