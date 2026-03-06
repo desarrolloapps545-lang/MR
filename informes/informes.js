@@ -697,8 +697,46 @@ document.addEventListener('DOMContentLoaded', () => {
     btnGeneratePg.addEventListener('click', generatePgReport);
 
     async function generatePgReport() {
-        console.log('Generación de reporte P&G pendiente de reconstrucción.');
-        pgTableBody.innerHTML = '<tr><td colspan="8">Funcionalidad en reconstrucción...</td></tr>';
+        pgTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Cargando...</td></tr>';
+
+        const mode = currentPgMode || 'daily';
+        const user = pgFilterUser.value;
+        const dept = pgFilterDept.value;
+        const muni = pgFilterMuni.value;
+        const startDate = pgDateState.start;
+        const endDate = pgDateState.end;
+
+        if (!startDate || !endDate) {
+            pgTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Seleccione un rango de fechas.</td></tr>';
+            return;
+        }
+
+        try {
+            const { data: { session } } = await sbClient.auth.getSession();
+            const { data, error } = await sbClient.functions.invoke('pg', {
+                body: { mode, startDate: startDate.toISOString(), endDate: endDate.toISOString(), user, dept, muni },
+                headers: { Authorization: `Bearer ${session?.access_token}` }
+            });
+
+            if (error) throw error;
+
+            currentPgReportData = data; // Guardar para exportar
+
+            if (!data || data.length === 0) {
+                pgTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No se encontraron registros.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            data.forEach(row => {
+                html += `<tr><td>${row.date}</td><td>${row.user}</td><td>${row.muni}</td><td>$${(row.cobro || 0).toLocaleString('es-CO')}</td><td>$${(row.gastos || 0).toLocaleString('es-CO')}</td><td>$${(row.creditos || 0).toLocaleString('es-CO')}</td><td>$${(row.ganancia || 0).toLocaleString('es-CO')}</td><td>$${(row.cobroReal || 0).toLocaleString('es-CO')}</td></tr>`;
+            });
+            pgTableBody.innerHTML = html;
+
+        } catch (err) {
+            console.error(err);
+            pgTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:red;">Error: ${err.message}</td></tr>`;
+        }
     }
 
     function showInputModal(title, label, initialValue, onConfirm) {
@@ -962,13 +1000,188 @@ document.addEventListener('DOMContentLoaded', () => {
     btnGeneratePb.addEventListener('click', generatePaymentBehaviorReport);
 
     async function generatePaymentBehaviorReport() {
-        console.log('Generación de reporte PB pendiente de reconstrucción.');
-        pbTableBody.innerHTML = '<tr><td colspan="9">Funcionalidad en reconstrucción...</td></tr>';
+        pbTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Cargando...</td></tr>';
+
+        const mode = currentPbMode || 'daily';
+        const user = pbFilterUser.value;
+        const dept = pbFilterDept.value;
+        const muni = pbFilterMuni.value;
+        const startDate = pgDateState.start;
+        const endDate = pgDateState.end;
+
+        if (!startDate || !endDate) {
+            pbTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Seleccione un rango de fechas.</td></tr>';
+            return;
+        }
+
+        try {
+            const { data: { session } } = await sbClient.auth.getSession();
+            const { data, error } = await sbClient.functions.invoke('payment-behavior', {
+                body: { mode, startDate: startDate.toISOString(), endDate: endDate.toISOString(), user, dept, muni },
+                headers: { Authorization: `Bearer ${session?.access_token}` }
+            });
+
+            if (error) throw error;
+
+            // Post-process for export (add dateObj for Excel sorting if needed)
+            currentPbReportData = data.map(r => {
+                // Try to parse dateStr back to object for export logic
+                let dObj = null;
+                if (r.dateStr.includes('Semana')) {
+                    // Weekly label, keep null or approx
+                } else {
+                    const [d, m, y] = r.dateStr.split('-').map(Number);
+                    dObj = new Date(y, m - 1, d);
+                }
+                return { ...r, dateObj: dObj };
+            });
+
+            if (!data || data.length === 0) {
+                pbTableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Todos los clientes realizaron sus pagos en las fechas seleccionadas.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            data.forEach(row => {
+                html += `<tr>
+                    <td>${row.name || 'N/A'}</td>
+                    <td>${row.municipality || 'N/A'}</td>
+                    <td>${row.asesor_name || 'N/A'}</td>
+                    <td>${row.saleDate}</td>
+                    <td>$${(row.nuevos || 0).toLocaleString('es-CO')}</td>
+                    <td>$${(row.represtes || 0).toLocaleString('es-CO')}</td>
+                    <td>$${(row.valor_cuota || 0).toLocaleString('es-CO')}</td>
+                    <td style="text-align:center; cursor:pointer;" onclick="toggleMissedPaymentDetails(this.querySelector('i'), '${row.id}', '${row.dateStr}', '${mode === 'weekly' ? 'Semanal' : 'Diario'}')">
+                        <i class="fas fa-chevron-down dropdown-toggle"></i>
+                    </td>
+                    <td>$${(row.balance || 0).toLocaleString('es-CO')}</td>
+                </tr>`;
+            });
+            pbTableBody.innerHTML = html;
+
+        } catch (err) {
+            console.error(err);
+            pbTableBody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:red;">Error: ${err.message}</td></tr>`;
+        }
     }
 
-    pbTableBody.addEventListener('click', (e) => {
-        // Sin lógica
-    });
+    // Helper to get last N payments for dropdown
+    async function getLastPaymentsForDebtor(debtorId, refDate, n, isWeekly) {
+        try {
+            const { data: paymentsSnap, error } = await sbClient
+                .from('payments')
+                .select('*')
+                .eq('debtor_number', debtorId);
+            
+            if (error) throw error;
+
+            let payments = paymentsSnap.map(d => {
+                const dateObj = parseDateValue(d.payment_date) || (d.created_at ? new Date(d.created_at) : new Date(0));
+                return { ...d, dateObj };
+            });
+
+            // Filter payments strictly BEFORE the reference date/time
+            if (refDate) {
+                payments = payments.filter(p => p.dateObj < refDate);
+            }
+
+            // Sort descending
+            payments.sort((a, b) => b.dateObj - a.dateObj);
+            payments = payments.slice(0, n);
+
+            const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            
+            return payments.map(p => {
+                const d = p.dateObj;
+                const dateStr = `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getFullYear()}`;
+                
+                let weekNum = 0;
+                if (isWeekly) {
+                    const day = d.getDate();
+                    if (day <= 7) weekNum = 1;
+                    else if (day <= 14) weekNum = 2;
+                    else if (day <= 21) weekNum = 3;
+                    else weekNum = 4;
+                }
+
+                return {
+                    date: dateStr,
+                    quotaVal: Number(p.valor_cuota) || 0,
+                    amount: Number(p.payment_amount) || 0,
+                    weekNum: weekNum,
+                    month: months[d.getMonth()]
+                };
+            });
+        } catch (e) {
+            console.error("Error fetching history:", e);
+            return [];
+        }
+    }
+
+    // Expose toggle function globally
+    window.toggleMissedPaymentDetails = async (btn, debtorId, dateStr, mode) => {
+        const tr = btn.closest('tr');
+        const nextTr = tr.nextElementSibling;
+        
+        if (nextTr && nextTr.classList.contains('history-dropdown-row')) {
+            nextTr.remove();
+            btn.classList.remove('fa-chevron-up');
+            btn.classList.add('fa-chevron-down');
+            return;
+        }
+
+        btn.classList.remove('fa-chevron-down');
+        btn.classList.add('fa-chevron-up');
+
+        const newRow = document.createElement('tr');
+        newRow.className = 'history-dropdown-row';
+        const cell = document.createElement('td');
+        cell.colSpan = 9;
+        cell.innerHTML = '<div class="history-table-container"><div class="spinner" style="width:20px; height:20px; margin:0 auto;"></div></div>';
+        newRow.appendChild(cell);
+        tr.parentNode.insertBefore(newRow, tr.nextSibling);
+
+        // Parse dateStr back to object for comparison
+        let refDate = new Date();
+        if (dateStr.includes('-')) {
+             const [d, m, y] = dateStr.split('-').map(Number);
+             refDate = new Date(y, m - 1, d);
+        }
+        // If weekly label, refDate is roughly now or end of that week, logic handles it loosely
+
+        const isWeekly = mode === 'Semanal';
+        const limit = isWeekly ? 4 : 15;
+
+        const history = await getLastPaymentsForDebtor(debtorId, refDate, limit, isWeekly);
+        
+        const { data: debtorData } = await sbClient.from('debtors').select('*').eq('debtor_number', debtorId).single();
+        currentHistoryData = { debtor: { ...debtorData, name: debtorData.name || 'Cliente' }, payments: history, mode: mode };
+
+        let tableHtml = `<div style="display:flex; justify-content:flex-end; margin-bottom:8px;"><button class="history-download-btn" onclick="currentDownloadContext='payment_behavior_history'; downloadFormatModal.style.display='flex';"><i class="fas fa-download"></i></button></div>`;
+        tableHtml += `<table class="history-table"><thead><tr>`;
+        
+        if (isWeekly) {
+            tableHtml += `<th>Semana</th><th>Mes</th><th>Fecha Pago</th><th>Valor Cuota</th><th>Abono</th>`;
+        } else {
+            tableHtml += `<th>Fecha Pago</th><th>Valor Cuota</th><th>Abono</th>`;
+        }
+        tableHtml += `</tr></thead><tbody>`;
+
+        if (history.length === 0) {
+            tableHtml += `<tr><td colspan="${isWeekly?5:3}" style="text-align:center;">No hay pagos anteriores recientes.</td></tr>`;
+        } else {
+            history.forEach(h => {
+                if (isWeekly) {
+                    tableHtml += `<tr><td>${h.weekNum}</td><td>${h.month}</td><td>${h.date}</td><td>$${h.quotaVal.toLocaleString('es-CO')}</td><td>$${h.amount.toLocaleString('es-CO')}</td></tr>`;
+                } else {
+                    tableHtml += `<tr><td>${h.date}</td><td>$${h.quotaVal.toLocaleString('es-CO')}</td><td>$${h.amount.toLocaleString('es-CO')}</td></tr>`;
+                }
+            });
+        }
+        tableHtml += `</tbody></table>`;
+
+        cell.querySelector('.history-table-container').innerHTML = tableHtml;
+    };
 
     btnDownloadPb.addEventListener('click', () => {
         alert('Descarga en reconstrucción.');
@@ -1798,7 +2011,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnGenerateEx.addEventListener('click', generateExReport);
 
     async function generateExReport() {
-        exTableBody.innerHTML = '<tr><td colspan="4">Cargando...</td></tr>';
+        exTableBody.innerHTML = '<tr><td colspan="6">Cargando...</td></tr>';
 
         const user = exFilterUser.value;
         const isWeekly = currentExMode === 'weekly';
@@ -1808,7 +2021,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const endDate = pgDateState.end;
 
         if (!startDate || !endDate) {
-             exTableBody.innerHTML = '<tr><td colspan="4">Seleccione un rango de fechas.</td></tr>';
+             exTableBody.innerHTML = '<tr><td colspan="6">Seleccione un rango de fechas.</td></tr>';
              return;
         }
 
@@ -1834,7 +2047,9 @@ document.addEventListener('DOMContentLoaded', () => {
             let html = '';
             records.forEach(r => {
                 const othersVal = (r.others && r.others.length > 0) ? (parseFloat(r.others[0]) || 0) : 0;
-                if (othersVal <= 0) return;
+                const fuelVal = parseFloat(r.fuel) || 0;
+                const lunchVal = parseFloat(r.lunch) || 0;
+                if (othersVal === 0 && fuelVal === 0 && lunchVal === 0) return;
 
                 const othersDesc = (r.others && r.others.length > 1) ? r.others[1] : 'N/A';
                 
@@ -1844,15 +2059,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 html += `<tr>
                     <td>${r.user_name || 'N/A'}</td>
                     <td>${dateStr}</td>
+                    <td>$${fuelVal.toLocaleString('es-CO')}</td>
+                    <td>$${lunchVal.toLocaleString('es-CO')}</td>
                     <td>$${othersVal.toLocaleString('es-CO')}</td>
                     <td>${othersDesc}</td>
                 </tr>`;
             });
 
-            exTableBody.innerHTML = html || '<tr><td colspan="4" style="text-align:center;">No se encontraron registros.</td></tr>';
+            exTableBody.innerHTML = html || '<tr><td colspan="6" style="text-align:center;">No se encontraron registros.</td></tr>';
         } catch (error) {
             console.error("Error generating EX report:", error);
-            exTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red;">Error: ${error.message}</td></tr>`;
+            exTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">Error: ${error.message}</td></tr>`;
         }
     }
 
