@@ -225,6 +225,52 @@ function parseDateValue(value) {
 }
 
 /**
+ * Exporta un array de objetos a un archivo Excel.
+ * @param {Array<Object>} data Los datos a exportar.
+ * @param {string} filename El nombre del archivo (sin extensión).
+ * @param {Object} columnMapping Un objeto que mapea claves de datos a cabeceras de Excel. ej: { name: 'CLIENTE' }
+ */
+function exportToExcel(data, filename, columnMapping) {
+    if (!data || data.length === 0) {
+        alert("No hay datos para exportar.");
+        return;
+    }
+
+    const headers = Object.values(columnMapping);
+    const sheetData = [headers]; // Empezar con las cabeceras
+
+    data.forEach(row => {
+        const rowData = [];
+        Object.keys(columnMapping).forEach(key => {
+            // El valor puede ser una fecha ya parseada o un string/número
+            rowData.push(row[key]);
+        });
+        sheetData.push(rowData);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+
+    // Aplicar formato de fecha a las celdas que contienen objetos Date
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r + 1; R <= range.e.r; ++R) { // Empezar en 1 para saltar la cabecera
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+            const cell_address = { c: C, r: R };
+            const cell_ref = XLSX.utils.encode_cell(cell_address);
+            const cell = ws[cell_ref];
+            
+            if (cell && cell.v instanceof Date) {
+                cell.t = 'd'; // Tipo fecha
+                cell.z = 'dd/mm/yyyy'; // Formato de fecha corta
+            }
+        }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+    XLSX.writeFile(wb, `${filename}.xlsx`);
+}
+
+/**
  * Calcula el nombre del día de la semana en español a partir de una fecha en formato 'YYYY-MM-DD'.
  * @param {string} dateString La fecha en formato 'YYYY-MM-DD'.
  * @returns {string} El nombre del día ('Lunes', 'Martes', etc.).
@@ -940,7 +986,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 3. Descarga Excel
     btnDownloadPg.addEventListener('click', () => {
-        alert('Descarga en reconstrucción.');
+        const dataToExport = currentPgReportData.map(row => ({
+            ...row,
+            // Las fechas pueden ser etiquetas de semana, se dejan como texto.
+            cobro: parseFloat(row.cobro) || 0,
+            gastos: parseFloat(row.gastos) || 0,
+            creditos: parseFloat(row.creditos) || 0,
+            ganancia: parseFloat(row.ganancia) || 0,
+            cobroReal: parseFloat(row.cobroReal) || 0
+        }));
+        const mapping = {
+            date: 'FECHA',
+            user: 'ASESOR',
+            muni: 'MUNICIPIO',
+            cobro: 'COBRO REAL',
+            gastos: 'GASTOS',
+            creditos: 'CREDITOS',
+            ganancia: 'GANANCIA',
+            cobroReal: 'RECAUDO'
+        };
+        exportToExcel(dataToExport, 'Reporte_PG', mapping);
     });
 
     // ==========================================
@@ -1184,7 +1249,24 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     btnDownloadPb.addEventListener('click', () => {
-        alert('Descarga en reconstrucción.');
+        const dataToExport = currentPbReportData.map(row => ({
+            name: row.name,
+            municipality: row.municipality,
+            asesor_name: row.asesor_name,
+            saleDate: parseDateValue(row.saleDate), // Convertir a objeto Date
+            missedDate: row.dateStr.includes('Semana') ? row.dateStr : parseDateValue(row.dateStr),
+            nuevos: parseFloat(row.nuevos) || 0,
+            represtes: parseFloat(row.represtes) || 0,
+            valor_cuota: parseFloat(row.valor_cuota) || 0,
+            balance: parseFloat(row.balance) || 0
+        }));
+
+        const mapping = {
+            name: 'CLIENTE', municipality: 'MUNICIPIO', asesor_name: 'ASESOR',
+            saleDate: 'FECHA PRESTAMO', missedDate: 'FECHA FALTA', nuevos: 'NUEVOS',
+            represtes: 'REPRESTES', valor_cuota: 'VALOR CUOTA', balance: 'SALDO'
+        };
+        exportToExcel(dataToExport, 'Reporte_Comportamiento_Pago', mapping);
     });
 
     // ==========================================
@@ -1441,7 +1523,24 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     btnDownloadCr.addEventListener('click', () => {
-        alert('Descarga en reconstrucción.');
+        const dataToExport = currentCrReportData.map(c => ({
+            name: c.name,
+            fecha: parseDateValue(c.created_at),
+            asesor_name: c.asesor_name,
+            municipality: c.municipality,
+            nuevo: (c.credit_type || '').toLowerCase().includes('nuevo') ? (parseFloat(c.sale_value) || 0) : 0,
+            represte: !(c.credit_type || '').toLowerCase().includes('nuevo') ? (parseFloat(c.sale_value) || 0) : 0
+        }));
+
+        const mapping = {
+            name: 'CLIENTE',
+            fecha: 'FECHA',
+            asesor_name: 'ASESOR',
+            municipality: 'MUNICIPIO',
+            nuevo: 'NUEVO',
+            represte: 'REPRESTE'
+        };
+        exportToExcel(dataToExport, 'Reporte_Creditos', mapping);
     });
 
     // ==========================================
@@ -1980,7 +2079,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     btnDownloadPm.addEventListener('click', () => {
-        alert('Descarga en reconstrucción.');
+        const dataToExport = currentPmReportData.map(p => {
+            const debtorInfo = currentPmDebtorsMap.get(p.debtor_number);
+            const cuota = debtorInfo ? (parseFloat(debtorInfo.valor_cuota) || 0) : 0;
+            return {
+                debtor_name: p.debtor_name,
+                fecha: parseDateValue(p.created_at),
+                user_name: p.user_name,
+                municipality: p.municipality,
+                cuota: cuota,
+                abono: parseFloat(p.payment_amount) || 0
+            };
+        });
+
+        const mapping = {
+            debtor_name: 'CLIENTE',
+            fecha: 'FECHA',
+            user_name: 'ASESOR',
+            municipality: 'MUNICIPIO',
+            cuota: 'CUOTA',
+            abono: 'ABONO'
+        };
+        exportToExcel(dataToExport, 'Reporte_Cobros', mapping);
     });
 
     // ==========================================
@@ -2074,7 +2194,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     btnDownloadEx.addEventListener('click', () => {
-        alert('Descarga en reconstrucción.');
+        const dataToExport = currentExReportData.map(r => ({
+            user_name: r.user_name,
+            fecha: parseDateValue(r.created_at),
+            fuel: parseFloat(r.fuel) || 0,
+            lunch: parseFloat(r.lunch) || 0,
+            otros: (r.others && r.others.length > 0) ? (parseFloat(r.others[0]) || 0) : 0,
+            descripcion: (r.others && r.others.length > 1) ? r.others[1] : ''
+        }));
+
+        const mapping = {
+            user_name: 'ASESOR',
+            fecha: 'FECHA',
+            fuel: 'GASOLINA',
+            lunch: 'ALMUERZO',
+            otros: 'OTROS',
+            descripcion: 'DESCRIPCION'
+        };
+        exportToExcel(dataToExport, 'Reporte_Gastos', mapping);
     });
 
     // ==========================================
@@ -2386,24 +2523,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // Descarga Excel de Detalles de Créditos
     btnDownloadReportCreditsDetails.addEventListener('click', () => {
         if (!currentCreditsContext || !currentCreditsContext.data) return alert("No hay datos para descargar.");
-        
-        const data = currentCreditsContext.data.map(c => ({
-            CLIENTE: c.name,
-            CEDULA: c.cedula,
-            CREDITO: parseFloat(c.sale_value) || 0,
-            INTERESES: parseFloat(c.interests) || 0,
-            "VALOR TOTAL": parseFloat(c.total_credit_value) || 0,
-            CUOTAS: c.number_of_payments,
-            VALOR_CUOTA: parseFloat(c.valor_cuota) || 0,
-            "TIPO DE CREDITO": c.credit_type,
-            "TIPO DE PAGO": c.payment_term,
-            MUNICIPIO: c.municipality
+
+        const dataToExport = currentCreditsContext.data.map(c => ({
+            name: c.name,
+            cedula: c.cedula,
+            sale_value: parseFloat(c.sale_value) || 0,
+            interests: parseFloat(c.interests) || 0,
+            total_credit_value: parseFloat(c.total_credit_value) || 0,
+            number_of_payments: c.number_of_payments,
+            valor_cuota: parseFloat(c.valor_cuota) || 0,
+            credit_type: c.credit_type,
+            payment_term: Array.isArray(c.payment_term) ? c.payment_term.join(', ') : c.payment_term,
+            municipality: c.municipality
         }));
 
-        const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Creditos");
-        XLSX.writeFile(wb, `Detalle_Creditos_${currentCreditsContext.userName}_${currentCreditsContext.dateStr}.xlsx`);
+        const mapping = {
+            name: 'CLIENTE', cedula: 'CEDULA', sale_value: 'CREDITO', interests: 'INTERESES',
+            total_credit_value: "VALOR TOTAL", number_of_payments: 'CUOTAS', valor_cuota: 'VALOR CUOTA',
+            credit_type: "TIPO DE CREDITO", payment_term: "TIPO DE PAGO", municipality: 'MUNICIPIO'
+        };
+
+        const filename = `Detalle_Creditos_${currentCreditsContext.userName}_${getLocalDateKey(new Date(currentCreditsContext.dateStr))}`;
+        exportToExcel(dataToExport, filename, mapping);
     });
 
     // Lógica para abrir detalles de cobros
@@ -2510,6 +2651,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 return String(term).toUpperCase() === targetTerm;
             });
+
+            currentCreditsContext.paymentsData = filteredPayments; // Guardar para descarga
 
             // Renderizar Tabla
             tbody.innerHTML = '';
@@ -2842,12 +2985,34 @@ document.addEventListener('DOMContentLoaded', () => {
         return { data: filteredPayments, error: null };
     }
 
-    btnDownloadReportPaymentsDetails.addEventListener('click', async () => {
-        alert('Descarga en reconstrucción.');
-    });
-
     btnDownloadGn.addEventListener('click', () => {
-        alert('Descarga en reconstrucción.');
+        const dataToExport = currentGnReportData.map(r => {
+            const hasInjection = r.og_final_base !== null && r.og_final_base !== undefined;
+            const baseFinalDisplayValue = hasInjection ? r.og_final_base : r.final_base;
+            const injectionDisplayValue = hasInjection ? r.final_base : null;
+            return {
+                user_name: r.user_name,
+                credits_report: parseFloat(r.credits_report) || 0,
+                payments_report: parseFloat(r.payments_report) || 0,
+                expense_report: parseFloat(r.expense_report) || 0,
+                initial_base: parseFloat(r.initial_base) || 0,
+                final_base: parseFloat(baseFinalDisplayValue) || 0,
+                inyeccion: injectionDisplayValue !== null ? (parseFloat(injectionDisplayValue) || 0) : '-',
+                fecha: parseDateValue(r.created_at)
+            };
+        });
+
+        const mapping = {
+            user_name: 'ASESOR',
+            credits_report: 'CREDITO',
+            payments_report: 'COBRO',
+            expense_report: 'GASTOS',
+            initial_base: 'BASE INICIAL',
+            final_base: 'BASE FINAL',
+            inyeccion: 'INYECCION',
+            fecha: 'FECHA'
+        };
+        exportToExcel(dataToExport, 'Reporte_Cierres', mapping);
     });
 
     // Inicializar la primera vista de reporte
