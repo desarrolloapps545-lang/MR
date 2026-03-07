@@ -381,6 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
             table.tHead.rows[0].innerHTML = `
                 <th>Asesor</th>
                 <th>Créditos</th>
+                <th>Ganancias</th>
                 <th>Cobros</th>
                 <th>Gastos</th>
                 <th>Base Inicial</th>
@@ -2242,7 +2243,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnGenerateGn.addEventListener('click', generateGnReport);
 
     async function generateGnReport() {
-        gnTableBody.innerHTML = '<tr><td colspan="8">Cargando...</td></tr>';
+        gnTableBody.innerHTML = '<tr><td colspan="9">Cargando...</td></tr>';
 
         const mode = currentGnMode || 'daily';
         const tableName = mode === 'daily' ? 'reports' : 'wreports';
@@ -2268,6 +2269,7 @@ document.addEventListener('DOMContentLoaded', () => {
             table.tHead.rows[0].innerHTML = `
                 <th>Asesor</th>
                 <th>Créditos</th>
+                <th>Ganancias</th>
                 <th>Cobros</th>
                 <th>Gastos</th>
                 <th>Base Inicial</th>
@@ -2278,7 +2280,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (error) {
-            gnTableBody.innerHTML = `<tr><td colspan="8">Error: ${error.message}</td></tr>`;
+            gnTableBody.innerHTML = `<tr><td colspan="9">Error: ${error.message}</td></tr>`;
             return;
         }
 
@@ -2286,12 +2288,48 @@ document.addEventListener('DOMContentLoaded', () => {
         gnTableBody.innerHTML = '';
 
         if (!reports || reports.length === 0) {
-            gnTableBody.innerHTML = '<tr><td colspan="8">No se encontraron registros.</td></tr>';
+            gnTableBody.innerHTML = '<tr><td colspan="9">No se encontraron registros.</td></tr>';
             return;
         }
 
+        // Calcular intereses (Ganancias) para cada reporte
+        const reportsWithInterests = await Promise.all(reports.map(async (r) => {
+            let totalInterests = 0;
+            try {
+                const reportDate = new Date(r.created_at);
+                let startDate, endDate;
+                if (mode === 'weekly') {
+                    const end = new Date(reportDate); end.setHours(23, 59, 59, 999);
+                    const start = new Date(reportDate); start.setDate(start.getDate() - 6); start.setHours(0, 0, 0, 0);
+                    startDate = start.toISOString(); endDate = end.toISOString();
+                } else {
+                    const start = new Date(reportDate); start.setHours(0, 0, 0, 0);
+                    const end = new Date(reportDate); end.setHours(23, 59, 59, 999);
+                    startDate = start.toISOString(); endDate = end.toISOString();
+                }
+
+                const { data: debtors } = await sbClient.from('debtors')
+                    .select('interests, payment_term')
+                    .eq('asesor_name', r.user_name)
+                    .gte('created_at', startDate)
+                    .lte('created_at', endDate);
+
+                if (debtors) {
+                    const targetTerm = mode === 'weekly' ? 'SEMANAL' : 'DIARIO';
+                    debtors.forEach(d => {
+                        const term = d.payment_term;
+                        let match = false;
+                        if (Array.isArray(term)) match = term.some(t => String(t).toUpperCase() === targetTerm);
+                        else match = String(term) && String(term).toUpperCase() === targetTerm;
+                        if (match) totalInterests += (parseFloat(d.interests) || 0);
+                    });
+                }
+            } catch (e) { console.error("Error calculating interests", e); }
+            return { ...r, totalInterests };
+        }));
+
         // Ordenar por fecha descendente
-        reports.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        reportsWithInterests.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
         const fmt = (val) => '$ ' + (parseFloat(val) || 0).toLocaleString('es-CO');
         const fmtDate = (dateStr) => {
@@ -2299,7 +2337,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return new Date(dateStr).toLocaleDateString();
         };
 
-        reports.forEach(r => {
+        reportsWithInterests.forEach(r => {
             const hasInjection = r.og_final_base !== null && r.og_final_base !== undefined;
             const baseFinalDisplayValue = hasInjection ? r.og_final_base : r.final_base;
             const injectionDisplayValue = hasInjection ? r.final_base : null;
@@ -2311,6 +2349,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${fmt(r.credits_report)}
                     <button class="btn-action-small btn-primary" onclick="openReportCreditsDetails('${r.report_number}', '${r.user_name}', '${r.created_at}', '${currentGnMode || 'daily'}')"><i class="fas fa-eye"></i></button>
                 </td>
+                <td>${fmt(r.totalInterests)}</td>
                 <td>
                     ${fmt(r.payments_report)}
                     <button class="btn-action-small btn-primary" onclick="openReportPaymentsDetails('${r.report_number}', '${r.user_name}', '${r.created_at}', '${currentGnMode || 'daily'}')"><i class="fas fa-eye"></i></button>
@@ -2391,12 +2430,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const modal = document.getElementById('view-report-credits-modal');
         const tbody = document.getElementById('report-credits-detail-body');
         const totalSpan = document.getElementById('report-credits-total');
+        const interestsSpan = document.getElementById('report-credits-interests-total');
         
         // Verificar si es una recarga (modal ya abierto)
         const isRefresh = modal.style.display === 'block';
 
         tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;">Cargando...</td></tr>';
         totalSpan.innerText = '$0';
+        if (interestsSpan) interestsSpan.innerText = '$0';
         modal.style.display = 'block';
 
         // Solo resetear bandera y configurar interceptor si es apertura inicial
@@ -2459,12 +2500,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // Renderizar Tabla
             tbody.innerHTML = '';
             let total = 0;
+            let totalInterests = 0;
             
             if (filteredCredits.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;">No se encontraron créditos.</td></tr>';
             } else {
                 filteredCredits.forEach(c => {
                     total += (parseFloat(c.sale_value) || 0);
+                    totalInterests += (parseFloat(c.interests) || 0);
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${c.name || ''}</td>
@@ -2488,6 +2531,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             totalSpan.innerText = '$ ' + total.toLocaleString('es-CO');
+            if (interestsSpan) interestsSpan.innerText = '$ ' + totalInterests.toLocaleString('es-CO');
 
         } catch (e) {
             console.error(e);
